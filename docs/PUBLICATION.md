@@ -53,6 +53,6 @@ Pour activer le portrait : placer une photo autorisée dans `public/assets/portr
 1. Lancer `npm run content:check`, `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`.
 2. Lancer `npm start` et vérifier les deux langues, les filtres et la page individuelle.
 3. Changer `status` à `published` uniquement après approbation, puis faire réviser la modification par PR.
-4. Après fusion et déploiement autorisé, le contenu devient visible. Les listes sont rendues au serveur; la page d’accueil est reconstruite au déploiement. Pour une date future, déclencher un nouveau déploiement le jour de publication.
+4. Après fusion et déploiement autorisé, le contenu devient visible. Les listes sont rendues au serveur; la page d’accueil est rendue au serveur. Pour une date future, déclencher un nouveau déploiement le jour de publication.
 
 Ne pas ajouter d’articles fictifs pour remplir les grilles.

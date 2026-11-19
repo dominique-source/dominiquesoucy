@@ -35,6 +35,7 @@ Les alias d’article sous un sujet redirigent vers la route canonique du format
 
 ## Architecture et fichiers
 
+- `app/layout.tsx` : document HTML et polices locales; langue initiale transmise par le proxy.
 - `app/[lang]/` : layout localisé, accueil, sections, articles, 404, transition de page.
 - `app/globals.css` : tokens, compositions responsive, styles éditoriaux et animations CSS.
 - `app/og/route.tsx` : image Open Graph 1200 × 630 générée localement, FR/EN.
@@ -54,7 +55,7 @@ Les alias d’article sous un sujet redirigent vers la route canonique du format
 - `docs/PUBLICATION.md` : guide complet et gabarit de publication.
 - `tests/` : validation éditoriale et normalisation vidéo.
 
-Les composants sont rendus au serveur, sauf les interactions ciblées (menu, changement de langue, reveals, activation vidéo). Pas de dépendance d’animation lourde : CSS et APIs natives suffisent. Le menu est un panneau de navigation non modal, se ferme avec Échap et rend le focus au bouton. Les liens masqués sont inertes. `prefers-reduced-motion`, focus visibles, lien d’évitement et lecteurs natifs sont pris en charge.
+Le document HTML utilise le rendu dynamique pour garantir la langue correcte dès la première réponse, y compris pour les 404. Les composants sont rendus au serveur, sauf les interactions ciblées (menu, changement de langue, reveals, activation vidéo). Pas de dépendance d’animation lourde : CSS et APIs natives suffisent. Le menu est un panneau de navigation non modal, se ferme avec Échap et rend le focus au bouton. Les liens masqués sont inertes. `prefers-reduced-motion`, focus visibles, lien d’évitement et lecteurs natifs sont pris en charge.
 
 `SocialGraphic` expose les formats portrait 4:5, vertical 9:16 et paysage 16:9 et une variante de série. C’est un composant réutilisable pour des compositions approuvées, pas un outil de publication sur les réseaux sociaux. `/og` est l’image de partage réelle du site.
 

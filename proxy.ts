@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 export function proxy(request: NextRequest) {
   const p = request.nextUrl.pathname;
-  if (/^\/(fr|en)(\/|$)/.test(p)) return NextResponse.next();
+  if (/^\/(fr|en)(\/|$)/.test(p)) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-site-locale", p.split("/")[1]);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
   const url = request.nextUrl.clone();
   url.pathname = `/fr${p === "/" ? "" : p}`;
   return NextResponse.redirect(url);

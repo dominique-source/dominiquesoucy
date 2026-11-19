@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useLocale } from "@/components/locale-provider";
 import { dict } from "@/lib/i18n";
 export default function NotFound() {
-  const lang = usePathname().startsWith("/en") ? "en" : "fr";
+  const lang = useLocale();
   const d = dict(lang);
   return (
     <div className="content-shell fallback-page">

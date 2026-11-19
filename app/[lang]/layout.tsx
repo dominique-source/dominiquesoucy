@@ -1,32 +1,8 @@
-import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
+import type { Metadata } from "next";
 import { locale, dict } from "@/lib/i18n";
 import { site } from "@/lib/config";
 import { Header, Footer } from "@/components/site";
-import "../globals.css";
-const display = localFont({
-  src: "../../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-800-italic.woff2",
-  variable: "--font-display",
-  display: "swap",
-});
-const sans = localFont({
-  src: [
-    {
-      path: "../../node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2",
-      weight: "400",
-    },
-    {
-      path: "../../node_modules/@fontsource/inter/files/inter-latin-600-normal.woff2",
-      weight: "600",
-    },
-  ],
-  variable: "--font-sans",
-  display: "swap",
-});
-export const viewport: Viewport = {
-  themeColor: "#0A0A0A",
-  colorScheme: "dark",
-};
+import { LocaleProvider } from "@/components/locale-provider";
 export function generateStaticParams() {
   return [{ lang: "fr" }, { lang: "en" }];
 }
@@ -77,18 +53,13 @@ export default async function Layout({
 }) {
   const lang = locale((await params).lang);
   return (
-    <html
-      lang={lang === "fr" ? "fr-CA" : "en-CA"}
-      className={`${display.variable} ${sans.variable}`}
-    >
-      <body>
-        <a className="skip-link" href="#main">
-          {dict(lang).skip}
-        </a>
-        <Header lang={lang} />
-        <main id="main">{children}</main>
-        <Footer lang={lang} />
-      </body>
-    </html>
+    <LocaleProvider lang={lang}>
+      <a className="skip-link" href="#main">
+        {dict(lang).skip}
+      </a>
+      <Header lang={lang} />
+      <main id="main">{children}</main>
+      <Footer lang={lang} />
+    </LocaleProvider>
   );
 }
