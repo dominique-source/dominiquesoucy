@@ -6,7 +6,7 @@ import { brand } from "@/lib/brand-copy";
 import { entryPath, type Entry } from "@/lib/content";
 import { signature, site } from "@/lib/config";
 import { AbstractVisual, EditorialCard } from "./editorial";
-import { VideoPlayer } from "./video-player";
+import { AdaptiveVideo } from "./adaptive-video";
 import { EntryMeta } from "./editorial-templates";
 import { ShareControls } from "./share-controls";
 function ArticleBody({ entry }: { entry: Entry }) {
@@ -48,8 +48,11 @@ function ArticleMedia({
 }) {
   if (entry.videoUrl && !signatureCover)
     return (
-      <VideoPlayer
-        url={entry.videoUrl}
+      <AdaptiveVideo
+        videoUrl={entry.videoUrl}
+        orientation={entry.orientation}
+        poster={entry.poster ?? entry.coverImage}
+        layout="article"
         title={entry.title}
         lang={lang}
         captions={entry.captions}
@@ -167,13 +170,17 @@ export function ArticleLayout({
       <Link className="text-link" href={back}>
         {d.back}
       </Link>
-      <header>
-        <EntryMeta entry={entry} lang={lang} />
-        <h1>{entry.title}</h1>
-        <p className="article-deck">{entry.description}</p>
-        <p className="article-byline">Dominique Soucy</p>
-      </header>
-      <ArticleMedia entry={entry} lang={lang} />
+      <div
+        className={`article-media-stage ${entry.videoUrl ? `video-orientation-${entry.orientation}` : ""}`}
+      >
+        <header>
+          <EntryMeta entry={entry} lang={lang} />
+          <h1>{entry.title}</h1>
+          <p className="article-deck">{entry.description}</p>
+          <p className="article-byline">Dominique Soucy</p>
+        </header>
+        <ArticleMedia entry={entry} lang={lang} />
+      </div>
       <div className="reading-columns">
         <aside className="reading-margin">
           <p className="eyebrow accent">{d.categories[entry.category]}</p>

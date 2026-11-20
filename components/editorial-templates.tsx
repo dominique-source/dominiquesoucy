@@ -15,7 +15,8 @@ import {
   EmptyState,
   SignatureQuote,
 } from "./editorial";
-import { VideoPlayer } from "./video-player";
+import { AdaptiveVideo } from "./adaptive-video";
+import { pilotVideo } from "@/lib/config";
 import { Reveal } from "./reveal";
 export function EntryMeta({ entry, lang }: { entry: Entry; lang: Locale }) {
   const d = dict(lang);
@@ -86,6 +87,12 @@ export function VideoEditorial({
   const b = brand(lang);
   const d = dict(lang);
   const featured = featuredReflection(entries);
+  const showPilot = !featured && !active;
+  const orientation = featured?.videoUrl
+    ? featured.orientation
+    : showPilot
+      ? pilotVideo.orientation
+      : undefined;
   const others = entries.filter((e) => e.slug !== featured?.slug);
   return (
     <div className="video-editorial">
@@ -102,15 +109,18 @@ export function VideoEditorial({
           <p>{b.filmIntro}</p>
         </header>
         <section
-          className={`screening-room ${featured ? "" : "screening-empty"}`}
+          className={`screening-room ${orientation ? `video-orientation-${orientation}` : ""} ${featured || showPilot ? "" : "screening-empty"}`}
           aria-label={b.latestLabel}
         >
           {featured ? (
             <>
               <div className="screening-media">
                 {featured.videoUrl ? (
-                  <VideoPlayer
-                    url={featured.videoUrl}
+                  <AdaptiveVideo
+                    videoUrl={featured.videoUrl}
+                    orientation={featured.orientation}
+                    poster={featured.poster ?? featured.coverImage}
+                    layout="featured"
                     title={featured.title}
                     lang={lang}
                     captions={featured.captions}
@@ -145,6 +155,25 @@ export function VideoEditorial({
                 >
                   {b.transcript}
                 </Link>
+              </div>
+            </>
+          ) : showPilot ? (
+            <>
+              <div className="screening-media">
+                <AdaptiveVideo
+                  videoUrl={pilotVideo.videoUrl}
+                  orientation={pilotVideo.orientation}
+                  layout={pilotVideo.layout}
+                  poster={pilotVideo.poster}
+                  title={pilotVideo.label}
+                  lang={lang}
+                />
+              </div>
+              <div className="screening-intro">
+                <p className="eyebrow accent">{d.nav.reflexions}</p>
+                <h2 lang="fr">{pilotVideo.label}</h2>
+                <p>{b.pilotDescription}</p>
+                <div className="screening-note">{d.mission}</div>
               </div>
             </>
           ) : (

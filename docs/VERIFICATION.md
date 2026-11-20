@@ -52,3 +52,17 @@ Les entrées temporaires ont été retirées avant le build final. Les captures 
 Aucune photographie originale autorisée n’était présente : les emplacements abstraits sont intentionnels. Aucun portrait IA des maquettes n’a été réutilisé. Le cadrage réel et la lecture des véritables vidéos restent à vérifier lorsque les médias seront fournis. Aucun score Lighthouse ou résultat réel de Core Web Vitals n’est revendiqué.
 
 Aucune fusion de branche ni aucun déploiement effectué. Les références graphiques sont conservées hors de `public/`. La mise en production, les médias autorisés, les contenus et traductions approuvés, les liens officiels et les textes légaux demeurent à compléter.
+
+# Vidéo adaptative — vérification
+
+- Installation propre `npm ci` réussie; aucune dépendance ajoutée.
+- **34 tests réussis**, dont 23 nouveaux contrôles vidéo : les 9 combinaisons orientation × variante pour les lecteurs externes différés et les vidéos natives, valeurs par défaut, dimensions fiables, priorité du frontmatter, URLs et affiches non autorisées.
+- Lint, TypeScript, validation éditoriale et build de production réussis.
+- Matrice locale des 9 variantes mesurée à **375, 768 et 1440 px** : ratios 9:16, 16:9 et 1:1 corrects; aucun débordement horizontal; aucun iframe avant activation. Les affiches de contrôle utilisent `object-fit: contain`.
+- Intégration réelle vérifiée dans Réflexions et dans le gabarit d’article. Une ancienne règle V2 de largeur a été détectée puis neutralisée par une largeur maximale : le portrait reste plafonné même dans sa grille éditoriale.
+- Pilote portrait à 1440 × 1000 : **438,75 × 780 px avant et après activation**, avec focus transféré à l’iframe et URL YouTube sans cookies normalisée. Le fournisseur a bien chargé le pilote; aucun autoplay déclenché.
+- Écran compact 375 × 568 : cadre de **223,65 × 397,59 px**, sans débordement.
+- Paysage featured : grille large d’environ 1302 × 732 px. Carré featured : environ 631 × 631 px avec texte adjacent.
+- Les limites contrôlées concernent la géométrie du lecteur. Aucun score global de CLS ou Core Web Vitals n’est revendiqué.
+
+La route, l’affiche abstraite et l’entrée Markdown de contrôle ont été retirées avant livraison. Le pilote est une configuration média séparée et n’ajoute aucun titre éditorial, durée, date ou transcription. L’affiche originale autorisée en chemise blanche n’étant pas dans le dépôt, sa configuration reste vide. Le fournisseur peut montrer sa propre miniature après activation; aucune miniature YouTube n’est téléchargée ou substituée à l’original approuvé.

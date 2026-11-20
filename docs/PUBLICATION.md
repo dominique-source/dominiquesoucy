@@ -90,3 +90,7 @@ Utiliser uniquement l’original autorisé. Les visages et photographies contenu
 ### Partage
 
 Les articles offrent le partage natif si le navigateur le prend en charge, puis la copie du lien canonique. Si le presse-papiers est indisponible, le lien est affiché dans un champ sélectionnable. Aucun compte social ni service de partage tiers n’est inventé ou requis.
+
+## Orientation des vidéos
+
+Les champs `orientation`, `poster` et `videoDimensions` et les variantes de lecture sont documentés dans [Vidéo adaptative](VIDEO.md). Pour une vidéo verticale, utiliser `orientation: portrait`; pour une vidéo carrée, `orientation: square`. Sans indication ni dimensions fiables, le comportement reste `landscape`. L’orientation n’est jamais déduite du lien YouTube ou du cadrage d’une miniature.

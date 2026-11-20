@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdaptiveVideo } from "./adaptive-video";
 import Image from "next/image";
 import { dict, type Locale, type Section } from "@/lib/i18n";
 import { entryPath, type Entry } from "@/lib/content";
@@ -44,33 +45,47 @@ export function EditorialCard({ entry, lang }: { entry: Entry; lang: Locale }) {
   const d = dict(lang);
   return (
     <article className="editorial-card">
-      <Link
-        href={entryPath(entry)}
-        className="card-image"
-        tabIndex={-1}
-        aria-hidden="true"
-      >
-        {entry.coverImage ? (
-          <Image
-            src={entry.coverImage}
-            alt=""
-            fill
-            sizes="(max-width: 700px) 100vw, 45vw"
+      {entry.videoUrl ? (
+        <div className="card-video">
+          <AdaptiveVideo
+            videoUrl={entry.videoUrl}
+            orientation={entry.orientation}
+            poster={entry.poster ?? entry.coverImage}
+            title={entry.title}
+            captions={entry.captions}
+            lang={lang}
+            layout="card"
           />
-        ) : (
-          <AbstractVisual
-            kind={entry.contentType === "thought" ? "type" : "court"}
-          />
-        )}
-        <span className="media-tag">
-          {entry.videoUrl
-            ? d.video
-            : entry.contentType === "thought"
-              ? d.thought
-              : d.text}
-          {entry.duration ? ` / ${entry.duration}` : ""}
-        </span>
-      </Link>
+        </div>
+      ) : (
+        <Link
+          href={entryPath(entry)}
+          className="card-image"
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          {entry.coverImage ? (
+            <Image
+              src={entry.coverImage}
+              alt=""
+              fill
+              sizes="(max-width: 700px) 100vw, 45vw"
+            />
+          ) : (
+            <AbstractVisual
+              kind={entry.contentType === "thought" ? "type" : "court"}
+            />
+          )}
+          <span className="media-tag">
+            {entry.videoUrl
+              ? d.video
+              : entry.contentType === "thought"
+                ? d.thought
+                : d.text}
+            {entry.duration ? ` / ${entry.duration}` : ""}
+          </span>
+        </Link>
+      )}
       <div className="card-meta">
         <span>{d.categories[entry.category]}</span>
         <time dateTime={entry.publicationDate}>

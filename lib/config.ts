@@ -28,3 +28,13 @@ export const media: {
 } = { portrait: null };
 export const signature =
   "Imagine vouloir tenter de prendre au sérieux la société dans laquelle tu vis, voter, et ensuite voir ça…";
+
+// The pilot is a media configuration, not an article with invented publishing data.
+export const pilotVideo = {
+  videoUrl: "https://www.youtube.com/watch?v=6Zy87nhpHS8",
+  orientation: "portrait" as const,
+  layout: "featured" as const,
+  label: "PILOTE — ÉPISODE 00",
+  // Set only after the approved white-shirt original is added under public/assets/.
+  poster: null as string | null,
+};

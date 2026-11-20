@@ -1,0 +1,266 @@
+/* Media geometry is known before either a poster or third-party embed loads. */
+.video-player-shell {
+  min-width: 0;
+  width: 100%;
+}
+.video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #0a0a0a;
+  isolation: isolate;
+}
+.video-frame > .video-player,
+.video-frame > .video-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+}
+.video-frame > .video-player {
+  display: block;
+  object-fit: contain;
+  background: #0a0a0a;
+}
+.video-frame > .video-placeholder {
+  padding: 0;
+  overflow: hidden;
+  background: #11130e;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+}
+.video-poster {
+  z-index: 0;
+  object-fit: contain !important;
+}
+.adaptive-monogram {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: italic 800 clamp(3rem, 8vw, 7rem)/1 var(--display);
+  letter-spacing: -0.06em;
+  color: #39412b;
+  pointer-events: none;
+}
+.adaptive-monogram > span {
+  color: var(--accent);
+}
+.video-activation {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  width: 100%;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  background: linear-gradient(transparent 0%, rgb(10 10 10 / 0.92) 100%);
+}
+.video-activation .button {
+  max-width: 100%;
+  min-height: 44px;
+  height: auto;
+  padding: 0.75rem 1rem;
+  white-space: normal;
+  line-height: 1.4;
+  text-align: center;
+  flex-shrink: 0;
+}
+.video-activation .button svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+.video-activation p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #f4f4ef;
+  text-align: center;
+  margin: 0;
+  max-width: 36ch;
+}
+.video-caption-note {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-top: 0.75rem;
+  min-height: 1.5em;
+}
+.adaptive-video {
+  min-width: 0;
+  width: 100%;
+  margin-inline: auto;
+  color: var(--foreground);
+}
+.adaptive-video .video-frame {
+  aspect-ratio: var(--video-aspect-ratio);
+  border: 0;
+  box-shadow: 0 0 0 1px #454d34;
+}
+.adaptive-video--portrait {
+  --portrait-height: min(78svh, 780px);
+  width: 100%;
+  max-width: min(100%, calc(var(--portrait-height) * 0.5625));
+}
+.adaptive-video--portrait.adaptive-video--article {
+  --portrait-height: min(78svh, 760px);
+}
+.adaptive-video--portrait.adaptive-video--card {
+  --portrait-height: min(60svh, 440px);
+}
+.adaptive-video--square.adaptive-video--featured {
+  max-width: 640px;
+}
+.adaptive-video--square.adaptive-video--article {
+  max-width: 720px;
+}
+.adaptive-video--square.adaptive-video--card {
+  max-width: 480px;
+}
+.adaptive-video--card .video-activation {
+  gap: 0.75rem;
+  padding: 1rem;
+}
+.adaptive-video--card .video-activation .button {
+  font-size: 0.875rem;
+  padding: 0.65rem 0.75rem;
+}
+.adaptive-video--card .video-activation p {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+.adaptive-video--card .adaptive-monogram {
+  font-size: 3.5rem;
+}
+.card-video {
+  padding: 1rem;
+  min-width: 0;
+  background: #0f110d;
+}
+.field-note-0 .card-video {
+  grid-column: 1;
+  grid-row: 1/6;
+  align-self: start;
+}
+.screening-room.video-orientation-portrait {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+}
+.screening-room.video-orientation-square {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+}
+.screening-room.video-orientation-landscape {
+  grid-template-columns: minmax(0, 1fr);
+}
+.screening-room.video-orientation-landscape .screening-intro {
+  max-width: 70ch;
+}
+.screening-room .screening-media {
+  min-width: 0;
+  width: 100%;
+}
+.article-media-stage {
+  min-width: 0;
+}
+.article-media-stage > header {
+  max-width: 1000px;
+  padding-block: 2rem;
+}
+.article-media-stage.video-orientation-portrait,
+.article-media-stage.video-orientation-square {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: center;
+  padding-top: 2rem;
+}
+.article-media-stage.video-orientation-portrait h1,
+.article-media-stage.video-orientation-square h1 {
+  font-size: clamp(2.75rem, 5vw, 5rem);
+}
+.signature-reading-grid .adaptive-video .video-player {
+  margin: 0;
+}
+@media (max-width: 850px) {
+  .screening-room.video-orientation-landscape {
+    grid-template-columns: 1fr;
+  }
+  .article-media-stage.video-orientation-portrait,
+  .article-media-stage.video-orientation-square {
+    gap: 1.5rem;
+  }
+  .article-media-stage.video-orientation-portrait h1,
+  .article-media-stage.video-orientation-square h1 {
+    font-size: 3rem;
+  }
+}
+@media (max-width: 600px) {
+  .adaptive-video--portrait,
+  .adaptive-video--portrait.adaptive-video--article {
+    --portrait-height: min(70svh, 620px);
+  }
+  .adaptive-video--portrait.adaptive-video--card {
+    --portrait-height: min(58svh, 420px);
+  }
+  .adaptive-video--square {
+    max-width: 100%;
+  }
+  .screening-room.video-orientation-portrait,
+  .screening-room.video-orientation-square,
+  .screening-room.video-orientation-landscape {
+    grid-template-columns: 1fr;
+  }
+  .article-media-stage.video-orientation-portrait,
+  .article-media-stage.video-orientation-square {
+    grid-template-columns: 1fr;
+    padding-top: 0;
+    gap: 1rem;
+  }
+  .article-media-stage > header {
+    padding-block: 1rem;
+  }
+  .article-media-stage.video-orientation-portrait h1,
+  .article-media-stage.video-orientation-square h1 {
+    font-size: clamp(2.75rem, 12vw, 4rem);
+  }
+  .video-activation {
+    gap: 0.75rem;
+  }
+  .adaptive-video--portrait .video-activation p {
+    font-size: 0.8rem;
+  }
+  .field-note-0 .card-video {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+@media (max-height: 600px) {
+  .adaptive-video--portrait,
+  .adaptive-video--portrait.adaptive-video--article {
+    --portrait-height: 70svh;
+  }
+  .adaptive-video--portrait .video-activation {
+    gap: 0.5rem;
+    padding: 0.6rem;
+  }
+  .adaptive-video--portrait .video-activation .button {
+    padding: 0.6rem;
+    font-size: 0.8rem;
+  }
+  .adaptive-video--portrait .video-activation p {
+    font-size: 0.75rem;
+  }
+}
+
+.video-frame:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}

@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import type { Viewport } from "next";
 import "./globals.css";
 import "./brand-v2.css";
+import "./adaptive-video.css";
 const display = localFont({
   src: "../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-800-italic.woff2",
   variable: "--font-display",

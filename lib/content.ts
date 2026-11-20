@@ -3,6 +3,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { z } from "zod";
 import { videoSource } from "./video";
+import { videoOrientations, resolveVideoOrientation } from "./video-layout";
 import type { Locale, Section } from "./i18n";
 const asset = z
   .string()
@@ -31,6 +32,14 @@ export const contentSchema = z
       .refine((v) => videoSource(v) !== null, "Unsupported video URL")
       .optional(),
     captions: asset.optional(),
+    poster: asset.optional(),
+    orientation: z.enum(videoOrientations).optional(),
+    videoDimensions: z
+      .object({
+        width: z.number().int().positive().max(16384),
+        height: z.number().int().positive().max(16384),
+      })
+      .optional(),
     duration: z.string().optional(),
     tags: z.array(z.string()),
     topics: z
@@ -50,7 +59,14 @@ export const contentSchema = z
         path: ["coverAlt"],
         message: "Approved images require alt text",
       });
-  });
+  })
+  .transform((entry) => ({
+    ...entry,
+    orientation: resolveVideoOrientation(
+      entry.orientation,
+      entry.videoDimensions,
+    ),
+  }));
 export type Entry = z.infer<typeof contentSchema> & { body: string };
 export function parseContent(source: string): Entry {
   const { data, content } = matter(source);

@@ -53,7 +53,10 @@ L’accueil, la bibliothèque vidéo, le carnet d’observations et les articles
 - `components/article-reading.tsx` : lecture classique et gabarit signature, contenus connexes.
 - `components/share-controls.tsx` : partage natif, copie et repli accessible.
 - `lib/brand-copy.ts` : nouveaux libellés V2 FR/EN.
-- `components/video-player.tsx` : lecteur responsive et activation explicite des intégrations.
+- `components/adaptive-video.tsx` : ratio réservé 9:16, 16:9 ou 1:1 et variantes featured/article/card.
+- `components/video-player.tsx` : infrastructure sécurisée, activation explicite des intégrations et contrôles natifs.
+- `lib/video-layout.ts` : ratios, orientations et métadonnées sources.
+- `docs/VIDEO.md` : API, frontmatter, affiches, sous-titres et configuration du pilote.
 - `components/reveal.tsx` : apparitions au défilement via IntersectionObserver, contenu visible sans JS.
 - `lib/content.ts` : schéma, validation, tri, filtres, brouillons, sélection à la une; interface à conserver pour un futur CMS.
 - `lib/i18n.ts` : dictionnaires centralisés et types de routes.
