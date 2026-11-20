@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation";
 import { locale, dict, sections, type Section } from "@/lib/i18n";
-import { getEntries } from "@/lib/content";
-import { CategoryNavigation, ObservationGrid } from "@/components/editorial";
+import { getEntries, matchesTopic, observationTopics } from "@/lib/content";
 import { AboutPreview, PurInstinctBridge } from "@/components/site";
+import {
+  VideoEditorial,
+  FieldNotes,
+  SubjectEditorial,
+} from "@/components/editorial-templates";
 import { pageMetadata } from "@/lib/metadata";
 type Props = {
   params: Promise<{ lang: string; section: string }>;
@@ -31,7 +35,7 @@ export default async function SectionPage({ params, searchParams }: Props) {
   const d = dict(lang);
   if (section === "a-propos")
     return (
-      <div className="content-shell">
+      <div className="content-shell about-v2">
         <header className="page-heading">
           <p className="eyebrow accent">{d.eyebrow}</p>
           <h1>{d.about}</h1>
@@ -41,21 +45,44 @@ export default async function SectionPage({ params, searchParams }: Props) {
       </div>
     );
   const { category } = await searchParams;
-  if (category && !["sport", "societe", "humain"].includes(category))
-    notFound();
-  return (
-    <div className="content-shell listing">
-      <header className="page-heading">
-        <p className="eyebrow accent">DOMINIQUE SOUCY / {d.eyebrow}</p>
-        <h1>{d.nav[section]}</h1>
-        <p>{d.descriptions[section]}</p>
-        {section === "societe" && <p className="subjects">{d.subjects}</p>}
-      </header>
-      <CategoryNavigation lang={lang} section={section} active={category} />
-      <ObservationGrid
+  const valid =
+    section === "observations"
+      ? observationTopics
+      : ["sport", "societe", "humain"];
+  if (category && !valid.some((value) => value === category)) notFound();
+  const allEntries = getEntries(lang, section);
+  const entries = category
+    ? allEntries.filter((e) =>
+        section === "observations"
+          ? matchesTopic(e, category)
+          : e.category === category,
+      )
+    : allEntries;
+  if (section === "reflexions")
+    return (
+      <VideoEditorial
         lang={lang}
-        entries={getEntries(lang, section, category)}
+        entries={entries}
+        allEntries={allEntries}
+        active={category}
       />
-    </div>
+    );
+  if (section === "observations")
+    return (
+      <FieldNotes
+        lang={lang}
+        entries={entries}
+        allEntries={allEntries}
+        active={category}
+      />
+    );
+  return (
+    <SubjectEditorial
+      lang={lang}
+      section={section}
+      entries={entries}
+      allEntries={allEntries}
+      active={category}
+    />
   );
 }

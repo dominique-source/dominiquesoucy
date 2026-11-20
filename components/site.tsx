@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
+import { brand } from "@/lib/brand-copy";
 import Image from "next/image";
 import { dict, type Locale } from "@/lib/i18n";
 import { media, site } from "@/lib/config";
@@ -7,7 +9,6 @@ import {
   LanguageToggle,
   MobileNavigation,
 } from "./navigation";
-import { AbstractVisual } from "./editorial";
 export function Header({ lang }: { lang: Locale }) {
   return (
     <header className="site-header">
@@ -16,14 +17,12 @@ export function Header({ lang }: { lang: Locale }) {
         href={`/${lang}`}
         aria-label={`Dominique Soucy — ${dict(lang).home}`}
       >
-        DOMINIQUE
-        <br />
-        SOUCY<span>.</span>
+        DOMINIQUE SOUCY<span>.</span>
       </Link>
       <DesktopNavigation lang={lang} />
       <div className="header-actions">
         <LanguageToggle lang={lang} />
-        <MobileNavigation lang={lang} />
+        <MobileNavigation key={lang} lang={lang} />
       </div>
     </header>
   );
@@ -31,27 +30,40 @@ export function Header({ lang }: { lang: Locale }) {
 export function Portrait({
   lang,
   className = "",
+  priority = false,
 }: {
   lang: Locale;
   className?: string;
+  priority?: boolean;
 }) {
+  const b = brand(lang);
+  const position = {
+    "--portrait-position": media.portrait?.position ?? "50% 40%",
+    "--portrait-mobile-position": media.portrait?.mobilePosition ?? "50% 30%",
+  } as CSSProperties;
   return (
-    <div className={`portrait ${className}`}>
+    <div className={`portrait ${className}`} style={position}>
       {media.portrait ? (
         <Image
           src={media.portrait.src}
           alt={media.portrait.alt[lang]}
           fill
           sizes="(max-width: 700px) 100vw, 55vw"
-          priority
+          preload={priority}
         />
       ) : (
         <>
-          <AbstractVisual kind="lines" />
-          <span className="portrait-monogram" aria-hidden="true">
-            D<span>S</span>
-          </span>
-          <span className="portrait-caption">{dict(lang).portrait}</span>
+          <div className="portrait-art" aria-hidden="true">
+            <span className="portrait-orbit" />
+            <span className="portrait-rule" />
+            <span className="portrait-letters">
+              DS<span>.</span>
+            </span>
+          </div>
+          <div className="portrait-placeholder-label">
+            <span>{b.portraitNote}</span>
+            <small>{b.approvedPhoto}</small>
+          </div>
         </>
       )}
     </div>
@@ -59,36 +71,44 @@ export function Portrait({
 }
 export function Hero({ lang }: { lang: Locale }) {
   const d = dict(lang);
+  const b = brand(lang);
   return (
-    <section className="hero">
-      <div className="hero-topline">
-        <span>{d.eyebrow}</span>
+    <section className="home-hero">
+      <div className="hero-composition">
+        <div className="hero-copy">
+          <p className="eyebrow hero-eyebrow">
+            <span>SPORT</span>
+            <i>/</i>
+            <span>{lang === "fr" ? "SOCIÉTÉ" : "SOCIETY"}</span>
+            <i>/</i>
+            <span>{lang === "fr" ? "HUMAIN" : "HUMAN"}</span>
+          </p>
+          <h1 className="home-title" aria-label="Dominique Soucy">
+            DOMINIQUE
+            <br />
+            <span>
+              SOUCY<span className="accent">.</span>
+            </span>
+          </h1>
+          <p className="hero-positioning">{d.positioning}</p>
+          <p className="hero-mission">{d.mission}</p>
+          <div className="home-actions">
+            <Link className="button button-cut" href={`/${lang}/reflexions`}>
+              {d.explore}
+            </Link>
+            <Link className="button button-outline" href={`/${lang}/a-propos`}>
+              {d.discover}
+            </Link>
+          </div>
+        </div>
+        <div className="hero-photo-wrap">
+          <Portrait lang={lang} className="hero-portrait" priority />
+          <span className="hero-diagonal" aria-hidden="true" />
+        </div>
+      </div>
+      <div className="hero-colophon">
+        <span>{b.originalPerspective}</span>
         <span>DOMINIQUESOUCY.COM</span>
-      </div>
-      <div className="hero-stage">
-        <Portrait lang={lang} />
-        <h1 className="hero-title" aria-label="Dominique Soucy">
-          DOMINIQUE
-          <br />
-          <span>
-            SOUCY<span className="hero-dot">.</span>
-          </span>
-        </h1>
-        <div className="hero-note">
-          <span className="accent">[ DS ]</span>
-          <p>{d.positioning}</p>
-        </div>
-      </div>
-      <div className="hero-bottom">
-        <p>{d.mission}</p>
-        <div className="hero-cta">
-          <Link className="button" href={`/${lang}/reflexions`}>
-            {d.explore}
-          </Link>
-          <Link className="text-link" href={`/${lang}/a-propos`}>
-            {d.discover}
-          </Link>
-        </div>
       </div>
     </section>
   );
@@ -121,9 +141,10 @@ export function AboutPreview({
 export function PurInstinctBridge({ lang }: { lang: Locale }) {
   const d = dict(lang);
   return (
-    <section className="purinstinct">
+    <section className="purinstinct v2-bridge">
       <div>
         <p className="eyebrow">PÜRINSTINCT WORLDWIDE</p>
+        <span className="bridge-art" aria-hidden="true" />
         <h2>{d.bridge}</h2>
       </div>
       <div>

@@ -1,4 +1,4 @@
-# Dominique Soucy — V1
+# Dominique Soucy — V2
 
 **SPORT. SOCIÉTÉ. HUMAIN.** Un média personnel indépendant. « Le sport comme miroir de la société. »
 
@@ -33,17 +33,26 @@ Chaque route existe sous `/fr` et `/en` :
 
 Les alias d’article sous un sujet redirigent vers la route canonique du format. Les slugs inexistants donnent une page 404. Une traduction manquante affiche un message localisé avec le lien original et `noindex`.
 
+## Direction artistique V2
+
+L’accueil, la bibliothèque vidéo, le carnet d’observations et les articles signature possèdent des compositions distinctes. La V2 conserve le système éditorial de la V1; elle n’ajoute aucun contenu fictif. Les références originales sont dans `design/brand-v2/`, hors de `public/`. Voir [la correspondance avec les maquettes](design/brand-v2/IMPLEMENTATION.md).
+
 ## Architecture et fichiers
 
 - `app/layout.tsx` : document HTML et polices locales; langue initiale transmise par le proxy.
 - `app/[lang]/` : layout localisé, accueil, sections, articles, 404, transition de page.
-- `app/globals.css` : tokens, compositions responsive, styles éditoriaux et animations CSS.
+- `app/globals.css` : base V1; `app/brand-v2.css` : tokens et compositions V2 responsive.
 - `app/og/route.tsx` : image Open Graph 1200 × 630 générée localement, FR/EN.
 - `app/sitemap.ts`, `app/robots.ts` : indexation.
 - `proxy.ts` : préfixe français par défaut; actifs et métadonnées exclus.
 - `components/site.tsx` : Header, Hero, AboutPreview, PurInstinctBridge, Footer, portrait configurable.
 - `components/navigation.tsx` : navigation active, MobileNavigation animée, FR/EN.
-- `components/editorial.tsx` : EditorialCard, FeaturedReflection, ObservationGrid, CategoryNavigation, ArticleLayout, SignatureQuote, SocialGraphic.
+- `components/editorial.tsx` : cartes et briques éditoriales communes.
+- `components/home-editorial.tsx` : portes d’entrée et signature de l’accueil.
+- `components/editorial-templates.tsx` : VideoEditorial, FieldNotes, SubjectEditorial et filtres.
+- `components/article-reading.tsx` : lecture classique et gabarit signature, contenus connexes.
+- `components/share-controls.tsx` : partage natif, copie et repli accessible.
+- `lib/brand-copy.ts` : nouveaux libellés V2 FR/EN.
 - `components/video-player.tsx` : lecteur responsive et activation explicite des intégrations.
 - `components/reveal.tsx` : apparitions au défilement via IntersectionObserver, contenu visible sans JS.
 - `lib/content.ts` : schéma, validation, tri, filtres, brouillons, sélection à la une; interface à conserver pour un futur CMS.

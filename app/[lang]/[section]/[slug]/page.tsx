@@ -1,8 +1,14 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { locale, dict, sections, type Section } from "@/lib/i18n";
-import { findEntry, entryPath, entrySection } from "@/lib/content";
-import { ArticleLayout } from "@/components/editorial";
+import {
+  findEntry,
+  entryPath,
+  entrySection,
+  relatedEntries,
+  getEntries,
+} from "@/lib/content";
+import { ArticleLayout } from "@/components/article-reading";
 import { site } from "@/lib/config";
 import { pageMetadata, jsonLd } from "@/lib/metadata";
 type Props = {
@@ -103,7 +109,11 @@ export default async function Article({ params }: Props) {
           }),
         }}
       />
-      <ArticleLayout entry={entry} lang={lang} />
+      <ArticleLayout
+        entry={entry}
+        lang={lang}
+        related={relatedEntries(entry, getEntries(lang))}
+      />
     </div>
   );
 }

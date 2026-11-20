@@ -1,10 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import ReactMarkdown from "react-markdown";
 import { dict, type Locale, type Section } from "@/lib/i18n";
 import { entryPath, type Entry } from "@/lib/content";
 import { signature } from "@/lib/config";
-import { VideoPlayer } from "./video-player";
 import { Reveal } from "./reveal";
 export function AbstractVisual({
   kind = "court",
@@ -181,84 +179,6 @@ export function SignatureQuote({
       {lang === "en" && <p className="small muted">{d.signatureUnavailable}</p>}
       <div className="signature-credit">DOMINIQUE SOUCY</div>
     </aside>
-  );
-}
-export function ArticleLayout({ entry, lang }: { entry: Entry; lang: Locale }) {
-  const d = dict(lang);
-  return (
-    <article className="article-layout">
-      <Link
-        className="text-link"
-        href={`/${lang}/${entry.contentType === "reflection" ? "reflexions" : "observations"}`}
-      >
-        {d.back}
-      </Link>
-      <header>
-        <p className="eyebrow accent">
-          {d.categories[entry.category]} / {entry.videoUrl ? d.video : d.text}
-        </p>
-        <h1>{entry.title}</h1>
-        <p className="article-deck">{entry.description}</p>
-        <div className="card-meta">
-          <span>Dominique Soucy</span>
-          <time dateTime={entry.publicationDate}>
-            {new Intl.DateTimeFormat(lang === "fr" ? "fr-CA" : "en-CA", {
-              dateStyle: "long",
-              timeZone: "UTC",
-            }).format(new Date(entry.publicationDate))}
-          </time>
-          {entry.duration && <span>{entry.duration}</span>}
-        </div>
-      </header>
-      {entry.videoUrl ? (
-        <VideoPlayer
-          url={entry.videoUrl}
-          title={entry.title}
-          lang={lang}
-          captions={entry.captions}
-        />
-      ) : entry.coverImage ? (
-        <div className="article-cover">
-          <Image
-            src={entry.coverImage}
-            alt={entry.coverAlt!}
-            fill
-            sizes="(max-width: 1000px) 100vw, 1000px"
-            priority
-          />
-        </div>
-      ) : null}
-      <div className="prose">
-        <ReactMarkdown
-          components={{
-            img: ({ src, alt }) =>
-              typeof src === "string" &&
-              src.startsWith("/assets/") &&
-              !src.includes("..") ? (
-                <Image src={src} alt={alt ?? ""} width={1000} height={667} />
-              ) : null,
-            a: ({ href, children }) => (
-              <a
-                href={href}
-                rel={
-                  href?.startsWith("https:") ? "noopener noreferrer" : undefined
-                }
-              >
-                {children}
-              </a>
-            ),
-          }}
-        >
-          {entry.body}
-        </ReactMarkdown>
-      </div>
-      {entry.signature && <SignatureQuote lang={lang} full />}
-      <ul className="tags" aria-label="Tags">
-        {entry.tags.map((t) => (
-          <li key={t}>{t}</li>
-        ))}
-      </ul>
-    </article>
   );
 }
 export function SocialGraphic({

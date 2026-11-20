@@ -33,6 +33,12 @@ export const contentSchema = z
     captions: asset.optional(),
     duration: z.string().optional(),
     tags: z.array(z.string()),
+    topics: z
+      .array(z.enum(["sport", "societe", "culture", "education", "communaute"]))
+      .default([]),
+    mediaAspect: z
+      .enum(["landscape", "portrait", "square"])
+      .default("landscape"),
     status: z.enum(["published", "draft"]),
     featured: z.boolean(),
     signature: z.boolean().default(false),
@@ -111,4 +117,41 @@ export function findEntry(lang: Locale, section: Section, slug: string) {
   return published(loadContent()).find(
     (e) => e.language === lang && e.slug === slug && matchesSection(e, section),
   );
+}
+
+export const observationTopics = [
+  "sport",
+  "societe",
+  "culture",
+  "education",
+  "communaute",
+  "humain",
+] as const;
+export type ObservationTopic = (typeof observationTopics)[number];
+export function matchesTopic(entry: Entry, topic: string) {
+  return (
+    entry.category === topic || entry.topics.some((value) => value === topic)
+  );
+}
+export function availableTopics(entries: Entry[]): ObservationTopic[] {
+  return observationTopics.filter((topic) =>
+    published(entries).some((entry) => matchesTopic(entry, topic)),
+  );
+}
+export function relatedEntries(
+  entry: Entry,
+  entries: Entry[],
+  limit = 3,
+): Entry[] {
+  const candidates = published(entries).filter(
+    (other) => other.language === entry.language && other.slug !== entry.slug,
+  );
+  const scoped = entry.signature
+    ? candidates.filter((other) => other.signature)
+    : candidates.filter(
+        (other) =>
+          other.category === entry.category ||
+          other.contentType === entry.contentType,
+      );
+  return scoped.slice(0, limit);
 }

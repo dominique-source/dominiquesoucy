@@ -19,7 +19,12 @@ export const site = {
 };
 // Only approved photography belongs here. Paths are relative to public/.
 export const media: {
-  portrait: { src: string; alt: Record<"fr" | "en", string> } | null;
+  portrait: {
+    src: string;
+    alt: Record<"fr" | "en", string>;
+    position?: string;
+    mobilePosition?: string;
+  } | null;
 } = { portrait: null };
 export const signature =
   "Imagine vouloir tenter de prendre au sérieux la société dans laquelle tu vis, voter, et ensuite voir ça…";
