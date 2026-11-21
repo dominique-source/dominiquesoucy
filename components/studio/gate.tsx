@@ -47,7 +47,9 @@ export function StudioGate({ lang }: { lang: "fr" | "en" }) {
   return (
     <section className="studio-gate">
       <div className="studio-access">
-        <p className="studio-kicker">DOMINIQUE SOUCY / STUDIO PRIVÉ</p>
+        <p className="studio-kicker">
+          DOMINIQUE SOUCY / {fr ? "STUDIO PRIVÉ" : "PRIVATE STUDIO"}
+        </p>
         <span className="studio-mic" aria-hidden="true">
           ◉
         </span>
