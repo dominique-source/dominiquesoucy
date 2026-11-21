@@ -1,8 +1,10 @@
-import { Hero, PurInstinctBridge } from "@/components/site";
+import { PurInstinctBridge } from "@/components/site";
+import { HomeSignature } from "@/components/home-editorial";
 import {
-  EditorialEntryPoints,
-  HomeSignature,
-} from "@/components/home-editorial";
+  PremiumHero,
+  PilotFeature,
+  PremiumHomeEditorial,
+} from "@/components/premium-editorial";
 import { Reveal } from "@/components/reveal";
 import { locale, dict } from "@/lib/i18n";
 import { getEntries } from "@/lib/content";
@@ -42,9 +44,10 @@ export default async function Home({
           }),
         }}
       />
-      <Hero lang={lang} />
+      <PremiumHero lang={lang} />
+      <PilotFeature lang={lang} />
+      <PremiumHomeEditorial lang={lang} entries={getEntries(lang)} />
       <div className="content-shell">
-        <EditorialEntryPoints lang={lang} entries={getEntries(lang)} />
         <Reveal>
           <HomeSignature lang={lang} />
         </Reveal>
