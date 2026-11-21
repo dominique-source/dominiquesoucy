@@ -74,24 +74,43 @@
   object-position: center 20%;
 }
 .cinematic-portrait {
+  --portrait-position: var(--portrait-desktop-position);
+  --portrait-scale: var(--portrait-desktop-scale);
+  --portrait-clip: var(--portrait-desktop-clip);
+  --portrait-offset: var(--portrait-desktop-offset);
   position: absolute;
   z-index: 1;
-  width: min(82%, 440px);
-  aspect-ratio: 1;
+  width: min(82%, var(--portrait-max-width));
+  height: 100%;
   right: 13%;
-  bottom: 4%;
+  bottom: 0;
   transform: translate(var(--collage-x, 0px), var(--collage-y, 0px));
   mask-image:
-    linear-gradient(0deg, transparent, #000 18%, #000 88%, transparent),
-    linear-gradient(90deg, transparent, #000 15%, #000 80%, transparent);
+    linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent),
+    linear-gradient(#000 85%, transparent);
   mask-composite: intersect;
 }
 .cinematic-portrait img {
+  position: absolute;
+  top: var(--portrait-offset);
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: grayscale(1) brightness(0.9);
+  height: auto;
+  max-width: none;
+  aspect-ratio: var(--portrait-ratio);
+  object-fit: cover;
+  object-position: var(--portrait-position);
+  transform: scale(var(--portrait-scale));
+  transform-origin: var(--portrait-position);
+  clip-path: inset(0 0 var(--portrait-clip) 0);
+  mask-image: linear-gradient(
+    transparent 0%,
+    #000 6%,
+    #000 48%,
+    transparent calc(100% - var(--portrait-clip)),
+    transparent
+  );
+  filter: grayscale(var(--portrait-monochrome)) contrast(1.06) brightness(0.92);
 }
 .cinematic-moment {
   position: absolute;
@@ -107,6 +126,7 @@
   text-align: left;
   isolation: isolate;
   box-shadow: 0 8px 24px #0008;
+  --moment-depth: -0.8;
 }
 .cinematic-moment::after {
   content: "";
@@ -144,6 +164,7 @@
   width: 120px;
   height: 174px;
   rotate: 5deg;
+  --moment-depth: -0.5;
 }
 .cinematic-moment--sport img {
   object-fit: contain;
@@ -152,6 +173,7 @@
   top: 8%;
   right: 4%;
   rotate: 5deg;
+  --moment-depth: -0.8;
 }
 .cinematic-moment--human {
   top: 5%;
@@ -159,6 +181,7 @@
   width: 145px;
   height: 95px;
   rotate: -6deg;
+  --moment-depth: 0.35;
 }
 .cinematic-moment:is(:hover, :focus-visible, [aria-pressed="true"]) {
   z-index: 7;
@@ -199,7 +222,7 @@
     left: 40%;
   }
   .cinematic-portrait {
-    bottom: 6%;
+    bottom: 0;
     right: 3%;
   }
   .cinematic-moment--sport {
@@ -233,14 +256,19 @@
     inset: auto;
     width: calc(100% + 2 * var(--gutter));
     margin: 20px calc(-1 * var(--gutter)) 0;
-    height: 390px;
+    height: 530px;
     order: 1;
   }
   .cinematic-portrait {
-    width: 360px;
-    max-width: 75%;
-    right: 24%;
-    bottom: 2%;
+    --portrait-position: var(--portrait-mobile-position);
+    --portrait-scale: var(--portrait-mobile-scale);
+    --portrait-clip: var(--portrait-mobile-clip);
+    --portrait-offset: var(--portrait-mobile-offset);
+    width: min(78%, var(--portrait-mobile-max-width));
+    height: calc(100% - 150px);
+    right: 11%;
+    top: 0;
+    bottom: auto;
   }
   .cinematic-moment--human {
     left: 6%;
@@ -263,13 +291,11 @@
     padding-top: 35px;
   }
   .cinematic-collage {
-    height: 320px;
+    height: 480px;
   }
   .cinematic-portrait {
-    width: 290px;
-    max-width: 85%;
-    right: 12%;
-    bottom: 3%;
+    width: min(78%, var(--portrait-mobile-max-width));
+    right: 11%;
   }
   .cinematic-moment--human {
     width: 100px;
@@ -298,6 +324,15 @@
   .cinematic-collage {
     animation: collage-arrive 1.2s ease-out both;
   }
+  .cinematic-moment {
+    transform: translate(
+        calc(var(--collage-x, 0px) * var(--moment-depth)),
+        calc(
+          var(--collage-y, 0px) * var(--moment-depth) + var(--moment-lift, 0px)
+        )
+      )
+      scale(var(--moment-scale, 1));
+  }
   .cinematic-moment,
   .cinematic-moment img {
     transition:
@@ -306,7 +341,8 @@
       outline-color 0.35s ease;
   }
   .cinematic-moment:is(:hover, :focus-visible, [aria-pressed="true"]) {
-    transform: translateY(-6px);
+    --moment-scale: 1.035;
+    --moment-lift: -4px;
   }
   @keyframes collage-arrive {
     from {
@@ -320,5 +356,33 @@
 @media (prefers-reduced-motion: reduce) {
   .cinematic-portrait {
     transform: none;
+  }
+}
+
+/* Dedicated mobile/tablet collage: the photographs never cover the face. */
+@media (max-width: 900px) {
+  .cinematic-moments {
+    position: absolute;
+    inset: auto var(--gutter) 38px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 145px));
+    justify-content: center;
+    gap: 12px;
+    z-index: 6;
+  }
+  .cinematic-moments .cinematic-moment {
+    display: block;
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: 94px;
+    rotate: 0deg;
+  }
+  .cinematic-collage figcaption {
+    bottom: 12px;
+    left: var(--gutter);
+    right: var(--gutter);
+    max-width: none;
+    text-align: center;
   }
 }
