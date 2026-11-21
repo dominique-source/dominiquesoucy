@@ -120,7 +120,13 @@ export function PilotFeature({ lang }: { lang: Locale }) {
             {d.explore}
           </Link>
         </div>
-        <div className="pilot-player">
+        <div
+          id="pilote"
+          className="pilot-player"
+          tabIndex={-1}
+          role="group"
+          aria-label={pilotVideo.label}
+        >
           <p className="eyebrow" lang="fr">
             {pilotVideo.label}
           </p>

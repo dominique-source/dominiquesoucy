@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "codex/dominiquesoucy-v4-premium": false
+      "codex/dominiquesoucy-v4-premium": false,
+      "codex/homepage-premium-v5": false
     }
   }
 }
