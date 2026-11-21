@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
 import { archiveLabel, photograph } from "@/lib/photography";
+import { heroPortrait, heroPortraitStyle } from "@/lib/hero-media";
 
 const moments = [
   {
@@ -30,7 +31,7 @@ const moments = [
 export function CinematicCollage({ lang }: { lang: Locale }) {
   const surface = useRef<HTMLElement>(null);
   const [active, setActive] = useState<string | null>(null);
-  const portrait = photograph("05_portrait_ballon", lang);
+  const portrait = heroPortrait;
 
   useEffect(() => {
     const element = surface.current;
@@ -76,6 +77,7 @@ export function CinematicCollage({ lang }: { lang: Locale }) {
     <figure
       ref={surface}
       className="cinematic-collage"
+      style={heroPortraitStyle(portrait)}
       aria-label={
         lang === "fr"
           ? "Regards croisés — archives personnelles"
@@ -96,7 +98,7 @@ export function CinematicCollage({ lang }: { lang: Locale }) {
           src={portrait.src}
           width={portrait.width}
           height={portrait.height}
-          alt={portrait.alt}
+          alt={portrait.alt[lang]}
           unoptimized
           loading="eager"
         />
