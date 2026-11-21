@@ -1,8 +1,7 @@
 import type { Locale } from "./i18n";
 export const brandCopy = {
   fr: {
-    pilotDescription:
-      "Un premier aperçu du format vidéo. Les informations éditoriales seront ajoutées après validation.",
+    pilotDescription: "Le sport comme miroir de la société.",
     fieldNotes: "Carnet de terrain",
     fieldSubtitle: "Regards spontanés sur ce qui nous entoure.",
     fieldStatement: ["Le réel.", "Sans filtre."],
@@ -69,8 +68,7 @@ export const brandCopy = {
     mobileNav: "Navigation éditoriale",
   },
   en: {
-    pilotDescription:
-      "A first look at the video format. Editorial details will be added after approval.",
+    pilotDescription: "Sport as a mirror of society.",
     fieldNotes: "Field notes",
     fieldSubtitle: "Spontaneous perspectives on the world around us.",
     fieldStatement: ["Real life.", "Unfiltered."],

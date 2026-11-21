@@ -34,3 +34,13 @@ export function videoSource(
     ? { kind: "file", src: u.href }
     : null;
 }
+
+/** Called only after explicit activation; legacy embeds remain unchanged. */
+export function activatedEmbedUrl(src: string, autoplay: boolean) {
+  if (!autoplay) return src;
+  const url = new URL(src);
+  url.searchParams.set("autoplay", "1");
+  url.searchParams.set("playsinline", "1");
+  url.searchParams.set("controls", "1");
+  return url.href;
+}
