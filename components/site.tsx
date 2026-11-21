@@ -20,6 +20,23 @@ export function Header({ lang }: { lang: Locale }) {
       </Link>
       <DesktopNavigation lang={lang} />
       <div className="header-actions">
+        <Link className="studio-header-link" href={`/${lang}/studio-live`}>
+          <svg
+            viewBox="0 0 16 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            aria-hidden="true"
+          >
+            <rect x="5" y="1" width="6" height="11" rx="3" />
+            <path d="M2 8v2a6 6 0 0012 0V8M8 16v3M4 19h8" />
+          </svg>
+          <span>
+            {lang === "fr"
+              ? "CONFÉRENCE DE PRESSE LIVE"
+              : "LIVE PRESS CONFERENCE"}
+          </span>
+        </Link>
         <LanguageToggle lang={lang} />
         <MobileNavigation key={lang} lang={lang} />
       </div>
