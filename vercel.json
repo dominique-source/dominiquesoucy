@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "codex/dominiquesoucy-v4-premium": false,
-      "codex/homepage-premium-v5": false
+      "codex/homepage-premium-v5": false,
+      "codex/portrait-integration-fix": false
     }
   }
 }

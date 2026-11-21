@@ -1,36 +1,39 @@
-# V5 — approved homepage reference and review
+# Approved homepage layout — current reference
 
-`approved-reference.png` is the user-supplied composition. It is a visual reference with AI-rendered details, not a photographic asset. It is never served by the homepage and no face is extracted from it.
+`approved-reference.png` is the latest screenshot supplied by the user on November 21, 2026. It supersedes the earlier cinematic concept, retained in `previous-reference.png` only for design history. The user explicitly confirmed that the homepage should include a right-hand portrait column like the supplied reference.
 
-## Implementation
+Both images are design references, never photographic assets for the actual website. None of their AI-rendered people or facial details are extracted, recreated or displayed as website photography. No fictitious team members, names or professional roles from the template are copied.
 
-- `components/cinematic-hero.tsx`: server-rendered hero, semantic headline, real photographs, three localized actions. The primary action targets the actual pilot player and moves keyboard focus there without loading an external iframe.
-- `app/homepage-v5.css`: homepage-only cinematic layers, restrained grain, monumental condensed title, Georgia editorial statement and italic mission, lime play action and fine rules. Navigation refinements are scoped to pages containing the new hero. Other editorial pages retain their V4 design.
-- `components/premium-editorial.tsx`: an addressable, focusable `#pilote` player group. AdaptiveVideo and all source ratios remain unchanged.
-- `app/[lang]/page.tsx`, `app/layout.tsx`: connect the hero and its stylesheet.
-- `vercel.json`: disables automatic Git deployments for `codex/homepage-premium-v5`; this is a review-only branch.
+## Composition
 
-## Authentic source photographs
+The implementation follows the new primary reference: compact dark navigation with lime branding and the existing About link styled as the header action, a large white sans-serif statement in a black introduction panel, restrained body text, a solid lime primary action and an outlined secondary action. A horizontal monochrome sports/community photograph follows, with a large lime diagonal panel at the left and the small cross pattern above it. A dark portrait column at the right uses lime image backgrounds, compact captions and a short chapter heading.
 
-1. `/assets/dominique/originals/02_portrait_chemise_bleue.jpg` — foreground, original 447 × 447 file. Its source pixels, facial features, colour and texture are unchanged. It is the only preloaded hero photograph.
-2. `/assets/dominique/originals/07_archive_rouge_et_or.jpg` — original 1100 × 1536 archive, displayed behind the composition using CSS grayscale, subdued contrast/opacity and edge fades. Its actual autograph and existing marks have not been erased or replaced.
+The original monochrome portrait is displayed close to its useful native resolution, avoiding the earlier 760-pixel enlargement of a 447-pixel source. A personal basketball archive occupies the second sidebar tile instead of inventing a second team member. On mobile, the main panel, photo band and portrait module stack; the two real archive/profile tiles share a responsive grid.
 
-The preliminary transparent PNGs remain rejected because of visible extraction defects. Instead, a new SVG alpha mask removes only the light exterior background when displaying the original portrait. It is not a replacement photograph. A second CSS alpha gradient softens the lower edge; there are no portrait colour filters, sharpening, scaling animations or reconstructed facial details.
+## Components and scope
 
-`trace-mask.py` records how the SVG was produced. It reads the original image, flood-fills connected light neutral exterior pixels, traces the largest outer contour and writes a vector alpha mask. It does not write a raster image. The filled outer contour retains the photographic interior, including facial details and shirt highlights. The bottom boundary is deliberately not seeded, because the shirt extends beyond the source frame. A 0.3-source-pixel edge feather avoids hard raster stair-steps. This optional design-time utility needs Python, Pillow, NumPy and OpenCV; none is a runtime or build dependency. Run it from any directory with `python3 design/homepage-v5/trace-mask.py` if the same approved source needs its mask regenerated.
+- `components/cinematic-hero.tsx` retains its existing export to avoid unrelated routing refactors, but now renders the approved sports editorial composition. Its copy comes from the existing FR/EN dictionary; the three actions lead to the real pilot, localized reflections and localized About page.
+- `app/homepage-v5.css` contains only the new homepage composition, its scoped header refinements and the existing pilot anchor treatment. The previous cinematic hero styles are replaced rather than layered underneath.
+- `components/premium-editorial.tsx` retains the focusable `#pilote` player group. AdaptiveVideo, native aspect ratios, deferred external embeds, captions and content validation remain unchanged.
+- Existing publications, editorial pages, SEO, local fonts and FR/EN routes remain intact.
+- `vercel.json` disables automatic Git deployment of `codex/portrait-integration-fix`. This delivery updates the open PR and does not merge or deploy it.
 
-## Comparison and limits
+## Authentic photographs
 
-The rendered desktop composition is compared directly with the supplied reference: name on the left, faded athlete in the centre, authentic portrait on the right, serif statement below the name, and three actions at the bottom left. Mobile deliberately changes the order to eyebrow, name, portrait, statement, mission and actions. At 768 px, the action row sits below the portrait to keep every label on a dark background.
+1. `02_portrait_chemise_bleue.jpg` — original 447 × 447 portrait, served as the exact JPEG without another compression pass. It appears in the lime-backed profile tile, normally below its native CSS width.
+2. `04_equipe_purathlete.jpg` — original 1620 × 1080 photograph for the wide band. Its landscape framing allows real faces to remain visible without inventing a basketball scene or enlarging the tiny action archive. Its crop and horizontal offset keep the lime panel away from the faces.
+3. `07_archive_rouge_et_or.jpg` — original 1100 × 1536 basketball archive in the sidebar, shown with `contain` so the full postcard, autograph and embedded marks remain visible.
 
-This is not a pixel-perfect recreation of the mockup: the original face, head angle, clothing, archive autograph and original image boundaries are preserved rather than recreating the mockup's AI details. The foreground source is only 447 × 447; the large desktop presentation is visibly softer than the conceptual reference. It has not been sharpened or AI-upscaled. A higher-resolution version of the same original would improve large-screen detail. Minor light edge pixels inherent to the original photograph can remain visible against black. The approved white-shirt pilot poster is still absent, so its existing neutral fallback remains.
+CSS grayscale supplies the monochrome presentation from the reference; the wide band has a restrained brightness adjustment. There is no facial reconstruction, skin smoothing, sharpening, geometric face alteration or change to the source photographs. All supplied originals remain byte-identical to the ZIP. Archival context is labelled explicitly and no dates, photographer credits, identities or partnerships are invented.
 
-## Verification
+The preliminary transparent PNGs remain unused. The blue-shirt portrait uses the existing SVG exterior alpha mask. `trace-mask.py` records its optional design-time generation from connected light neutral background pixels. It writes only an SVG alpha contour, never a raster photograph. A 1.1-source-pixel inset excludes the old bright fringe, with a 0.25-pixel feather. The image's RGB data and interior facial details are retained. Python, Pillow, NumPy and OpenCV are optional design-time tooling, not app or build dependencies.
 
-- Existing 35 tests cover publishing validation, safe video providers, all portrait/landscape/square × featured/article/card variants, legacy defaults and the byte integrity of all seven original photographs.
-- Lint, TypeScript, content validation, production build and formatting checks are run before delivery.
-- Browser comparisons and functional checks cover 375, 430, 768 and 1440 px in FR and EN; desktop/mobile screenshots are delivered with the PR in the chat.
-- The hero CTA scrolls to and focuses `#pilote`; it does not activate YouTube. The player remains 9:16. Secondary actions retain the active locale.
-- CSS motion is opt-in under `prefers-reduced-motion: no-preference`; reduced motion has no hero animation or smooth anchor scrolling. No client animation package or scroll listener was added.
+## Review and limitations
 
-No merge or production deployment is part of this V5 delivery.
+The layout, typography hierarchy, dark/lime palette, diagonal band, portrait column and action treatment are compared against the latest screenshot. The original template's English promotional copy, stock/generated athlete, fictitious coaches and Framer/bookmark/download interface are not part of the personal website. The composition is implemented as real React/CSS, not by displaying the mockup.
+
+The authentic photographs intentionally differ from the reference's AI-rendered scenes and faces. The portrait source remains 447 × 447; it is kept small enough for a clean presentation instead of manufacturing more detail. The existing neutral pilot poster remains until the approved white-shirt asset is supplied. No invented video metadata is added.
+
+## Validation
+
+All 35 existing tests pass, along with lint, typecheck, content validation, production build and formatting checks. Existing tests cover all video orientations and variants, safe content loading and SHA-256 identity of all seven original photographs. Browser review covers 375, 430, 768 and 1440 px in FR/EN: eight combinations without document or headline overflow. The mobile menu target is 44 × 44 px; the homepage actions are at least 44 px high. The pilot link focuses the real player, retains the 9:16 frame and does not load an iframe before explicit activation. The pilot section immediately follows the new homepage composition. Screenshots are delivered in the chat for direct comparison with the current approved reference.

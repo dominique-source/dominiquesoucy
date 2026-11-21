@@ -45,7 +45,7 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="447" height="447" viewB
 <title>Exterior background mask for the original blue-shirt photograph</title>
 <!-- Traced from connected light neutral background pixels in the original.
      Interior photographic pixels are retained. No facial generation or retouching. -->
-<defs><filter id="edge" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="0.3"/></filter></defs>
+<defs><filter id="edge" x="-5%" y="-5%" width="110%" height="110%"><feMorphology in="SourceAlpha" operator="erode" radius="1.1" result="clean-edge"/><feGaussianBlur in="clean-edge" stdDeviation="0.25"/></filter></defs>
 <path fill="white" filter="url(#edge)" d="{path}"/>
 </svg>'''
 source.parent.parent.joinpath("masks/02-portrait-silhouette.svg").write_text(svg)

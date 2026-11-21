@@ -1,211 +1,213 @@
-/* Approved V5: all photo layers use untouched repository originals. */
-body:has(.cinematic-hero) .site-header {
-  border-bottom: 1px solid #55554c;
+/* Primary reference: the supplied sports editorial layout, with authentic assets. */
+body:has(.reference-home) .site-header {
+  height: 64px;
+  border-bottom: 1px solid #343730;
+  background: #0a0a0a;
 }
-body:has(.cinematic-hero) .desktop-nav a {
-  font-family: var(--font-sans), Arial, sans-serif;
-  font-size: clamp(12px, 1.05vw, 16px);
-  font-weight: 400;
-  font-style: normal;
-  letter-spacing: 0.065em;
+body:has(.reference-home) .wordmark {
+  font-size: 21px;
+  color: #ccff00;
 }
-body:has(.cinematic-hero) .desktop-nav a::after {
+body:has(.reference-home) .desktop-nav a {
+  font:
+    400 12px/1.4 var(--font-sans),
+    Arial,
+    sans-serif;
+  letter-spacing: 0.035em;
+}
+body:has(.reference-home) .desktop-nav {
+  gap: clamp(18px, 2vw, 32px);
+}
+body:has(.reference-home) .desktop-nav a:last-child {
+  min-height: 44px;
+  padding-inline: 18px;
+  background: #ccff00;
+  color: #0a0a0a;
+}
+body:has(.reference-home) .desktop-nav a:last-child::after {
+  display: none;
+}
+body:has(.reference-home) .desktop-nav a::after {
   height: 1px;
 }
-.cinematic-hero {
-  --hero-height: clamp(700px, calc(100svh - 78px), 900px);
-  position: relative;
-  isolation: isolate;
-  background: #0a0a0a;
-  overflow: clip;
+body:has(.reference-home) .menu-toggle {
+  min-width: 44px;
+  min-height: 44px;
 }
-.cinematic-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  background:
-    linear-gradient(
-      90deg,
-      #0a0a0a 2%,
-      rgb(10 10 10 / 0.85) 23%,
-      transparent 55%
-    ),
-    linear-gradient(
-      0deg,
-      #0a0a0a 0%,
-      transparent 22%,
-      transparent 82%,
-      rgb(10 10 10 / 0.22)
-    );
+body:has(.reference-home) .mobile-menu {
+  top: 63px;
 }
-.cinematic-hero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.055;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23g)' d='M0 0h180v180H0z'/%3E%3C/svg%3E");
-}
-.cinematic-stage {
-  position: relative;
+.reference-home {
+  --reference-rail: 250px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--reference-rail);
   max-width: 1680px;
-  min-height: var(--hero-height);
-  margin-inline: auto;
-  padding: clamp(60px, 7.8svh, 80px) var(--gutter) 56px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
+  margin: auto;
+  background: #0a0a0a;
 }
-.cinematic-eyebrow,
-.cinematic-title,
-.cinematic-statement,
-.cinematic-mission,
-.cinematic-actions {
+.reference-main {
+  min-width: 0;
+}
+.reference-intro {
   position: relative;
-  z-index: 3;
+  min-height: 410px;
+  padding: 64px clamp(35px, 8.8vw, 140px) 58px;
+  isolation: isolate;
 }
-.cinematic-eyebrow {
-  margin: 0 0 28px;
-  color: #ccff00;
-  font-size: 14px;
-  letter-spacing: 0.28em;
+.reference-eyebrow {
+  font-size: 11px;
   text-transform: uppercase;
+  letter-spacing: 0.13em;
   line-height: 1.6;
-  font-style: italic;
-}
-.cinematic-title {
-  margin: 0 0 32px;
-  font-size: clamp(100px, 11.5vw, 185px);
-  letter-spacing: -0.035em;
-  line-height: 0.8;
-  text-wrap: nowrap;
-}
-.cinematic-title > span {
-  display: block;
-}
-.cinematic-stop {
   color: #ccff00;
+  margin: 0 0 19px;
 }
-.cinematic-statement {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(32px, 3.3vw, 53px);
-  line-height: 1.08;
-  letter-spacing: -0.025em;
+.reference-intro h1 {
+  max-width: 760px;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: clamp(40px, 4.1vw, 64px);
+  line-height: 1.06;
+  letter-spacing: -0.048em;
+  text-transform: none;
+  text-wrap: balance;
+  margin: 0 0 20px;
+}
+.reference-mission {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.6;
+  margin: 0 0 8px;
+}
+.reference-description {
   max-width: 650px;
+  font-size: 14px;
+  color: #b6b9b2;
+  line-height: 1.65;
   margin: 0;
-  padding-top: 23px;
 }
-.cinematic-statement::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 58px;
-  height: 3px;
-  background: #ccff00;
-  transform-origin: left;
-}
-.cinematic-mission {
-  font:
-    italic clamp(19px, 1.85vw, 30px)/1.35 Georgia,
-    "Times New Roman",
-    serif;
-  max-width: 650px;
-  margin: 14px 0 0;
-}
-.cinematic-actions {
-  margin-top: 38px;
+.reference-actions {
   display: flex;
+  gap: 12px;
   align-items: center;
-  gap: clamp(22px, 2.5vw, 42px);
   flex-wrap: wrap;
-  max-width: 850px;
+  margin-top: 25px;
+  position: relative;
+  z-index: 1;
 }
-.cinematic-actions > a {
+.reference-actions a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(14px, 1.3vw, 20px);
-  line-height: 1.3;
-  border-bottom: 1px solid #ccff00;
-  white-space: nowrap;
+  gap: 10px;
+  min-height: 46px;
+  padding: 12px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  border: 1px solid #565d3b;
   transition:
     color 0.2s,
+    background 0.2s,
     border-color 0.2s;
 }
-.cinematic-actions > a:hover {
-  color: #ccff00;
-}
-.cinematic-actions .cinematic-play {
+.reference-actions .reference-primary {
+  color: #0a0a0a;
   background: #ccff00;
-  color: #0a0a0a;
-  min-height: 56px;
-  gap: 14px;
-  padding: 14px 22px;
-  border: 1px solid #ccff00;
-  font:
-    600 clamp(14px, 1.2vw, 18px)/1.4 var(--font-sans),
-    Arial,
-    sans-serif;
-  transition:
-    background 0.2s,
-    color 0.2s;
+  border-color: #ccff00;
 }
-.cinematic-actions .cinematic-play:hover {
+.reference-actions .reference-primary:hover {
   background: #f4f4ef;
-  color: #0a0a0a;
   border-color: #f4f4ef;
 }
-.cinematic-actions a:focus-visible {
-  outline: 2px solid #f4f4ef;
-  outline-offset: 6px;
+.reference-actions .reference-secondary:hover {
+  color: #ccff00;
+  border-color: #ccff00;
 }
-.cinematic-archive {
-  position: absolute;
-  z-index: 0;
-  top: -2%;
-  bottom: 0;
-  left: 30%;
-  width: 45%;
-  pointer-events: none;
-  opacity: 0.34;
-  mask-image:
-    linear-gradient(90deg, transparent, #000 28%, #000 70%, transparent),
-    linear-gradient(transparent 0%, #000 13%, #000 48%, transparent 92%);
-  mask-composite: intersect;
-}
-.cinematic-archive img {
+.reference-stitches {
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: 50% 20%;
-  filter: grayscale(1) contrast(0.95) brightness(0.8);
+  position: absolute;
+  right: 6%;
+  bottom: 0;
+  width: 150px;
+  height: 66px;
+  opacity: 0.68;
+  z-index: -1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='m4 4 10 10m0-10L4 14' fill='none' stroke='%23CCFF00' stroke-width='1'/%3E%3C/svg%3E");
+  background-size: 18px 18px;
 }
-.cinematic-portrait {
+.reference-sport-band {
+  height: 360px;
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  background: #181a18;
+  isolation: isolate;
+}
+.reference-sport-band > img {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 22%;
+  width: 78%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 22%;
+  filter: grayscale(1) brightness(0.76);
+}
+.reference-lime-plane {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #ccff00;
+  clip-path: polygon(0 0, 35% 0, 24% 100%, 0 100%);
+}
+.reference-sport-band figcaption {
   position: absolute;
   z-index: 2;
-  right: calc(var(--gutter) * -0.9);
-  bottom: 0;
-  width: min(54vw, 760px);
-  aspect-ratio: 1;
-  pointer-events: none;
-  mask-image: linear-gradient(
-    #000 0%,
-    #000 77%,
-    rgb(0 0 0 / 0.98) 83%,
-    rgb(0 0 0 / 0.8) 90%,
-    rgb(0 0 0 / 0.3) 97%,
-    transparent 100%
-  );
+  bottom: 15px;
+  right: 20px;
+  background: rgb(10 10 10 / 0.8);
+  padding: 5px 9px;
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
-.cinematic-portrait img {
+.reference-profile {
+  min-width: 0;
+  background: #181b18;
+  padding: 27px 24px 24px;
+  border-left: 1px solid #30352c;
+}
+.reference-profile header {
+  margin-bottom: 27px;
+}
+.reference-profile header .reference-eyebrow {
+  font-size: 10px;
+  margin-bottom: 9px;
+  color: #a4aa9f;
+}
+.reference-profile h2 {
+  font:
+    600 25px/1.1 var(--font-sans),
+    Arial,
+    sans-serif;
+  letter-spacing: -0.04em;
+  text-transform: none;
+}
+.reference-person,
+.reference-archive-card {
+  margin: 0 0 25px;
+}
+.reference-person-frame {
+  position: relative;
+  aspect-ratio: 1;
+  background: #ccff00;
+  overflow: hidden;
+}
+.reference-person-frame img {
   display: block;
   width: 100%;
   height: 100%;
@@ -213,6 +215,49 @@ body:has(.cinematic-hero) .desktop-nav a::after {
   mask-image: url("/assets/dominique/masks/02-portrait-silhouette.svg");
   mask-size: 100% 100%;
   mask-repeat: no-repeat;
+  filter: grayscale(1);
+}
+.reference-profile figcaption {
+  margin-top: 10px;
+  display: grid;
+  gap: 4px;
+}
+.reference-profile figcaption strong {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+.reference-profile figcaption span {
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: 0.025em;
+  color: #999f93;
+}
+.reference-archive-frame {
+  position: relative;
+  aspect-ratio: 1/1.16;
+  background: #ccff00;
+}
+.reference-archive-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1);
+}
+.reference-about-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 12px;
+  border-bottom: 1px solid #ccff00;
+}
+.reference-actions a:focus-visible,
+.reference-about-link:focus-visible {
+  outline: 2px solid #f4f4ef;
+  outline-offset: 5px;
 }
 #pilote {
   scroll-margin-top: 0;
@@ -221,192 +266,206 @@ body:has(.cinematic-hero) .desktop-nav a::after {
   outline: 2px solid #ccff00;
   outline-offset: -4px;
 }
-@media (min-width: 1700px) {
-  .cinematic-title {
-    font-size: 185px;
+@media (min-width: 1440px) {
+  .reference-home {
+    --reference-rail: 280px;
   }
-  .cinematic-archive {
-    left: 32%;
-    width: 42%;
+  .reference-profile {
+    padding-inline: 26px;
   }
-  .cinematic-stage {
-    padding-top: 70px;
-    padding-bottom: 65px;
+  .reference-intro {
+    min-height: 430px;
+  }
+  .reference-sport-band {
+    height: 370px;
   }
 }
-@media (min-width: 768px) and (max-width: 1100px) {
-  .cinematic-hero {
-    --hero-height: clamp(650px, calc(100svh - 76px), 800px);
+@media (min-width: 1800px) {
+  .reference-home {
+    --reference-rail: 300px;
   }
-  .cinematic-stage {
-    padding-top: 60px;
-    padding-bottom: 45px;
-    justify-content: flex-start;
+  .reference-intro {
+    min-height: 460px;
   }
-  .cinematic-eyebrow {
-    font-size: 12px;
-    letter-spacing: 0.2em;
+  .reference-sport-band {
+    height: 410px;
   }
-  .cinematic-title {
-    font-size: clamp(95px, 12vw, 135px);
+}
+@media (min-width: 901px) and (max-width: 1100px) {
+  .reference-home {
+    --reference-rail: 220px;
   }
-  .cinematic-statement {
-    font-size: clamp(31px, 3.7vw, 41px);
-    max-width: 58%;
-  }
-  .cinematic-mission {
-    font-size: 21px;
-    max-width: 62%;
-  }
-  .cinematic-portrait {
-    width: 58vw;
-    right: -5vw;
-    bottom: 145px;
-  }
-  .cinematic-archive {
-    width: 58%;
-    left: 25%;
-    top: 5%;
-  }
-  .cinematic-actions {
-    gap: 22px;
-    max-width: 100%;
-    margin-top: auto;
-  }
-  .cinematic-actions > a {
-    font-size: 14px;
-  }
-  .cinematic-actions .cinematic-play {
+  .reference-profile {
     padding-inline: 18px;
+  }
+  .reference-intro {
+    padding-inline: 55px;
+  }
+  .reference-intro h1 {
+    font-size: 45px;
+  }
+  .reference-stitches {
+    width: 100px;
+    height: 48px;
+    right: 5%;
+  }
+  .reference-description {
     font-size: 14px;
   }
 }
-@media (max-width: 767px) {
-  .cinematic-hero {
-    --hero-height: auto;
-  }
-  .cinematic-stage {
-    min-height: 0;
-    padding: 35px var(--gutter) 45px;
-    display: grid;
+@media (max-width: 900px) {
+  .reference-home {
     grid-template-columns: minmax(0, 1fr);
-    justify-items: start;
   }
-  .cinematic-eyebrow {
-    margin-bottom: 22px;
-    font-size: 12px;
-    letter-spacing: 0.17em;
+  .reference-intro {
+    min-height: 0;
+    padding: 46px var(--gutter) 55px;
   }
-  .cinematic-title {
-    font-size: clamp(80px, 18.5vw, 138px);
-    line-height: 0.8;
-    margin-bottom: 0;
+  .reference-intro h1 {
+    max-width: 650px;
+    font-size: clamp(38px, 6.5vw, 57px);
   }
-  .cinematic-portrait {
-    position: relative;
-    right: auto;
-    bottom: auto;
-    justify-self: end;
-    width: min(100%, 447px);
-    margin-top: 16px;
-    margin-right: calc(var(--gutter) * -0.5);
-    z-index: 2;
+  .reference-description {
+    font-size: 16px;
+    max-width: 650px;
   }
-  .cinematic-archive {
-    top: 170px;
-    left: 3%;
-    width: 91%;
-    height: min(105vw, 540px);
-    opacity: 0.35;
+  .reference-sport-band {
+    height: 330px;
   }
-  .cinematic-archive img {
-    object-position: 50% 0%;
-  }
-  .cinematic-hero::before {
-    background:
-      linear-gradient(90deg, rgb(10 10 10 / 0.65), transparent 75%),
-      linear-gradient(0deg, #0a0a0a 0%, transparent 55%);
-  }
-  .cinematic-statement {
-    font-size: clamp(32px, 7.3vw, 44px);
-    line-height: 1.14;
-    margin-top: 7px;
-    padding-top: 22px;
-    max-width: 100%;
-  }
-  .cinematic-mission {
-    font-size: 20px;
-    max-width: 100%;
-    margin-top: 14px;
-  }
-  .cinematic-actions {
-    width: 100%;
+  .reference-profile {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 22px 20px;
-    margin-top: 28px;
+    gap: 22px 30px;
+    padding: 30px var(--gutter);
+    border-left: 0;
+    border-top: 1px solid #30352c;
   }
-  .cinematic-actions > a {
-    font-size: 16px;
-    line-height: 1.45;
-    white-space: normal;
-    justify-content: flex-start;
-    min-height: 48px;
-    align-self: stretch;
-  }
-  .cinematic-actions .cinematic-play {
+  .reference-profile header {
     grid-column: 1/-1;
-    width: 100%;
-    min-height: 56px;
-    justify-content: center;
-    font-size: 16px;
+    margin: 0;
   }
-  .statement-break {
-    display: none;
+  .reference-person,
+  .reference-archive-card {
+    margin: 0;
   }
-  #pilote {
-    scroll-margin-top: 0;
+  .reference-about-link {
+    grid-column: 1/-1;
+    justify-self: start;
+  }
+  .reference-profile figcaption strong {
+    font-size: 12px;
+  }
+  .reference-profile figcaption span {
+    font-size: 12px;
+  }
+  .reference-person-frame,
+  .reference-archive-frame {
+    max-width: 320px;
+  }
+  .reference-stitches {
+    right: var(--gutter);
+    width: 110px;
+    height: 40px;
+  }
+  .reference-lime-plane {
+    clip-path: polygon(0 0, 30% 0, 17% 100%, 0 100%);
   }
 }
-@media (max-width: 390px) {
-  .cinematic-title {
-    font-size: 80px;
+@media (max-width: 500px) {
+  .reference-intro {
+    padding-top: 35px;
+    padding-bottom: 54px;
   }
-  .cinematic-eyebrow {
-    font-size: 12px;
-    letter-spacing: 0.14em;
+  .reference-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.1em;
   }
-  .cinematic-portrait {
-    margin-top: 20px;
+  .reference-intro h1 {
+    font-size: 40px;
+    line-height: 1.06;
+    margin-bottom: 20px;
   }
-  .cinematic-actions > a {
-    font-size: 15px;
+  .reference-mission {
+    font-size: 16px;
+  }
+  .reference-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    margin-top: 24px;
+    gap: 12px;
+  }
+  .reference-actions a {
+    min-height: 48px;
+    font-size: 14px;
+  }
+  .reference-stitches {
+    width: 90px;
+    height: 30px;
+  }
+  .reference-sport-band {
+    height: 240px;
+  }
+  .reference-sport-band > img {
+    left: 10%;
+    width: 90%;
+    object-position: 50% 12%;
+  }
+  .reference-lime-plane {
+    clip-path: polygon(0 0, 23% 0, 10% 100%, 0 100%);
+  }
+  .reference-sport-band figcaption {
+    font-size: 9px;
+    right: 10px;
+    bottom: 10px;
+    max-width: 75%;
+  }
+  .reference-profile {
+    gap: 22px;
+    padding-block: 28px;
+  }
+  .reference-person-frame {
+    aspect-ratio: 1;
+  }
+  .reference-archive-frame {
+    aspect-ratio: 1/1.16;
+  }
+  .reference-profile h2 {
+    font-size: 27px;
+  }
+  .reference-profile figcaption strong {
+    font-size: 10px;
+    letter-spacing: 0.07em;
+  }
+  .reference-profile figcaption span {
+    font-size: 11px;
+  }
+  .reference-about-link {
+    font-size: 14px;
   }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .cinematic-eyebrow {
-    animation: cinematic-rise 0.6s 0.2s both;
+  .reference-intro h1,
+  .reference-intro > .reference-eyebrow,
+  .reference-mission,
+  .reference-description,
+  .reference-actions {
+    animation: reference-enter 0.55s both;
   }
-  .cinematic-title {
-    animation: cinematic-title 0.8s 0.35s both;
+  .reference-intro h1 {
+    animation-delay: 0.08s;
   }
-  .cinematic-archive {
-    animation: cinematic-archive 1s 0.55s both;
+  .reference-mission,
+  .reference-description {
+    animation-delay: 0.16s;
   }
-  .cinematic-portrait {
-    animation: cinematic-portrait 0.8s 0.75s both;
+  .reference-actions {
+    animation-delay: 0.24s;
   }
-  .cinematic-statement,
-  .cinematic-mission {
-    animation: cinematic-rise 0.7s 0.95s both;
+  .reference-profile {
+    animation: reference-enter 0.65s 0.16s both;
   }
-  .cinematic-statement::before {
-    animation: cinematic-rule 0.7s 1.05s both;
-  }
-  .cinematic-actions {
-    animation: cinematic-rise 0.6s 1.15s both;
-  }
-  @keyframes cinematic-rise {
+  @keyframes reference-enter {
     from {
       opacity: 0;
       transform: translateY(10px);
@@ -416,61 +475,9 @@ body:has(.cinematic-hero) .desktop-nav a::after {
       transform: translateY(0);
     }
   }
-  @keyframes cinematic-title {
-    from {
-      opacity: 0;
-      clip-path: inset(0 0 100% 0);
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      clip-path: inset(0);
-      transform: translateY(0);
-    }
-  }
-  @keyframes cinematic-archive {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 0.34;
-    }
-  }
-  @keyframes cinematic-portrait {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  @keyframes cinematic-rule {
-    from {
-      transform: scaleX(0);
-    }
-    to {
-      transform: scaleX(1);
-    }
-  }
-}
-@media (prefers-reduced-motion: no-preference) and (max-width: 767px) {
-  .cinematic-archive {
-    animation-name: cinematic-archive-mobile;
-  }
-  @keyframes cinematic-archive-mobile {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 0.35;
-    }
-  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cinematic-hero *,
-  .cinematic-hero *::before {
+  .reference-home * {
     animation: none !important;
     transition: none !important;
   }
