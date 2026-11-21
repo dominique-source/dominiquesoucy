@@ -1,70 +1,101 @@
 import Image from "next/image";
 import Link from "next/link";
 import { dict, type Locale } from "@/lib/i18n";
-import { photograph } from "@/lib/photography";
+import { photograph, archiveLabel } from "@/lib/photography";
 
-/** V5 composition: original photographs, with a background-only CSS silhouette mask. */
+/** The approved reference is composition only. All website photographs are originals. */
 export function CinematicHero({ lang }: { lang: Locale }) {
   const d = dict(lang);
   const portrait = photograph("02_portrait_chemise_bleue", lang);
+  const community = photograph("04_equipe_purathlete", lang);
   const archive = photograph("07_archive_rouge_et_or", lang);
   return (
-    <section className="cinematic-hero" aria-labelledby="cinematic-title">
-      <div className="cinematic-archive" aria-hidden="true">
-        <Image
-          src={archive.src}
-          width={archive.width}
-          height={archive.height}
-          alt=""
-          loading="eager"
-          fetchPriority="low"
-          sizes="(max-width: 767px) 100vw, 42vw"
-        />
-      </div>
-      <div className="cinematic-stage">
-        <p className="cinematic-eyebrow">{d.eyebrow}</p>
-        <h1 id="cinematic-title" className="cinematic-title">
-          <span>DOMINIQUE</span>
-          <span>
-            SOUCY<span className="cinematic-stop">.</span>
-          </span>
-        </h1>
-        <div className="cinematic-portrait">
+    <section className="reference-home" aria-labelledby="reference-title">
+      <div className="reference-main">
+        <div className="reference-intro">
+          <p className="reference-eyebrow">{d.eyebrow}</p>
+          <h1 id="reference-title">{d.positioning}</h1>
+          <p className="reference-mission">{d.mission}</p>
+          <p className="reference-description">{d.bio2}</p>
+          <div className="reference-actions">
+            <a className="reference-primary" href="#pilote">
+              <svg
+                viewBox="0 0 20 20"
+                width="14"
+                height="14"
+                aria-hidden="true"
+              >
+                <path d="M4 2 18 10 4 18Z" fill="currentColor" />
+              </svg>
+              {lang === "fr" ? "Regarder le pilote" : "Watch the pilot"}
+            </a>
+            <Link className="reference-secondary" href={`/${lang}/reflexions`}>
+              {d.explore}
+            </Link>
+          </div>
+          <span className="reference-stitches" aria-hidden="true" />
+        </div>
+        <figure className="reference-sport-band">
           <Image
-            src={portrait.src}
-            width={portrait.width}
-            height={portrait.height}
-            alt={portrait.alt}
+            src={community.src}
+            width={community.width}
+            height={community.height}
+            alt={community.alt}
             preload
-            unoptimized
-            sizes="(max-width: 767px) 100vw, (max-width: 1100px) 55vw, 600px"
+            sizes="(max-width: 900px) 100vw, 75vw"
           />
-        </div>
-        <p className="cinematic-statement">
-          {lang === "fr" ? (
-            <>
-              Le sport comme miroir
-              <br className="statement-break" /> de la société.
-            </>
-          ) : (
-            <>
-              Sport as a mirror
-              <br className="statement-break" /> of society.
-            </>
-          )}
-        </p>
-        <p className="cinematic-mission">{d.mission}</p>
-        <div className="cinematic-actions">
-          <a className="cinematic-play" href="#pilote">
-            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-              <path d="M4 2 18 10 4 18Z" fill="currentColor" />
-            </svg>
-            {lang === "fr" ? "Regarder le pilote" : "Watch the pilot"}
-          </a>
-          <Link href={`/${lang}/reflexions`}>{d.explore}</Link>
-          <Link href={`/${lang}/a-propos`}>{d.discover}</Link>
-        </div>
+          <div className="reference-lime-plane" aria-hidden="true" />
+          <figcaption>{archiveLabel(lang)}</figcaption>
+        </figure>
       </div>
+      <aside
+        className="reference-profile"
+        aria-labelledby="reference-profile-title"
+      >
+        <header>
+          <p className="reference-eyebrow">{d.nav["a-propos"]}</p>
+          <h2 id="reference-profile-title">
+            {lang === "fr" ? "Le parcours." : "The journey."}
+          </h2>
+        </header>
+        <figure className="reference-person">
+          <div className="reference-person-frame">
+            <Image
+              src={portrait.src}
+              width={portrait.width}
+              height={portrait.height}
+              alt={portrait.alt}
+              unoptimized
+              loading="eager"
+              sizes="(max-width: 600px) 80vw, 260px"
+            />
+          </div>
+          <figcaption>
+            <strong>Dominique Soucy</strong>
+            <span>{d.relationship}</span>
+          </figcaption>
+        </figure>
+        <figure className="reference-archive-card">
+          <div className="reference-archive-frame">
+            <Image
+              src={archive.src}
+              width={archive.width}
+              height={archive.height}
+              alt={archive.alt}
+              sizes="(max-width: 600px) 80vw, 260px"
+            />
+          </div>
+          <figcaption>
+            <strong>
+              {lang === "fr" ? "Archives personnelles" : "Personal archives"}
+            </strong>
+            <span>{d.categories.sport}</span>
+          </figcaption>
+        </figure>
+        <Link className="reference-about-link" href={`/${lang}/a-propos`}>
+          {d.discover}
+        </Link>
+      </aside>
     </section>
   );
 }
