@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   canAsk,
@@ -526,6 +527,16 @@ export function StudioDashboard({
           {t("VERROUILLER", "LOCK STUDIO")} ↗
         </button>
       </div>
+      <Link
+        className="studio-community-link"
+        href={`/${lang}/studio-live/questions`}
+      >
+        {t(
+          "PRÉPARER MON ÉMISSION · QUESTIONS COMMUNAUTAIRES",
+          "PREPARE MY EPISODE · COMMUNITY QUESTIONS",
+        )}{" "}
+        ↗
+      </Link>
       <header className="studio-title">
         <div>
           <p className="studio-kicker">

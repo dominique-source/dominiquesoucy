@@ -11,6 +11,7 @@ import "./pilot-thumbnails.css";
 import "./homepage-v6-3.css";
 import "./studio-live.css";
 import "./studio-universe.css";
+import "./questions.css";
 const display = localFont({
   src: "../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-800-italic.woff2",
   variable: "--font-display",
