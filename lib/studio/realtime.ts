@@ -62,6 +62,11 @@ export class RealtimeStudio {
           this.responseId = event.response?.id;
         if (event.type === "response.done") {
           this.generating = false;
+          if (event.response?.status === "failed") {
+            this.silence();
+            this.callbacks.connection("provider-error");
+            return;
+          }
           if (this.pending && this.permitted) {
             const pending = this.pending;
             this.pending = undefined;

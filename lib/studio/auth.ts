@@ -61,11 +61,15 @@ export async function logout() {
   });
 }
 export function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return (
-    !!origin &&
-    new URL(origin).host ===
-      (request.headers.get("host") || new URL(request.url).host) &&
-    request.headers.get("sec-fetch-site") !== "cross-site"
-  );
+  try {
+    const origin = request.headers.get("origin");
+    return (
+      !!origin &&
+      new URL(origin).host ===
+        (request.headers.get("host") || new URL(request.url).host) &&
+      request.headers.get("sec-fetch-site") !== "cross-site"
+    );
+  } catch {
+    return false;
+  }
 }

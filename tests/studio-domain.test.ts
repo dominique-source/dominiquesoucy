@@ -87,6 +87,10 @@ test("server code comparison has no shipped default and accepts formatting only"
 });
 test("mutation endpoints reject foreign and absent origins", () => {
   const url = "https://example.test/api/studio/login";
+  assert.equal(
+    sameOrigin(new Request(url, { headers: { origin: "invalid" } })),
+    false,
+  );
   assert.equal(sameOrigin(new Request(url)), false);
   assert.equal(
     sameOrigin(new Request(url, { headers: { origin: "https://evil.test" } })),

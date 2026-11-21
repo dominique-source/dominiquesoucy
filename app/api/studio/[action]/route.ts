@@ -8,6 +8,7 @@ import {
   validCode,
 } from "@/lib/studio/auth";
 import { limit } from "@/lib/studio/store";
+import { summarize, summaryInput } from "@/lib/studio/summary";
 import { silentSession } from "@/lib/studio/domain";
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -66,6 +67,22 @@ export async function POST(
     if (action === "logout") {
       await logout();
       return json({ ok: true });
+    }
+    if (action === "summary") {
+      if (!process.env.OPENAI_API_KEY)
+        return json({ error: "PROVIDER_NOT_CONFIGURED" }, 503);
+      if (
+        !(await limit(`summary:${s.key}`, 5, 900)) ||
+        !(await limit("summary-global", 30, 900))
+      )
+        return json({ error: "RATE_LIMITED" }, 429);
+      const raw = await r.text();
+      if (raw.length > 48000) return json({ error: "BAD_REQUEST" }, 400);
+      const body = summaryInput.safeParse(JSON.parse(raw));
+      if (!body.success) return json({ error: "BAD_REQUEST" }, 400);
+      return json({
+        summary: await summarize(body.data.transcript, body.data.lang),
+      });
     }
     if (action !== "connect") return json({ error: "NOT_FOUND" }, 404);
     if (!process.env.OPENAI_API_KEY)

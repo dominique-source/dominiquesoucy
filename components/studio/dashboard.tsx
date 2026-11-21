@@ -105,6 +105,42 @@ export function StudioDashboard({
   useEffect(() => {
     memoryRef.current = memory;
   }, [memory]);
+  const [aiSummary, setAiSummary] = useState("");
+  const [summaryConsent, setSummaryConsent] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
+  const summaryAbort = useRef<AbortController | null>(null);
+  async function prepareSummary() {
+    if (activeRef.current || !summaryConsent || !provider) return;
+    const source = entriesRef.current;
+    setSummarizing(true);
+    setError("");
+    summaryAbort.current = new AbortController();
+    try {
+      const r = await fetch("/api/studio/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consent: true,
+          lang,
+          transcript: exportText(source),
+        }),
+        signal: summaryAbort.current.signal,
+      });
+      if (!r.ok) throw new Error("summary");
+      const body = await r.json();
+      if (entriesRef.current === source) setAiSummary(body.summary);
+    } catch (e) {
+      if (!(e instanceof Error && e.name === "AbortError"))
+        setError(
+          t(
+            "Résumé indisponible. Le bilan local reste exportable; vérifie la clé, la connexion et la longueur du texte.",
+            "Summary unavailable. The local review remains exportable; check the key, connection and transcript length.",
+          ),
+        );
+    } finally {
+      setSummarizing(false);
+    }
+  }
   const [draft, setDraft] = useState("");
   const [note, setNote] = useState("");
   const [format, setFormat] = useState("16:9");
@@ -340,6 +376,8 @@ export function StudioDashboard({
     indexRef.current = -1;
     setIndex(-1);
     demoRef.current = demo;
+    setAiSummary("");
+    summaryAbort.current?.abort();
     started.current = now;
     setSeconds(0);
     activeRef.current = true;
@@ -452,6 +490,7 @@ export function StudioDashboard({
     };
     window.addEventListener("offline", offline);
     return () => {
+      summaryAbort.current?.abort();
       clearInterval(id);
       window.removeEventListener("offline", offline);
       engine.current?.close();
@@ -555,7 +594,12 @@ export function StudioDashboard({
                       "DÉMONSTRATION · SANS IA CONNECTÉE",
                       "DEMONSTRATION · NO CONNECTED AI",
                     )
-                  : t("AUDIO EN DIRECT · OPENAI", "LIVE AUDIO · OPENAI")}
+                  : connection === "connected"
+                    ? t("AUDIO EN DIRECT · OPENAI", "LIVE AUDIO · OPENAI")
+                    : t(
+                        "CONNEXION VOCALE EN ATTENTE",
+                        "VOICE CONNECTION PENDING",
+                      )}
               </span>
               <span>{format} / 15 MIN MAX</span>
             </div>
@@ -982,6 +1026,8 @@ export function StudioDashboard({
             <button
               onClick={() => {
                 finish();
+                summaryAbort.current?.abort();
+                setAiSummary("");
                 entriesRef.current = [];
                 setEntries([]);
                 setNote("");
@@ -991,6 +1037,72 @@ export function StudioDashboard({
               {t("EFFACER LA SÉANCE", "CLEAR SESSION")}
             </button>
           </div>
+          <details className="studio-guide">
+            <summary>
+              {t(
+                "RÉSUMÉ ÉDITORIAL IA — SUR DEMANDE",
+                "AI EDITORIAL SUMMARY — ON REQUEST",
+              )}
+            </summary>
+            <p>
+              {t(
+                "Après la séance, créer un résumé privé des idées et des questions ouvertes. La transcription sera envoyée à OpenAI; aucun envoi automatique. Ce résumé doit être relu avant tout partage.",
+                "After the session, create a private summary of ideas and open questions. The transcript will be sent to OpenAI; nothing is sent automatically. Review this summary before sharing.",
+              )}
+            </p>
+            <label className="studio-check">
+              <input
+                type="checkbox"
+                checked={summaryConsent}
+                onChange={(e) => setSummaryConsent(e.target.checked)}
+              />
+              {t(
+                "J’autorise l’envoi de la transcription pour ce résumé.",
+                "I consent to sending the transcript for this summary.",
+              )}
+            </label>
+            <button
+              disabled={
+                active ||
+                !provider ||
+                !entries.length ||
+                !summaryConsent ||
+                summarizing
+              }
+              onClick={() => void prepareSummary()}
+            >
+              {summarizing
+                ? "…"
+                : t("PRÉPARER LE RÉSUMÉ IA", "PREPARE AI SUMMARY")}
+            </button>
+            {!provider && (
+              <p>
+                {t(
+                  "Une clé API serveur est nécessaire. Le bilan local reste disponible sans IA.",
+                  "A server API key is required. The local review remains available without AI.",
+                )}
+              </p>
+            )}
+            {aiSummary && (
+              <>
+                <label>
+                  {t(
+                    "Résumé privé — à relire et corriger",
+                    "Private summary — review and edit",
+                  )}
+                  <textarea
+                    value={aiSummary}
+                    onChange={(e) => setAiSummary(e.target.value)}
+                  />
+                </label>
+                <button
+                  onClick={() => saveFile("studio-resume-prive.txt", aiSummary)}
+                >
+                  {t("EXPORTER LE RÉSUMÉ PRIVÉ", "EXPORT PRIVATE SUMMARY")}
+                </button>
+              </>
+            )}
+          </details>
           <details>
             <summary>
               {t("MÉMOIRE ÉDITORIALE FACULTATIVE", "OPTIONAL EDITORIAL MEMORY")}

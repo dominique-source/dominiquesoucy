@@ -30,6 +30,7 @@ Les cookies sont HttpOnly, SameSite=Strict et Secure. Pour tester **uniquement s
 | `STUDIO_REDIS_URL`      | URL HTTPS d’un Redis REST compatible Upstash                                        |
 | `STUDIO_REDIS_TOKEN`    | Secret Redis REST                                                                   |
 | `OPENAI_API_KEY`        | Clé serveur OpenAI autorisée à utiliser Realtime; facultative pour la démonstration |
+| `OPENAI_SUMMARY_MODEL`  | Modèle du résumé facultatif, défaut `gpt-4.1-mini`                                  |
 | `OPENAI_REALTIME_MODEL` | Modèle configurable, défaut `gpt-realtime-2.1`                                      |
 
 Sur Vercel, configurer les secrets en **Production** et **Preview**, idéalement avec des bases Redis séparées par environnement. Ne jamais utiliser `NEXT_PUBLIC_` pour ces variables. Les nouveaux secrets ne s’appliquent qu’aux nouveaux déploiements. Sans configuration d’accès/Redis, le studio refuse l’accès; le reste du site fonctionne. Sans clé OpenAI, le studio authentifié reste utilisable en démonstration clairement identifiée.
@@ -77,10 +78,14 @@ Le guide **Configurer mon studio** est accessible dans la régie :
 
 ## Vérification reproductible
 
-57 tests automatisés passent après intégration V6.4. Les contrôles reproductibles : `npm test`, `npm run lint`, `npm run typecheck`, `npm run format:check`, `npm run build`.
+59 tests automatisés passent après intégration V6.4. Les contrôles reproductibles : `npm test`, `npm run lint`, `npm run typecheck`, `npm run format:check`, `npm run build`.
 
 Avec un serveur local **de démonstration sans clé fournisseur**, `node --env-file=.env.local scripts/check-studio.mjs` vérifie les refus anonymes, une origine étrangère, le login, l’accès API, le fournisseur absent, la révocation et la limite d’essais. Ce test épuise volontairement le compteur local : redémarrer le serveur avant de nouveaux essais d’accès.
 
 Tests unitaires : modes et priorité, commandes FR/EN, VAD silencieux, export et confidentialité, expiration/révocation du stockage, code erroné, compteur d’essais, interruptions et sérialisation via transport simulé, absence/refus du micro simulés. Un test simulé ne valide ni un vrai micro, ni un flux OpenAI, ni OBS.
 
 Captures réelles : [MacBook FR](review/1440-fr-dashboard.png), [mobile EN](review/375-en-dashboard.png), [tablette FR](review/768-fr-dashboard.png). Le navigateur a réellement servi une session authentifiée en démonstration; aucune donnée biographique privée n’a été utilisée pour ces tests.
+
+## Résumé éditorial facultatif
+
+Après la séance, le panneau **Résumé éditorial IA** permet un envoi volontaire de la transcription à OpenAI, avec un consentement séparé. Le résumé est privé, modifiable et exportable après relecture. L’API Responses utilise `store: false`, un texte limité à 40 000 caractères et cinq demandes par session sur 15 minutes. Le coût du modèle de résumé s’ajoute à la voix; voir la [fiche officielle GPT-4.1 mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini). L’intégration est testée avec un fournisseur simulé; aucun résumé fournisseur réel n’a été généré sans clé. Le bilan local reste disponible hors connexion.
