@@ -1,0 +1,123 @@
+/* Full supplied scene: no card frame, rounded crop, duplicate lettering or raster retouch. */
+.studio-universe-motion {
+  background: #0a0a0a;
+}
+.studio-universe {
+  margin: 0;
+  width: 100%;
+  scroll-margin-top: 64px;
+}
+.studio-universe figure {
+  margin: 0;
+}
+.studio-universe-frame {
+  width: 100%;
+  position: relative;
+  aspect-ratio: var(--studio-ratio);
+  background: #0a0a0a;
+  isolation: isolate;
+}
+.studio-universe-frame img {
+  object-fit: var(--studio-fit);
+  object-position: var(--studio-position);
+}
+.studio-universe-translation {
+  text-align: center;
+  background: #0a0a0a;
+  padding: clamp(24px, 3vw, 44px) var(--gutter);
+}
+.studio-universe-translation h2 {
+  font:
+    italic 400 clamp(28px, 4vw, 58px)/1.15 Georgia,
+    serif;
+  text-transform: none;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+.studio-universe-translation em {
+  color: #ccff00;
+  font: inherit;
+}
+.studio-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  padding: 0;
+  margin: -1px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .studio-universe-motion .studio-universe-frame {
+    transform: translateY(var(--studio-parallax, 0px));
+    opacity: 1;
+    transition: opacity var(--studio-duration, 900ms) ease;
+  }
+  .studio-universe-motion .studio-universe-frame img {
+    scale: 1;
+    transition: scale var(--studio-duration, 900ms) ease;
+  }
+  .studio-universe-pending .studio-universe-frame {
+    opacity: 0.35;
+  }
+  .studio-universe-pending .studio-universe-frame img {
+    scale: 1.015;
+  }
+  .studio-universe-translation {
+    opacity: 1;
+    transition: opacity var(--studio-duration, 900ms) ease;
+  }
+  .studio-universe-pending .studio-universe-translation {
+    opacity: 0.35;
+  }
+}
+@media (max-width: 900px) {
+  .studio-universe-frame {
+    aspect-ratio: var(--studio-mobile-ratio);
+  }
+  .studio-universe-frame img {
+    object-fit: var(--studio-mobile-fit);
+    object-position: var(--studio-mobile-position);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-universe-motion .studio-universe-frame,
+  .studio-universe-motion .studio-universe-frame img,
+  .studio-universe-translation {
+    transform: none;
+    scale: none;
+    opacity: 1;
+    transition: none;
+  }
+}
+
+/* User-approved second use of the studio: a very faint atmosphere behind the hero. */
+.reference-intro:has(.cinematic-collage) > .hero-studio-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: var(--atmosphere-opacity, 0.09);
+  pointer-events: none;
+  overflow: hidden;
+  mask-image:
+    linear-gradient(90deg, transparent, #000 30%, #000 75%, transparent),
+    linear-gradient(transparent, #000 28%, #000 70%, transparent);
+  mask-composite: intersect;
+}
+.hero-studio-atmosphere img {
+  object-fit: cover;
+  object-position: var(--atmosphere-position);
+  filter: saturate(0.25) brightness(0.6);
+}
+.hero-studio-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #0a0a0ae8, #0a0a0a40 55%, #0a0a0aa8);
+}
+@media (max-width: 900px) {
+  .hero-studio-atmosphere img {
+    object-position: var(--atmosphere-mobile-position);
+  }
+}

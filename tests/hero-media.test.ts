@@ -10,20 +10,17 @@ import {
 test("the extreme close-up uses the authentic face-dense source and excludes the lower torso", () => {
   assert.equal(
     heroPortrait.src,
-    "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "/assets/dominique/originals/05_portrait_ballon.jpg",
   );
   assert.ok(existsSync(`public${heroPortrait.src}`));
-  assert.ok(
-    heroPortrait.silhouetteMask &&
-      existsSync(`public${heroPortrait.silhouetteMask}`),
-  );
+  assert.equal(heroPortrait.silhouetteMask, undefined);
   for (const crop of [heroPortrait.desktopCrop, heroPortrait.mobileCrop]) {
-    assert.ok(crop.scale >= 2 && crop.scale <= 2.2);
+    assert.ok(crop.scale >= 2.8 && crop.scale <= 3.1);
     const lastVisibleSourceRow =
       heroPortrait.height * (1 - crop.excludeBottom / 100);
-    assert.ok(lastVisibleSourceRow > 260 && lastVisibleSourceRow < 330);
+    assert.ok(lastVisibleSourceRow > 230 && lastVisibleSourceRow < 350);
   }
-  assert.equal(heroPortrait.maxRenderedWidth, 900);
+  assert.equal(heroPortrait.maxRenderedWidth, 1200);
   assert.ok(heroPortrait.alt.fr.length > 30 && heroPortrait.alt.en.length > 30);
 });
 

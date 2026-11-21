@@ -19,6 +19,7 @@ export type HeroPortrait = {
   monochrome?: boolean;
   /** Upper bound for the rendered full image, before clipping. */
   maxRenderedWidth: number;
+  mobileMaxRenderedWidth?: number;
   silhouetteMask?: string;
   fadeStart?: number;
 };
@@ -35,29 +36,30 @@ export const heroPortrait: HeroPortrait = {
     en: "Close-up black-and-white portrait of Dominique Soucy smiling.",
   },
   desktopCrop: {
-    objectPosition: "50% 18%",
-    scale: 2.1,
-    excludeBottom: 35,
-    offsetY: "-14%",
-  },
-  mobileCrop: {
-    objectPosition: "50% 18%",
-    scale: 2.05,
-    excludeBottom: 35,
+    objectPosition: "56% 0%",
+    scale: 2.8,
+    excludeBottom: 46,
     offsetY: "-10%",
   },
+  mobileCrop: {
+    objectPosition: "56% 0%",
+    scale: 3.1,
+    excludeBottom: 46,
+    offsetY: "-20%",
+  },
   monochrome: true,
-  maxRenderedWidth: 900,
+  maxRenderedWidth: 1200,
+  mobileMaxRenderedWidth: 1050,
   // The shirt-headshot silhouette mask cannot be reused on a different source.
   silhouetteMask: undefined,
-  fadeStart: 58,
+  fadeStart: 48,
 };
 
 export function heroPortraitStyle(media: HeroPortrait): CSSProperties {
   const crops = { desktop: media.desktopCrop, mobile: media.mobileCrop };
   const values: Record<string, string | number> = {
     "--portrait-max-width": `${media.maxRenderedWidth / media.desktopCrop.scale}px`,
-    "--portrait-mobile-max-width": `${media.maxRenderedWidth / media.mobileCrop.scale}px`,
+    "--portrait-mobile-max-width": `${(media.mobileMaxRenderedWidth ?? media.maxRenderedWidth) / media.mobileCrop.scale}px`,
     "--portrait-monochrome": media.monochrome ? 1 : 0,
     "--portrait-silhouette": media.silhouetteMask
       ? `url("${media.silhouetteMask}")`
@@ -112,4 +114,43 @@ export const pilotPoster: CinematicPosterConfig = {
   visible: true,
   autoplayOnActivate: true,
   videoUrl: pilotVideo.videoUrl,
+};
+
+export type StudioUniverseConfig = {
+  image: { src: string; width: number; height: number };
+  alt: Record<Locale, string>;
+  slogan: Record<Locale, readonly [string, string]>;
+  presentation: Record<Locale, "embedded" | "caption">;
+  desktopCrop: { position: string; fit: "contain" | "cover"; ratio: string };
+  mobileCrop: { position: string; fit: "contain" | "cover"; ratio: string };
+  motion?: { enabled: boolean; durationMs: number; parallaxPx: number };
+};
+export const studioUniverse: StudioUniverseConfig = {
+  image: {
+    src: "/assets/studio/studio-universe.png",
+    width: 1672,
+    height: 941,
+  },
+  alt: {
+    fr: "Composition de studio cinématographique : fauteuil en cuir brun, caméra, boîte à lumière et collage sportif noir et blanc aux accents lime.",
+    en: "Cinematic studio artwork with a brown leather chair, camera, softbox and a black-and-white sports collage with lime accents.",
+  },
+  slogan: {
+    fr: ["Bienvenue dans", "mon univers"],
+    en: ["Welcome to", "my world"],
+  },
+  // French lettering is embedded in the supplied artwork. EN translation stays outside it.
+  presentation: { fr: "embedded", en: "caption" },
+  desktopCrop: { position: "50% 50%", fit: "contain", ratio: "1672 / 941" },
+  mobileCrop: { position: "50% 50%", fit: "contain", ratio: "1672 / 941" },
+  motion: { enabled: true, durationMs: 900, parallaxPx: 6 },
+};
+
+/** The same supplied studio artwork, decorative only behind the main introduction. */
+export const heroAtmosphere = {
+  enabled: true,
+  src: studioUniverse.image.src,
+  opacity: 0.09,
+  desktopPosition: "50% 45%",
+  mobilePosition: "52% 45%",
 };

@@ -269,7 +269,9 @@
     --portrait-offset: var(--portrait-mobile-offset);
     width: min(78%, var(--portrait-mobile-max-width));
     height: calc(100% - 150px);
-    right: 11%;
+    left: 50%;
+    right: auto;
+    translate: -50% 0;
     top: 0;
     bottom: auto;
   }
@@ -294,11 +296,13 @@
     padding-top: 35px;
   }
   .cinematic-collage {
-    height: 570px;
+    height: 600px;
   }
   .cinematic-portrait {
     width: min(78%, var(--portrait-mobile-max-width));
-    right: 11%;
+    left: 50%;
+    right: auto;
+    translate: -50% 0;
   }
   .cinematic-moment--human {
     width: 100px;
