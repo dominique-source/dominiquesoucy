@@ -3,6 +3,9 @@ import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { videoSource } from "@/lib/video";
 import { localVideoPoster } from "@/lib/video-layout";
+import { CinematicVideoPoster } from "./cinematic-video-poster";
+import type { CinematicPosterConfig } from "@/lib/homepage-media";
+import { activatedEmbedUrl } from "@/lib/video";
 import { dict, type Locale } from "@/lib/i18n";
 export function VideoPlayer({
   url,
@@ -10,18 +13,21 @@ export function VideoPlayer({
   lang,
   captions,
   poster,
+  cinematicPoster,
 }: {
   url: string;
   title: string;
   lang: Locale;
   captions?: string;
   poster?: string;
+  cinematicPoster?: CinematicPosterConfig;
 }) {
   const [activatedUrl, setActivatedUrl] = useState<string | null>(null);
   const loaded = activatedUrl === url;
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const fileRef = useRef<HTMLVideoElement>(null);
   useEffect(() => {
-    if (loaded) iframeRef.current?.focus();
+    if (loaded) (iframeRef.current ?? fileRef.current)?.focus();
   }, [loaded]);
   const source = videoSource(url);
   const d = dict(lang);
@@ -30,12 +36,23 @@ export function VideoPlayer({
   return (
     <div className="video-player-shell">
       <div className="video-frame">
-        {source.kind === "file" ? (
+        {cinematicPoster?.visible && !loaded ? (
+          <CinematicVideoPoster
+            config={cinematicPoster}
+            lang={lang}
+            onPlay={() => setActivatedUrl(url)}
+          />
+        ) : source.kind === "file" ? (
           <video
+            ref={fileRef}
+            tabIndex={0}
             className="video-player"
             controls
             preload="none"
             playsInline
+            autoPlay={
+              loaded && cinematicPoster?.autoplayOnActivate ? true : undefined
+            }
             aria-label={title}
             poster={approvedPoster}
           >
@@ -54,10 +71,13 @@ export function VideoPlayer({
           <iframe
             ref={iframeRef}
             className="video-player"
-            src={source.src}
+            src={activatedEmbedUrl(
+              source.src,
+              !!cinematicPoster?.autoplayOnActivate,
+            )}
             title={title}
             loading="lazy"
-            allow="fullscreen; picture-in-picture; encrypted-media"
+            allow={`${cinematicPoster?.autoplayOnActivate ? "autoplay; " : ""}fullscreen; picture-in-picture; encrypted-media`}
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
           />

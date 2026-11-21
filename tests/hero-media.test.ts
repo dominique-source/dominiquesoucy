@@ -7,17 +7,23 @@ import {
   type HeroPortrait,
 } from "../lib/hero-media";
 
-test("the approved close-up retains the face and excludes the ball from the original source", () => {
+test("the extreme close-up uses the authentic face-dense source and excludes the lower torso", () => {
+  assert.equal(
+    heroPortrait.src,
+    "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+  );
   assert.ok(existsSync(`public${heroPortrait.src}`));
+  assert.ok(
+    heroPortrait.silhouetteMask &&
+      existsSync(`public${heroPortrait.silhouetteMask}`),
+  );
   for (const crop of [heroPortrait.desktopCrop, heroPortrait.mobileCrop]) {
-    assert.ok(crop.scale >= 1.5 && crop.scale <= 1.7);
-    // In the unchanged 512px source, the chin ends before y=220 and the ball begins after y=350.
+    assert.ok(crop.scale >= 2 && crop.scale <= 2.2);
     const lastVisibleSourceRow =
       heroPortrait.height * (1 - crop.excludeBottom / 100);
-    assert.ok(lastVisibleSourceRow > 220);
-    assert.ok(lastVisibleSourceRow < 350);
+    assert.ok(lastVisibleSourceRow > 260 && lastVisibleSourceRow < 330);
   }
-  assert.ok(heroPortrait.maxRenderedWidth / heroPortrait.width <= 1.41);
+  assert.equal(heroPortrait.maxRenderedWidth, 900);
   assert.ok(heroPortrait.alt.fr.length > 30 && heroPortrait.alt.en.length > 30);
 });
 

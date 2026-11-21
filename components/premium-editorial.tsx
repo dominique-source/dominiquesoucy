@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { dict, type Locale } from "@/lib/i18n";
-import { brand } from "@/lib/brand-copy";
 import { pilotVideo } from "@/lib/config";
+import { pilotPoster } from "@/lib/homepage-media";
 import type { Entry } from "@/lib/content";
 import { featuredReflection } from "@/lib/content";
 import { archiveLabel } from "@/lib/photography";
@@ -98,23 +98,15 @@ export function PremiumHero({ lang }: { lang: Locale }) {
   );
 }
 export function PilotFeature({ lang }: { lang: Locale }) {
-  const d = dict(lang),
-    b = brand(lang),
-    w = wording[lang];
+  const d = dict(lang);
   return (
     <section className="premium-pilot" aria-labelledby="home-pilot-title">
       <div className="content-shell pilot-composition">
         <div className="pilot-copy">
           <p className="eyebrow accent">
-            {d.nav.reflexions} / {w.current}
+            {pilotPoster.title[lang]} — {pilotPoster.episode[lang]}
           </p>
-          <h2 id="home-pilot-title" lang="fr">
-            PILOTE
-            <span>
-              ÉPISODE 00<span className="accent">.</span>
-            </span>
-          </h2>
-          <p>{b.pilotDescription}</p>
+          <h2 id="home-pilot-title">{d.positioning}</h2>
           <p className="pilot-statement">{d.mission}</p>
           <Link className="text-link" href={`/${lang}/reflexions`}>
             {d.explore}
@@ -125,19 +117,18 @@ export function PilotFeature({ lang }: { lang: Locale }) {
           className="pilot-player"
           tabIndex={-1}
           role="group"
-          aria-label={pilotVideo.label}
+          aria-label={`${pilotPoster.title[lang]} — ${pilotPoster.episode[lang]}`}
         >
-          <p className="eyebrow" lang="fr">
-            {pilotVideo.label}
-          </p>
           <AdaptiveVideo
-            videoUrl={pilotVideo.videoUrl}
+            videoUrl={pilotPoster.videoUrl}
             orientation={pilotVideo.orientation}
             poster={pilotVideo.poster}
             layout="featured"
-            title={pilotVideo.label}
+            title={`${pilotPoster.title[lang]} — ${pilotPoster.episode[lang]}`}
             lang={lang}
+            cinematicPoster={pilotPoster}
           />
+          <p className="pilot-photo-credit">{pilotPoster.photoCredit[lang]}</p>
         </div>
       </div>
     </section>

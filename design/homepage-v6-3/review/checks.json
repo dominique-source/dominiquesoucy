@@ -1,0 +1,121 @@
+{
+  "fr": [
+    {
+      "before": {
+        "cards": 3,
+        "frameHeight": 595.5546875,
+        "frameWidth": 335,
+        "iframes": 0,
+        "overflow": 0,
+        "poster": true,
+        "ratio": 0.5625,
+        "width": 375
+      },
+      "after": {
+        "focus": "IFRAME",
+        "height": 595.5546875,
+        "iframe": "https://www.youtube-nocookie.com/embed/6Zy87nhpHS8?autoplay=1&playsinline=1&controls=1",
+        "poster": false,
+        "width": 335
+      }
+    },
+    {
+      "before": {
+        "cards": 3,
+        "frameHeight": 691.078125,
+        "frameWidth": 388.734375,
+        "iframes": 0,
+        "overflow": 0,
+        "poster": true,
+        "ratio": 0.5625,
+        "width": 430
+      },
+      "after": {
+        "focus": "IFRAME",
+        "height": 691.078125,
+        "iframe": "https://www.youtube-nocookie.com/embed/6Zy87nhpHS8?autoplay=1&playsinline=1&controls=1",
+        "poster": false,
+        "width": 388.734375
+      }
+    },
+    {
+      "before": {
+        "cards": 3,
+        "frameHeight": 746.6640625,
+        "frameWidth": 420,
+        "iframes": 0,
+        "overflow": 0,
+        "poster": true,
+        "ratio": 0.5625,
+        "width": 768
+      },
+      "after": {
+        "focus": "IFRAME",
+        "height": 746.6640625,
+        "iframe": "https://www.youtube-nocookie.com/embed/6Zy87nhpHS8?autoplay=1&playsinline=1&controls=1",
+        "poster": false,
+        "width": 420
+      }
+    },
+    {
+      "before": {
+        "cards": 3,
+        "frameHeight": 746.6640625,
+        "frameWidth": 420,
+        "iframes": 0,
+        "overflow": 0,
+        "poster": true,
+        "ratio": 0.5625,
+        "width": 1440
+      },
+      "after": {
+        "focus": "IFRAME",
+        "height": 746.6640625,
+        "iframe": "https://www.youtube-nocookie.com/embed/6Zy87nhpHS8?autoplay=1&playsinline=1&controls=1",
+        "poster": false,
+        "width": 420
+      }
+    },
+    {
+      "before": {
+        "cards": 3,
+        "frameHeight": 746.6640625,
+        "frameWidth": 420,
+        "iframes": 0,
+        "overflow": 0,
+        "poster": true,
+        "ratio": 0.5625,
+        "width": 1920
+      },
+      "after": {
+        "focus": "IFRAME",
+        "height": 746.6640625,
+        "iframe": "https://www.youtube-nocookie.com/embed/6Zy87nhpHS8?autoplay=1&playsinline=1&controls=1",
+        "poster": false,
+        "width": 420
+      }
+    }
+  ],
+  "en": [
+    {
+      "copy": "PILOT — EPISODE 00Sport as a mirror of society.Inspiring thought before reaction.Explore reflections",
+      "focus": "pilote",
+      "iframes": 0,
+      "label": "Watch the pilot — Episode 00",
+      "lang": "en-CA",
+      "overflow": 0,
+      "poster": true,
+      "width": 375
+    },
+    {
+      "copy": "PILOT — EPISODE 00Sport as a mirror of society.Inspiring thought before reaction.Explore reflections",
+      "focus": "pilote",
+      "iframes": 0,
+      "label": "Watch the pilot — Episode 00",
+      "lang": "en-CA",
+      "overflow": 0,
+      "poster": true,
+      "width": 1440
+    }
+  ]
+}

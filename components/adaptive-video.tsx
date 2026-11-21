@@ -7,6 +7,7 @@ import {
   type VideoLayout,
 } from "@/lib/video-layout";
 import type { Locale } from "@/lib/i18n";
+import type { CinematicPosterConfig } from "@/lib/homepage-media";
 import { VideoPlayer } from "./video-player";
 export type AdaptiveVideoProps = {
   videoUrl: string;
@@ -16,6 +17,7 @@ export type AdaptiveVideoProps = {
   captions?: string;
   layout?: VideoLayout;
   lang?: Locale;
+  cinematicPoster?: CinematicPosterConfig;
 };
 export function AdaptiveVideo({
   videoUrl,
@@ -25,6 +27,7 @@ export function AdaptiveVideo({
   captions,
   layout = "article",
   lang = "fr",
+  cinematicPoster,
 }: AdaptiveVideoProps) {
   if (!videoSource(videoUrl)) return null;
   return (
@@ -43,6 +46,7 @@ export function AdaptiveVideo({
         lang={lang}
         captions={captions}
         poster={localVideoPoster(poster)}
+        cinematicPoster={cinematicPoster}
       />
     </div>
   );
