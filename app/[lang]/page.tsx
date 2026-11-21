@@ -1,7 +1,7 @@
+import { CinematicHero } from "@/components/cinematic-hero";
 import { PurInstinctBridge } from "@/components/site";
 import { HomeSignature } from "@/components/home-editorial";
 import {
-  PremiumHero,
   PilotFeature,
   PremiumHomeEditorial,
 } from "@/components/premium-editorial";
@@ -44,7 +44,7 @@ export default async function Home({
           }),
         }}
       />
-      <PremiumHero lang={lang} />
+      <CinematicHero lang={lang} />
       <PilotFeature lang={lang} />
       <PremiumHomeEditorial lang={lang} entries={getEntries(lang)} />
       <div className="content-shell">
