@@ -1,0 +1,51 @@
+{
+  "designReference": "/design/references/homepage-cinematic-approved-concept.png",
+  "referenceOnly": true,
+  "videos": [],
+  "photographs": [
+    {
+      "id": "01_basket_action_archive",
+      "source": "/assets/dominique/originals/01_basket_action_archive.jpg",
+      "bw": "/assets/home-cinematic/archive/01_basket_action_archive-bw.webp",
+      "role": "hero basketball archive"
+    },
+    {
+      "id": "02_portrait_chemise_bleue",
+      "source": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+      "bw": "/assets/home-cinematic/archive/02_portrait_chemise_bleue-bw.webp",
+      "role": "editorial collage optional"
+    },
+    {
+      "id": "03_moment_communautaire",
+      "source": "/assets/dominique/originals/03_moment_communautaire.jpg",
+      "bw": "/assets/home-cinematic/archive/03_moment_communautaire-bw.webp",
+      "role": "editorial collage optional"
+    },
+    {
+      "id": "04_equipe_purathlete",
+      "source": "/assets/dominique/originals/04_equipe_purathlete.jpg",
+      "bw": "/assets/home-cinematic/archive/04_equipe_purathlete-bw.webp",
+      "role": "editorial collage optional"
+    },
+    {
+      "id": "05_portrait_ballon",
+      "source": "/assets/dominique/originals/05_portrait_ballon.jpg",
+      "bw": "/assets/home-cinematic/archive/05_portrait_ballon-bw.webp",
+      "role": "editorial collage optional"
+    },
+    {
+      "id": "06_moment_humain",
+      "source": "/assets/dominique/originals/06_moment_humain.jpg",
+      "bw": "/assets/home-cinematic/archive/06_moment_humain-bw.webp",
+      "role": "editorial collage optional"
+    },
+    {
+      "id": "07_archive_rouge_et_or",
+      "source": "/assets/dominique/originals/07_archive_rouge_et_or.jpg",
+      "bw": "/assets/home-cinematic/archive/07_archive_rouge_et_or-bw.webp",
+      "role": "hero basketball archive"
+    }
+  ],
+  "texture": "/assets/home-cinematic/texture/subtle-film-grain.png",
+  "critical": "Do not display flat mockup as webpage. Do not use generated facial image as production portrait. Use real archive images; request authentic high resolution frontal or 3/4 portrait."
+}
