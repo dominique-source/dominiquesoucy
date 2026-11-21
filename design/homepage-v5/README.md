@@ -17,7 +17,7 @@
 
 The preliminary transparent PNGs remain rejected because of visible extraction defects. Instead, a new SVG alpha mask removes only the light exterior background when displaying the original portrait. It is not a replacement photograph. A second CSS alpha gradient softens the lower edge; there are no portrait colour filters, sharpening, scaling animations or reconstructed facial details.
 
-`trace-mask.py` records how the SVG was produced. It reads the original image, flood-fills connected light neutral exterior pixels, traces the largest outer contour and writes a vector alpha mask. It does not write a raster image. The filled outer contour retains the photographic interior, including facial details and shirt highlights. The bottom boundary is deliberately not seeded, because the shirt extends beyond the source frame. A 0.3-source-pixel edge feather avoids hard raster stair-steps. This optional design-time utility needs Python, Pillow, NumPy and OpenCV; none is a runtime or build dependency. Run it from any directory with `python3 design/homepage-v5/trace-mask.py` if the same approved source needs its mask regenerated.
+`trace-mask.py` records how the SVG was produced. It reads the original image, flood-fills connected light neutral exterior pixels, traces the largest outer contour and writes a vector alpha mask. It does not write a raster image. The filled outer contour retains the photographic interior, including facial details and shirt highlights. The bottom boundary is deliberately not seeded, because the shirt extends beyond the source frame. The alpha contour is inset by 1.1 source pixels to exclude the bright background fringe, then feathered by 0.25 source pixels to avoid hard raster stair-steps. This operation affects only perimeter alpha; it applies no RGB filter to the original photograph. This optional design-time utility needs Python, Pillow, NumPy and OpenCV; none is a runtime or build dependency. Run it from any directory with `python3 design/homepage-v5/trace-mask.py` if the same approved source needs its mask regenerated.
 
 ## Comparison and limits
 
@@ -34,3 +34,7 @@ This is not a pixel-perfect recreation of the mockup: the original face, head an
 - CSS motion is opt-in under `prefers-reduced-motion: no-preference`; reduced motion has no hero animation or smooth anchor scrolling. No client animation package or scroll listener was added.
 
 No merge or production deployment is part of this V5 delivery.
+
+## Portrait integration correction
+
+The foreground now serves the exact original JPEG (`unoptimized`), avoiding another lossy compression pass. Desktop width is capped at 600 CSS pixels instead of 760, with its top position retained and a broader fade below the face. The mask perimeter excludes the light fringe. No sharpening, face enhancement, colour filter or generated details are applied. The original photograph remains byte-identical to the supplied archive. A higher-resolution original would still be needed for a truly detailed, large desktop portrait.

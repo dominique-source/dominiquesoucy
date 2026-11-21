@@ -36,7 +36,8 @@ export function CinematicHero({ lang }: { lang: Locale }) {
             height={portrait.height}
             alt={portrait.alt}
             preload
-            sizes="(max-width: 767px) 100vw, (max-width: 1100px) 55vw, 760px"
+            unoptimized
+            sizes="(max-width: 767px) 100vw, (max-width: 1100px) 55vw, 600px"
           />
         </div>
         <p className="cinematic-statement">
