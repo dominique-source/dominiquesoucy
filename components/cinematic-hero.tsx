@@ -1,4 +1,6 @@
 import Image from "next/image";
+import type { CSSProperties } from "react";
+import { heroAtmosphere } from "@/lib/homepage-media";
 import Link from "next/link";
 import { dict, type Locale } from "@/lib/i18n";
 import { photograph, archiveLabel } from "@/lib/photography";
@@ -14,6 +16,28 @@ export function CinematicHero({ lang }: { lang: Locale }) {
     <section className="reference-home" aria-labelledby="reference-title">
       <div className="reference-main">
         <div className="reference-intro">
+          {heroAtmosphere.enabled && (
+            <div
+              className="hero-studio-atmosphere"
+              aria-hidden="true"
+              style={
+                {
+                  "--atmosphere-opacity": heroAtmosphere.opacity,
+                  "--atmosphere-position": heroAtmosphere.desktopPosition,
+                  "--atmosphere-mobile-position": heroAtmosphere.mobilePosition,
+                } as CSSProperties
+              }
+            >
+              <Image
+                src={heroAtmosphere.src}
+                alt=""
+                fill
+                sizes="100vw"
+                quality={85}
+                loading="lazy"
+              />
+            </div>
+          )}
           <p className="reference-eyebrow">{d.eyebrow}</p>
           <h1 id="reference-title">{d.positioning}</h1>
           <p className="reference-mission">{d.mission}</p>

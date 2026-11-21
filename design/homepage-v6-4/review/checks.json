@@ -1,0 +1,202 @@
+[
+  {
+    "atmosphereOpacity": "0.09",
+    "caption": false,
+    "cards": 3,
+    "heroPhoto": "/assets/dominique/originals/05_portrait_ballon.jpg",
+    "lang": "fr-CA",
+    "ordered": true,
+    "overflow": 0,
+    "sameOptimizedImage": true,
+    "sidebarPhoto": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "studioFit": "contain",
+    "studioRatio": 1.77686,
+    "width": 375,
+    "pilot": {
+      "focus": "pilote",
+      "iframes": 0,
+      "orientation": "portrait",
+      "poster": true
+    }
+  },
+  {
+    "atmosphereOpacity": "0.09",
+    "caption": true,
+    "cards": 3,
+    "heroPhoto": "/assets/dominique/originals/05_portrait_ballon.jpg",
+    "lang": "en-CA",
+    "ordered": true,
+    "overflow": 0,
+    "sameOptimizedImage": true,
+    "sidebarPhoto": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "studioFit": "contain",
+    "studioRatio": 1.77686,
+    "width": 375,
+    "pilot": {
+      "focus": "pilote",
+      "iframes": 0,
+      "orientation": "portrait",
+      "poster": true
+    }
+  },
+  {
+    "atmosphereOpacity": "0.09",
+    "caption": false,
+    "cards": 3,
+    "heroPhoto": "/assets/dominique/originals/05_portrait_ballon.jpg",
+    "lang": "fr-CA",
+    "ordered": true,
+    "overflow": 0,
+    "sameOptimizedImage": true,
+    "sidebarPhoto": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "studioFit": "contain",
+    "studioRatio": 1.77686,
+    "width": 430,
+    "pilot": {
+      "focus": "pilote",
+      "iframes": 0,
+      "orientation": "portrait",
+      "poster": true
+    }
+  },
+  {
+    "atmosphereOpacity": "0.09",
+    "caption": true,
+    "cards": 3,
+    "heroPhoto": "/assets/dominique/originals/05_portrait_ballon.jpg",
+    "lang": "en-CA",
+    "ordered": true,
+    "overflow": 0,
+    "sameOptimizedImage": true,
+    "sidebarPhoto": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "studioFit": "contain",
+    "studioRatio": 1.77686,
+    "width": 430,
+    "pilot": {
+      "focus": "pilote",
+      "iframes": 0,
+      "orientation": "portrait",
+      "poster": true
+    }
+  },
+  {
+    "atmosphereOpacity": "0.09",
+    "caption": false,
+    "cards": 3,
+    "heroPhoto": "/assets/dominique/originals/05_portrait_ballon.jpg",
+    "lang": "fr-CA",
+    "ordered": true,
+    "overflow": 0,
+    "sameOptimizedImage": true,
+    "sidebarPhoto": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "studioFit": "contain",
+    "studioRatio": 1.77685,
+    "width": 768,
+    "pilot": {
+      "focus": "pilote",
+      "iframes": 0,
+      "orientation": "portrait",
+      "poster": true
+    }
+  },
+  {
+    "atmosphereOpacity": "0.09",
+    "caption": true,
+    "cards": 3,
+    "heroPhoto": "/assets/dominique/originals/05_portrait_ballon.jpg",
+    "lang": "en-CA",
+    "ordered": true,
+    "overflow": 0,
+    "sameOptimizedImage": true,
+    "sidebarPhoto": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "studioFit": "contain",
+    "studioRatio": 1.77685,
+    "width": 768,
+    "pilot": {
+      "focus": "pilote",
+      "iframes": 0,
+      "orientation": "portrait",
+      "poster": true
+    }
+  },
+  {
+    "atmosphereOpacity": "0.09",
+    "caption": false,
+    "cards": 3,
+    "heroPhoto": "/assets/dominique/originals/05_portrait_ballon.jpg",
+    "lang": "fr-CA",
+    "ordered": true,
+    "overflow": 0,
+    "sameOptimizedImage": true,
+    "sidebarPhoto": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "studioFit": "contain",
+    "studioRatio": 1.77684,
+    "width": 1440,
+    "pilot": {
+      "focus": "pilote",
+      "iframes": 0,
+      "orientation": "portrait",
+      "poster": true
+    }
+  },
+  {
+    "atmosphereOpacity": "0.09",
+    "caption": true,
+    "cards": 3,
+    "heroPhoto": "/assets/dominique/originals/05_portrait_ballon.jpg",
+    "lang": "en-CA",
+    "ordered": true,
+    "overflow": 0,
+    "sameOptimizedImage": true,
+    "sidebarPhoto": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "studioFit": "contain",
+    "studioRatio": 1.77684,
+    "width": 1440,
+    "pilot": {
+      "focus": "pilote",
+      "iframes": 0,
+      "orientation": "portrait",
+      "poster": true
+    }
+  },
+  {
+    "atmosphereOpacity": "0.09",
+    "caption": false,
+    "cards": 3,
+    "heroPhoto": "/assets/dominique/originals/05_portrait_ballon.jpg",
+    "lang": "fr-CA",
+    "ordered": true,
+    "overflow": 0,
+    "sameOptimizedImage": true,
+    "sidebarPhoto": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "studioFit": "contain",
+    "studioRatio": 1.77684,
+    "width": 1920,
+    "pilot": {
+      "focus": "pilote",
+      "iframes": 0,
+      "orientation": "portrait",
+      "poster": true
+    }
+  },
+  {
+    "atmosphereOpacity": "0.09",
+    "caption": true,
+    "cards": 3,
+    "heroPhoto": "/assets/dominique/originals/05_portrait_ballon.jpg",
+    "lang": "en-CA",
+    "ordered": true,
+    "overflow": 0,
+    "sameOptimizedImage": true,
+    "sidebarPhoto": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+    "studioFit": "contain",
+    "studioRatio": 1.77684,
+    "width": 1920,
+    "pilot": {
+      "focus": "pilote",
+      "iframes": 0,
+      "orientation": "portrait",
+      "poster": true
+    }
+  }
+]
