@@ -25,29 +25,32 @@ export type HeroPortrait = {
 
 /** Replace this configuration only when an approved portrait becomes available. */
 export const heroPortrait: HeroPortrait = {
-  src: "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
-  width: 447,
-  height: 447,
+  // The immersive hero uses the original ball portrait, NOT the formal shirt headshot.
+  // The ball is excluded through CSS cropping; the authentic face is never regenerated.
+  src: "/assets/dominique/originals/05_portrait_ballon.jpg",
+  width: 512,
+  height: 512,
   alt: {
-    fr: "Portrait rapproché de Dominique Soucy souriant, en noir et blanc.",
+    fr: "Portrait en gros plan de Dominique Soucy souriant, en noir et blanc.",
     en: "Close-up black-and-white portrait of Dominique Soucy smiling.",
   },
   desktopCrop: {
-    objectPosition: "24% 0%",
+    objectPosition: "50% 18%",
     scale: 2.1,
-    excludeBottom: 28,
-    offsetY: "-16%",
+    excludeBottom: 35,
+    offsetY: "-14%",
   },
   mobileCrop: {
-    objectPosition: "24% 0%",
-    scale: 2.1,
-    excludeBottom: 28,
+    objectPosition: "50% 18%",
+    scale: 2.05,
+    excludeBottom: 35,
     offsetY: "-10%",
   },
   monochrome: true,
   maxRenderedWidth: 900,
-  silhouetteMask: "/assets/dominique/masks/02-portrait-silhouette.svg",
-  fadeStart: 62,
+  // The shirt-headshot silhouette mask cannot be reused on a different source.
+  silhouetteMask: undefined,
+  fadeStart: 58,
 };
 
 export function heroPortraitStyle(media: HeroPortrait): CSSProperties {
