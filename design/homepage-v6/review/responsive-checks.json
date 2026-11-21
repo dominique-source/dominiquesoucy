@@ -1,0 +1,90 @@
+[
+  {
+    "collageAfterActions": true,
+    "controls": 3,
+    "heroTitle": "Le sport comme miroir de la société.",
+    "iframe": 0,
+    "lang": "fr-CA",
+    "links": ["#pilote", "/fr/reflexions"],
+    "overflow": 0,
+    "portrait": 290,
+    "width": 375
+  },
+  {
+    "collageAfterActions": true,
+    "controls": 3,
+    "heroTitle": "Sport as a mirror of society.",
+    "iframe": 0,
+    "lang": "en-CA",
+    "links": ["#pilote", "/en/reflexions"],
+    "overflow": 0,
+    "portrait": 290,
+    "width": 375
+  },
+  {
+    "collageAfterActions": true,
+    "controls": 3,
+    "heroTitle": "Le sport comme miroir de la société.",
+    "iframe": 0,
+    "lang": "fr-CA",
+    "links": ["#pilote", "/fr/reflexions"],
+    "overflow": 0,
+    "portrait": 360,
+    "width": 768
+  },
+  {
+    "collageAfterActions": true,
+    "controls": 3,
+    "heroTitle": "Sport as a mirror of society.",
+    "iframe": 0,
+    "lang": "en-CA",
+    "links": ["#pilote", "/en/reflexions"],
+    "overflow": 0,
+    "portrait": 360,
+    "width": 768
+  },
+  {
+    "collageAfterActions": false,
+    "controls": 3,
+    "heroTitle": "Le sport comme miroir de la société.",
+    "iframe": 0,
+    "lang": "fr-CA",
+    "links": ["#pilote", "/fr/reflexions"],
+    "overflow": 0,
+    "portrait": 440,
+    "width": 1440
+  },
+  {
+    "collageAfterActions": false,
+    "controls": 3,
+    "heroTitle": "Sport as a mirror of society.",
+    "iframe": 0,
+    "lang": "en-CA",
+    "links": ["#pilote", "/en/reflexions"],
+    "overflow": 0,
+    "portrait": 440,
+    "width": 1440
+  },
+  {
+    "collageAfterActions": false,
+    "controls": 3,
+    "heroTitle": "Le sport comme miroir de la société.",
+    "iframe": 0,
+    "lang": "fr-CA",
+    "links": ["#pilote", "/fr/reflexions"],
+    "overflow": 0,
+    "portrait": 440,
+    "width": 1920
+  },
+  {
+    "collageAfterActions": false,
+    "controls": 3,
+    "heroTitle": "Sport as a mirror of society.",
+    "iframe": 0,
+    "lang": "en-CA",
+    "links": ["#pilote", "/en/reflexions"],
+    "overflow": 0,
+    "portrait": 440,
+    "width": 1920
+  }
+]

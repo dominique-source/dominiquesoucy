@@ -4,7 +4,8 @@
     "deploymentEnabled": {
       "codex/dominiquesoucy-v4-premium": false,
       "codex/homepage-premium-v5": false,
-      "codex/portrait-integration-fix": false
+      "codex/portrait-integration-fix": false,
+      "codex/homepage-v6-cinematic": false
     }
   }
 }

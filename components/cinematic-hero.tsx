@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { dict, type Locale } from "@/lib/i18n";
 import { photograph, archiveLabel } from "@/lib/photography";
+import { CinematicCollage } from "@/components/cinematic-collage";
 
 /** The approved reference is composition only. All website photographs are originals. */
 export function CinematicHero({ lang }: { lang: Locale }) {
@@ -33,6 +34,7 @@ export function CinematicHero({ lang }: { lang: Locale }) {
               {d.explore}
             </Link>
           </div>
+          <CinematicCollage lang={lang} />
           <span className="reference-stitches" aria-hidden="true" />
         </div>
         <figure className="reference-sport-band">
