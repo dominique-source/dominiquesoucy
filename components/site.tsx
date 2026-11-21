@@ -1,9 +1,8 @@
+import { EditorialPortrait } from "./photography";
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import { brand } from "@/lib/brand-copy";
-import Image from "next/image";
 import { dict, type Locale } from "@/lib/i18n";
-import { media, site } from "@/lib/config";
+import { site } from "@/lib/config";
 import {
   DesktopNavigation,
   LanguageToggle,
@@ -36,39 +35,16 @@ export function Portrait({
   className?: string;
   priority?: boolean;
 }) {
-  const b = brand(lang);
-  const position = {
-    "--portrait-position": media.portrait?.position ?? "50% 40%",
-    "--portrait-mobile-position": media.portrait?.mobilePosition ?? "50% 30%",
-  } as CSSProperties;
   return (
-    <div className={`portrait ${className}`} style={position}>
-      {media.portrait ? (
-        <Image
-          src={media.portrait.src}
-          alt={media.portrait.alt[lang]}
-          fill
-          sizes="(max-width: 700px) 100vw, 55vw"
-          preload={priority}
-        />
-      ) : (
-        <>
-          <div className="portrait-art" aria-hidden="true">
-            <span className="portrait-orbit" />
-            <span className="portrait-rule" />
-            <span className="portrait-letters">
-              DS<span>.</span>
-            </span>
-          </div>
-          <div className="portrait-placeholder-label">
-            <span>{b.portraitNote}</span>
-            <small>{b.approvedPhoto}</small>
-          </div>
-        </>
-      )}
-    </div>
+    <EditorialPortrait
+      lang={lang}
+      className={className}
+      priority={priority}
+      background="light"
+    />
   );
 }
+
 export function Hero({ lang }: { lang: Locale }) {
   const d = dict(lang);
   const b = brand(lang);

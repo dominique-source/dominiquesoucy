@@ -1,0 +1,76 @@
+{
+  "collection": "Dominique Soucy archival photographs",
+  "count": 7,
+  "photos": [
+    {
+      "id": "01_basket_action_archive",
+      "description": "basket archive action",
+      "original": "/assets/dominique/originals/01_basket_action_archive.jpg",
+      "vintage": "/assets/dominique/vintage/01_basket_action_archive.jpg",
+      "transparent": "/assets/dominique/transparent/01_basket_action_archive.png",
+      "original_filename": "IMG_6181.jpeg",
+      "transparent_has_alpha": true,
+      "alpha_range": [0, 255]
+    },
+    {
+      "id": "02_portrait_chemise_bleue",
+      "description": "portrait blue shirt",
+      "original": "/assets/dominique/originals/02_portrait_chemise_bleue.jpg",
+      "vintage": "/assets/dominique/vintage/02_portrait_chemise_bleue.jpg",
+      "transparent": "/assets/dominique/transparent/02_portrait_chemise_bleue.png",
+      "original_filename": "IMG_6179.jpeg",
+      "transparent_has_alpha": true,
+      "alpha_range": [0, 255]
+    },
+    {
+      "id": "03_moment_communautaire",
+      "description": "community event",
+      "original": "/assets/dominique/originals/03_moment_communautaire.jpg",
+      "vintage": "/assets/dominique/vintage/03_moment_communautaire.jpg",
+      "transparent": "/assets/dominique/transparent/03_moment_communautaire.png",
+      "original_filename": "IMG_6178.jpeg",
+      "transparent_has_alpha": true,
+      "alpha_range": [0, 255]
+    },
+    {
+      "id": "04_equipe_purathlete",
+      "description": "team",
+      "original": "/assets/dominique/originals/04_equipe_purathlete.jpg",
+      "vintage": "/assets/dominique/vintage/04_equipe_purathlete.jpg",
+      "transparent": "/assets/dominique/transparent/04_equipe_purathlete.png",
+      "original_filename": "IMG_6177.jpeg",
+      "transparent_has_alpha": true,
+      "alpha_range": [0, 255]
+    },
+    {
+      "id": "05_portrait_ballon",
+      "description": "ball portrait",
+      "original": "/assets/dominique/originals/05_portrait_ballon.jpg",
+      "vintage": "/assets/dominique/vintage/05_portrait_ballon.jpg",
+      "transparent": "/assets/dominique/transparent/05_portrait_ballon.png",
+      "original_filename": "IMG_6176.jpeg",
+      "transparent_has_alpha": true,
+      "alpha_range": [0, 255]
+    },
+    {
+      "id": "06_moment_humain",
+      "description": "human moment",
+      "original": "/assets/dominique/originals/06_moment_humain.jpg",
+      "vintage": "/assets/dominique/vintage/06_moment_humain.jpg",
+      "transparent": "/assets/dominique/transparent/06_moment_humain.png",
+      "original_filename": "IMG_5645.jpeg",
+      "transparent_has_alpha": true,
+      "alpha_range": [0, 255]
+    },
+    {
+      "id": "07_archive_rouge_et_or",
+      "description": "Rouge et Or archive",
+      "original": "/assets/dominique/originals/07_archive_rouge_et_or.jpg",
+      "vintage": "/assets/dominique/vintage/07_archive_rouge_et_or.jpg",
+      "transparent": "/assets/dominique/transparent/07_archive_rouge_et_or.png",
+      "original_filename": "IMG_1127.jpeg",
+      "transparent_has_alpha": true,
+      "alpha_range": [0, 255]
+    }
+  ]
+}

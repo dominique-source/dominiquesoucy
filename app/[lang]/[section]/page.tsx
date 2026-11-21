@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { locale, dict, sections, type Section } from "@/lib/i18n";
 import { getEntries, matchesTopic, observationTopics } from "@/lib/content";
-import { AboutPreview, PurInstinctBridge } from "@/components/site";
+import { AboutNarrative } from "@/components/premium-editorial";
 import {
   VideoEditorial,
   FieldNotes,
@@ -32,18 +32,7 @@ export default async function SectionPage({ params, searchParams }: Props) {
   const p = await params;
   const lang = locale(p.lang);
   const section = sectionName(p.section);
-  const d = dict(lang);
-  if (section === "a-propos")
-    return (
-      <div className="content-shell about-v2">
-        <header className="page-heading">
-          <p className="eyebrow accent">{d.eyebrow}</p>
-          <h1>{d.about}</h1>
-        </header>
-        <AboutPreview lang={lang} full />
-        <PurInstinctBridge lang={lang} />
-      </div>
-    );
+  if (section === "a-propos") return <AboutNarrative lang={lang} />;
   const { category } = await searchParams;
   const valid =
     section === "observations"

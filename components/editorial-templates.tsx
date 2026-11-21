@@ -1,3 +1,4 @@
+import { FieldArchive, SportArchive } from "./premium-editorial";
 import Link from "next/link";
 import Image from "next/image";
 import { dict, type Locale, type Section } from "@/lib/i18n";
@@ -244,17 +245,7 @@ export function FieldNotesEmpty({
   const b = brand(lang);
   return (
     <div className="field-empty">
-      <div className="field-empty-graphic">
-        <AbstractVisual kind="lines" />
-        <p aria-hidden="true">
-          {b.fieldStatement[0]}
-          <br />
-          <span>{b.fieldStatement[1]}</span>
-        </p>
-        <span className="field-empty-caption">
-          {b.fieldNotes} / DOMINIQUE SOUCY
-        </span>
-      </div>
+      {!filtered && <FieldArchive lang={lang} />}
       <div className="field-empty-copy">
         <p className="eyebrow accent">{b.fieldNotes}</p>
         <h2>{filtered ? b.noResults : b.fieldEmpty}</h2>
@@ -355,6 +346,7 @@ export function SubjectEditorial({
         {section === "societe" && <p className="subjects">{d.subjects}</p>}
         <span className="subject-orbit" aria-hidden="true" />
       </header>
+      {section === "sport-culture" && <SportArchive lang={lang} />}
       <TopicFilters
         lang={lang}
         section={section}
