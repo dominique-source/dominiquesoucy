@@ -14,6 +14,7 @@ const config: NextConfig = {
       },
     ];
   },
+  images: { qualities: [75, 85] },
   outputFileTracingIncludes: {
     "/*": [
       "./content/**/*.md",
