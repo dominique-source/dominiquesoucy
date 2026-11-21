@@ -9,6 +9,7 @@ import "./homepage-v5.css";
 import "./homepage-v6.css";
 import "./pilot-thumbnails.css";
 import "./homepage-v6-3.css";
+import "./studio-live.css";
 import "./studio-universe.css";
 const display = localFont({
   src: "../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-800-italic.woff2",
