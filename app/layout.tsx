@@ -7,6 +7,7 @@ import "./adaptive-video.css";
 import "./brand-v4.css";
 import "./homepage-v5.css";
 import "./homepage-v6.css";
+import "./pilot-thumbnails.css";
 const display = localFont({
   src: "../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-800-italic.woff2",
   variable: "--font-display",
