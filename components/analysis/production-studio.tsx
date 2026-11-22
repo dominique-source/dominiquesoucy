@@ -36,6 +36,20 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [busy,setBusy]=useState<""|"transcribe"|"analyze"|"questions">("");
   const [error,setError]=useState("");
   const [saveFailure,setSaveFailure]=useState("");
+  const [storageHealth,setStorageHealth]=useState("");
+  const [checkingStorage,setCheckingStorage]=useState(false);
+  const checkStorage=async()=>{
+    setCheckingStorage(true);
+    try{
+      const response=await fetch("/api/analysis/storage-health",{cache:"no-store"});
+      const data=await response.json() as {projectStore?:string;mediaStore?:string;error?:string};
+      setStorageHealth(data.error?
+        `HTTP ${response.status} · ${data.error}`:
+        `HTTP ${response.status} · Redis: ${data.projectStore||"unknown"} · Blob: ${data.mediaStore||"unknown"} (configuration seulement)`);
+    }catch{
+      setStorageHealth(fr?"Diagnostic indisponible : vérifie ta connexion.":"Diagnostic unavailable: check your connection.");
+    }finally{setCheckingStorage(false)}
+  };
   const [localBackup,setLocalBackup]=useState<StudioProject|null>(null);
   const [localBackupError,setLocalBackupError]=useState("");
   const [retryKey,setRetryKey]=useState(0);
@@ -383,6 +397,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           </select>
         </label>
         <button type="button" className="analysis-secondary" onClick={newProject} disabled={!ready||uploading}>+ {fr?"NOUVEAU PROJET":"NEW PROJECT"}</button>
+      </div>
+      <div className="studio-recovery-actions">
+        <button type="button" className="analysis-secondary" disabled={!ready||checkingStorage}
+          onClick={checkStorage}>{checkingStorage?(fr?"VÉRIFICATION…":"CHECKING…"):(fr?"DIAGNOSTIC DU STOCKAGE":"CHECK STORAGE")}</button>
+        {storageHealth&&<small role="status">{storageHealth}</small>}
       </div>
       {status==="error"&&<div className="studio-recovery-alert" role="alert">
         <strong>{fr?"SAUVEGARDE SERVEUR NON CONFIRMÉE":"SERVER SAVE NOT CONFIRMED"}</strong>
