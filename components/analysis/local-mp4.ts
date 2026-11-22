@@ -1,5 +1,5 @@
 import { drawStudioFrame, type CanvasVisual } from "./canvas-overlays";
-import { activeCamera, sourceTime, type CameraKey, type Cut, type SourceKey } from "@/lib/analysis/multicam";
+import { cameraShot, sourceTime, type CameraKey, type Cut, type SourceKey } from "@/lib/analysis/multicam";
 
 type RenderOptions={
   nodes:Partial<Record<SourceKey,HTMLMediaElement|null>>;
@@ -68,10 +68,10 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
     await new Promise<void>((resolve,reject)=>{
       const draw=()=>{
         const t=Math.max(0,master.currentTime-opts.offsets[opts.audioSource]);
-        const camera=activeCamera(opts.cuts,t,opts.fallback);
-        const video=opts.nodes[camera] as HTMLVideoElement|undefined;
+        const shot=cameraShot(opts.cuts,t,opts.fallback,opts.end);
+        const video=opts.nodes[shot.camera] as HTMLVideoElement|undefined;
         try{
-          drawStudioFrame(painter,video,width,height,t,opts.start,opts.visual);
+          drawStudioFrame(painter,video,width,height,t,opts.start,opts.visual,shot.zoom);
         }catch{reject(new Error("VIDEO_CANVAS_BLOCKED"));return}
         opts.onProgress(Math.min(100,Math.round((t-opts.start)/(opts.end-opts.start)*100)));
         if(t>=opts.end-.05||master.ended){resolve();return}

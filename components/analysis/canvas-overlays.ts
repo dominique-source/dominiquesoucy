@@ -18,7 +18,7 @@ function rounded(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:numbe
 }
 export function drawStudioFrame(
  ctx:CanvasRenderingContext2D,video:HTMLVideoElement|undefined,
- width:number,height:number,t:number,start:number,visual?:CanvasVisual,
+ width:number,height:number,t:number,start:number,visual?:CanvasVisual,cameraZoom=1,
 ){
  const bg=visual?.background||"original";
  const grad=ctx.createLinearGradient(0,0,width,height);
@@ -28,7 +28,7 @@ export function drawStudioFrame(
  if(video&&video.readyState>=2&&video.videoWidth&&video.videoHeight){
   const inset=bg==="original"?0:Math.round(Math.min(width,height)*.075);
   const areaW=width-inset*2,areaH=height-inset*2;
-  const zoom=visual?.style==="quote"?1.12:1;
+  const zoom=(visual?.style==="quote"?1.08:1)*Math.min(1.25,Math.max(1,cameraZoom));
   const scale=Math.max(areaW/video.videoWidth,areaH/video.videoHeight)*zoom;
   const w=video.videoWidth*scale,h=video.videoHeight*scale;
   ctx.save();ctx.beginPath();ctx.rect(inset,inset,areaW,areaH);ctx.clip();
