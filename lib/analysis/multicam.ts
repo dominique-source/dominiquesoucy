@@ -1,10 +1,10 @@
 /** Local-only multicamera edit decision list (EDL). No remote file storage. */
-export type SourceKey = "audio" | "main" | "vertical" | "secondary";
+export type SourceKey = "audio" | "enhanced" | "main" | "vertical" | "secondary";
 export type SourceFiles = Partial<Record<SourceKey, File>>;
-export type CameraKey = Exclude<SourceKey, "audio">;
+export type CameraKey = Exclude<SourceKey, "audio" | "enhanced">;
 export const cameraKeys: CameraKey[] = ["main", "vertical", "secondary"];
 export const labels: Record<SourceKey, string> = {
-  audio: "Audio principal", main: "Canon / principale",
+  audio: "Audio original", enhanced: "Audio optimisé / voix", main: "Canon / principale",
   vertical: "iPhone / verticale", secondary: "Samsung / secondaire",
 };
 export type Cut = { id: string; at: number; camera: CameraKey };
