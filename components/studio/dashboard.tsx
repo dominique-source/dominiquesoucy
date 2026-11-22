@@ -337,7 +337,7 @@ export function StudioDashboard({
     const isEpisodeFin = speaker === "Dominique" && episodeRef.current && completedEpisodeTurn(text);
     const c = speaker === "Dominique" ? voiceCommand(text) : undefined;
     // FIN is a control cue, not part of the published interview.
-    const cleanText = isEpisodeFin ? text.replace(/(?:^|[\\s.,!?;:])fin[.!?…\\s]*$/i, "").trim() : text;
+    const cleanText = isEpisodeFin ? "" : text;
     append(
       speaker === "Dominique"
         ? "Dominique"
@@ -581,7 +581,7 @@ export function StudioDashboard({
             <p>{t("CONTRÔLE VOCAL", "VOICE CONTROL")}</p>
             <h2>{t("MODE LIVE", "LIVE MODE")}</h2>
             <span>{episodeMode
-              ? t("ÉPISODE 001 · DIS « FIN » POUR LA QUESTION SUIVANTE", "EPISODE 001 · SAY 'FIN' FOR THE NEXT QUESTION")
+              ? t("ÉPISODE 001 · DIS « FIN » SEUL POUR LA PROCHAINE QUESTION", "EPISODE 001 · SAY 'FIN' FOR THE NEXT QUESTION")
               : t("DIS LA COMMANDE À VOIX HAUTE", "SAY THE COMMAND OUT LOUD")}</span>
           </div>
           {episodeMode && <div className="studio-episode-banner">
@@ -910,7 +910,7 @@ export function StudioDashboard({
             <span>{t("PREMIER TOURNAGE / DOM SOUCY MEDIA", "FIRST SHOOT / DOM SOUCY MEDIA")}</span>
             <strong>001 — À quoi sert vraiment le sport ?</strong>
             <p>{t(
-              "Prépare 3 journalistes, l'ouverture, le questionnement et la règle « FIN ». Une fois la séance ON AIR, ouvre les questions. Il n'y aura aucune relance automatique : dis « fin » après chaque réponse.",
+              "Prépare 3 journalistes, l'ouverture, le questionnement et la règle « FIN ». Une fois la séance ON AIR, ouvre les questions. Il n'y aura aucune relance automatique : dis « fin » seul après chaque réponse.",
               "Configure 3 journalists, the opening question and FIN gating. Once ON AIR, open the questions. No automatic follow-ups: say 'fin' after each answer."
             )}</p>
             <button type="button" disabled={active} onClick={prepareEpisode001} className="studio-episode-prepare">
