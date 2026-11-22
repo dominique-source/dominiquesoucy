@@ -25,7 +25,7 @@ export async function GET(request:Request){
     const expires=Date.now()+15*60*1000;
     const token=await issueSignedToken({ operations:["get"] });
     const signed=await presignUrl(token,{
-      pathname:item.pathname,operation:"get",validUntil:expires,
+      pathname:item.pathname,operation:"get",validUntil:expires,access:"private",
     });
     return json({url:signed.presignedUrl,expires,filename:item.filename});
   }catch{
