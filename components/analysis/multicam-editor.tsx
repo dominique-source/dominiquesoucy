@@ -320,8 +320,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     <div className="analysis-multi-claps">
       <strong>{fr?"ALIGNEMENT PAR CLAP VISUEL EN FIN D’ENREGISTREMENT":"VISUAL END-OF-RECORDING CLAP"}</strong>
       <p>{fr
-        ?"Si le micro Canon est mauvais : cherche l’image où les mains se touchent dans chaque vidéo. Place la lecture à cette image, puis clique sur « Marquer ». Aucun son n’est nécessaire."
-        :"If a camera microphone is poor: find the exact frame where hands touch on each video and mark it. No sound needed."}</p>
+        ?"Si le micro Canon est mauvais : utilise la barre de lecture de chaque vidéo à l’étape 06 pour trouver l’image exacte où tes mains se touchent à la fin, puis clique ici sur « Marquer l’image actuelle » pour chaque caméra. Aucun son Canon n’est nécessaire."
+        :"If a camera microphone is poor, use each camera video’s controls in step 06 to find the exact frame where hands touch at the end, then mark that frame here. No camera audio needed."}</p>
       <div className="analysis-multi-visual-claps">
         {videos.map(key=><div key={key}>
           <strong>{labels[key]}</strong><span>{visualClaps[key]===null?"—":`${visualClaps[key]?.toFixed(2)} s`}</span>
@@ -335,19 +335,26 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       <button type="button" className="analysis-primary" onClick={()=>{
         const keys=videos.filter(key=>visualClaps[key]!==null);
         if(keys.length<2){setError(fr?"Marque la même image de clap sur au moins deux vidéos.":"Mark the same clap frame on at least two videos.");return}
-        const anchor=keys.includes("main")?"main":keys[0];
+        // Prefer a camera already matched to the external reference audio.
+        // The visual clap then transfers that trusted offset to the silent Canon.
+        const confirmed=autoSyncResults.find(r=>keys.includes(r.source as CameraKey) &&
+          r.match.confidence!=="unreliable"&&!r.error);
+        const anchor=(confirmed?.source as CameraKey|undefined) ||
+          (keys.includes(realAudioSource as CameraKey)?realAudioSource as CameraKey:undefined) ||
+          (keys.includes("main")?"main":keys[0]);
         const base=visualClaps[anchor]||0;
+        const anchorOffset=offsets[anchor];
         const next={...offsets};
-        for(const key of keys)next[key]=(visualClaps[key]||0)-base;
-        next[anchor]=0;
+        for(const key of keys)next[key]=anchorOffset+(visualClaps[key]||0)-base;
         synchronize(next);
         setError("");
-        setSuccess(fr?`Alignement visuel appliqué à ${keys.length} caméras. Vérifie le début et le milieu de la vidéo.`:
-          `Visual clap alignment applied to ${keys.length} cameras. Check beginning and middle.`);
+        setSuccess(fr?
+          `Clap visuel aligné pour ${keys.length} caméras. ${confirmed?"Référence audio transférée depuis la caméra fiable.":"Alignement relatif des caméras seulement : vérifie le son final."} Vérifie aussi le début de la vidéo.`:
+          `Visual clap matched for ${keys.length} cameras. ${confirmed?"Transferred timing from a trusted audio match.":"Cameras aligned relative to each other; check final audio."} Verify the start as well.`);
       }}>{fr?"ALIGNER SUR LE CLAP VISUEL":"ALIGN USING VISUAL CLAP"}</button>
       <p className="analysis-note">{fr
-        ?"Le clap doit être visible dans au moins deux caméras. Il aligne les images entre elles, mais pas automatiquement la voix Samsung : il faudra aussi vérifier le décalage de l’audio final."
-        :"Visual clap aligns camera images only. Final separate audio still requires verification."}</p>
+        ?"Le clap doit être visible dans au moins deux caméras. Si une caméra est déjà alignée au son principal, son repère est transmis aux autres. Sinon, les caméras sont alignées entre elles seulement. Vérifie la voix finale."
+        :"If one camera has a trusted audio match, the clap transfers its offset to the other cameras. Otherwise, only relative alignment is possible. Verify final voice timing."}</p>
     </div>
     <div className="analysis-multi-player-header">
       <strong>{fr?"06 · PRÉVISUALISER LES ANGLES":"06 · ANGLE PREVIEW"}</strong>
@@ -355,7 +362,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     </div>
     <div className="analysis-multi-grid">
       {videos.map(key=><div key={key} className={`analysis-multi-camera ${effectiveCamera===key?"is-active":""}`}>
-        <video key={renderNonce} ref={el=>{elements.current[key]=el}} src={playbackUrls[key]} playsInline preload="metadata" muted
+        <video key={renderNonce} ref={el=>{elements.current[key]=el}} src={playbackUrls[key]} controls playsInline preload="metadata" muted
           onTimeUpdate={realAudioSource===key?onClock:undefined}
           onError={()=>setError(fr?`Impossible de lire ${labels[key]}. Essaie de convertir ce fichier en MP4 H.264.`:`Cannot play ${labels[key]}. Try converting it to H.264 MP4.`)}
           aria-label={labels[key]}/>
