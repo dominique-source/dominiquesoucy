@@ -24,6 +24,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [files,setFiles]=useState<SourceFiles>({});
   const [remoteUrls,setRemoteUrls]=useState<Partial<Record<SourceKey,string>>>({});
   const [uploads,setUploads]=useState<PendingUploads>({});
+  const uploading=Object.values(uploads).some(u=>u?.busy);
   const [ready,setReady]=useState(false);
   const [status,setStatus]=useState<"loading"|"pending"|"saving"|"saved"|"error">("loading");
   const [consent,setConsent]=useState(false);
@@ -69,7 +70,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     return()=>{cancelled=true};
   },[list,load,fr]);
   useEffect(()=>{
-    if(!ready)return;
+    if(!ready||uploading)return;
     const snapshot=JSON.stringify({...project,updatedAt:undefined});
     if(snapshot===persisted.current)return;
     const ticket=++revision.current;
@@ -94,7 +95,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       }
     },1000);
     return()=>clearTimeout(timeout);
-  },[project,ready,fr]);
+  },[project,ready,fr,uploading]);
   useEffect(()=>{
     if(!ready)return;
     const controller=new AbortController();
@@ -114,7 +115,6 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     })();
     return()=>controller.abort();
   },[project.id,project.media,ready]);
-  const uploading=Object.values(uploads).some(u=>u?.busy);
   useEffect(()=>{
     const before=(e:BeforeUnloadEvent)=>{
       if(uploading||status!=="saved"){e.preventDefault();}
