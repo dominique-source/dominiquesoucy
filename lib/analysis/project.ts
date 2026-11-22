@@ -51,7 +51,8 @@ export const capsuleSchema=z.object({
   style:z.enum(["classic","quote","conversation","editorial"]),
   caption:z.string().max(500),
   bubble:z.string().max(500),
-  background:z.enum(["original","dark","lime","gradient"]),
+  background:z.enum(["original","dark","lime","gradient","signature"]),
+  keying:z.object({enabled:z.boolean(),color:z.string().regex(/^#[0-9a-fA-F]{6}$/),tolerance:z.number().finite().min(0.03).max(0.45),softness:z.number().finite().min(0.01).max(0.35),spill:z.number().finite().min(0).max(1)}).strict().default({enabled:false,color:"#30b7b0",tolerance:0.16,softness:0.12,spill:0.45}),
   textPosition:z.enum(["top","center","bottom"]).default("bottom"),
   status:z.enum(["draft","rendered","failed"]).default("draft"),
 }).strict();
