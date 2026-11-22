@@ -449,8 +449,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
               const id=crypto.randomUUID();
               modify({capsules:[...project.capsules,{
                 id,title:`Question ${i+1}`,start:0,end:0,format:project.format,
-                style:"conversation",caption:q.answerExcerpt.slice(0,500),bubble:q.question,
-                background:"dark",textPosition:"bottom",status:"draft",
+                style:"conversation" as const,caption:q.answerExcerpt.slice(0,500),bubble:q.question,
+                background:"dark" as const,textPosition:"bottom" as const,status:"draft" as const,
               }].slice(0,40),selectedCapsuleId:id,stage:"editing"});
               document.getElementById("studio-capsule-workshop")?.scrollIntoView({behavior:"smooth",block:"start"});
             }}>{fr?"UTILISER CETTE BULLE DANS UNE CAPSULE":"USE THIS BUBBLE IN A CAPSULE"}</button>
