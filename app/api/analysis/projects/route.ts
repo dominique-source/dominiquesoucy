@@ -39,7 +39,7 @@ export async function POST(request:Request){
   const user=await session().catch(()=>null);
   if(!user)return json({error:"UNAUTHORIZED"},401);
   if(Number(request.headers.get("content-length")||0)>250000)return json({error:"TOO_LARGE"},413);
-  if(!(await limit(`project-save:${user.key}`,120,3600).catch(()=>false)))
+  if(!(await limit(`project-save:${user.key}`,1200,3600).catch(()=>false)))
     return json({error:"SAVE_RATE_LIMITED"},429);
   let data:unknown;
   try {data=await request.json()}catch{return json({error:"BAD_REQUEST"},400)}
