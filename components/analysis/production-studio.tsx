@@ -430,6 +430,19 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}
       format={project.format} onFormatChange={format=>modify({format})}
       capsule={project.capsules.find(c=>c.id===project.selectedCapsuleId)}
+      onProceedToCapsules={()=>{
+        if(!project.capsules.length){
+          const id=crypto.randomUUID();
+          modify({stage:"editing",selectedCapsuleId:id,capsules:[{
+            id,title:project.analysis?.moments?.[0]?.title?.slice(0,100)||"Capsule 01",
+            start:project.timeline.clipStart,end:project.timeline.clipEnd,
+            format:project.format,style:"conversation",
+            caption:project.analysis?.moments?.[0]?.excerpt?.slice(0,500)||"",
+            bubble:project.analysis?.moments?.[0]?.title?.slice(0,160)||"",
+            background:"dark",textPosition:"bottom",status:"draft",
+          }]});
+        }else modify({stage:"editing"});
+      }}
       onExportOutcome={(ok,details)=>{
         record(ok?"export":"error",details,ok?"success":"failure");
         const id=project.selectedCapsuleId;
