@@ -1,7 +1,18 @@
 import type { StudioProject } from "@/lib/analysis/project";
 import { keyPixels } from "@/lib/analysis/chroma-key";
 type Capsule=StudioProject["capsules"][number];
-export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">;
+export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string};
+const backgroundCache=new Map<string,HTMLImageElement>();
+export async function preloadStudioBackground(url:string){
+  if(!url.startsWith("/assets/studio/backdrops/"))throw Error("INVALID_STUDIO_BACKGROUND");
+  let image=backgroundCache.get(url);
+  if(!image){image=new Image();backgroundCache.set(url,image);image.src=url}
+  if(image.complete&&image.naturalWidth>0)return image;
+  try{await image.decode()}catch{throw Error("STUDIO_BACKGROUND_NOT_FOUND")}
+  if(!image.naturalWidth)throw Error("STUDIO_BACKGROUND_NOT_FOUND");
+  return image;
+}
+
 const matteCache=new WeakMap<CanvasRenderingContext2D,HTMLCanvasElement>();
 function lines(ctx:CanvasRenderingContext2D,text:string,maxWidth:number,limit=4){
  const words=text.replace(/\s+/g," ").trim().split(" ").filter(Boolean),out:string[]=[];
