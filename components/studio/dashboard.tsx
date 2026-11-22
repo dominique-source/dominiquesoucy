@@ -58,6 +58,9 @@ export function StudioDashboard({
   const [mode, setMode] = useState<Mode>("reflection");
   const modeRef = useRef<Mode>("reflection");
   const [active, setActive] = useState(false);
+  const [liveView, setLiveView] = useState(false);
+  const [lastVoiceCommand, setLastVoiceCommand] = useState<Command | null>(null);
+  const voiceFlash = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
@@ -209,6 +212,7 @@ export function StudioDashboard({
     setStream(null);
   }
   function finish() {
+    setLiveView(false);
     stopRecording();
     silence();
     activeRef.current = false;
@@ -306,6 +310,9 @@ export function StudioDashboard({
     }
   }
   function command(c: Command) {
+    setLastVoiceCommand(c);
+    if (voiceFlash.current) clearTimeout(voiceFlash.current);
+    voiceFlash.current = setTimeout(() => setLastVoiceCommand(null), 1600);
     if (c === "end") {
       finish();
       return;
@@ -425,6 +432,7 @@ export function StudioDashboard({
     setActive(true);
     if (demo) {
       status("demo");
+      setLiveView(true);
       return;
     }
     try {
@@ -475,6 +483,7 @@ export function StudioDashboard({
       });
       engine.current = call;
       await call.connect(s, lang, output);
+      if (activeRef.current) setLiveView(true);
     } catch (e) {
       finish();
       mediaError(e);
@@ -521,6 +530,7 @@ export function StudioDashboard({
       }
       if (activeRef.current && Date.now() - started.current >= 15 * 60 * 1000) {
         stopRecording();
+        setLiveView(false);
         engine.current?.close();
         streamRef.current?.getTracks().forEach((x) => x.stop());
         activeRef.current = false;
@@ -556,6 +566,7 @@ export function StudioDashboard({
       if (timer.current) clearTimeout(timer.current);
       if (watchdog.current) clearTimeout(watchdog.current);
       if (testTimer.current) clearTimeout(testTimer.current);
+      if (voiceFlash.current) clearTimeout(voiceFlash.current);
     };
   }, [expires, router, fr]);
   function updateEntry(id: string, visibility: Entry["visibility"]) {
@@ -568,7 +579,54 @@ export function StudioDashboard({
     return `${t("BILAN LOCAL — extraits non interprétés, pas une synthèse IA", "LOCAL REVIEW — uninterpreted excerpts, not an AI summary")}\n${Math.floor(seconds / 60)} min ${seconds % 60}s · ${entriesRef.current.filter((e) => e.speaker !== "Dominique").length} ${t("questions/interventions", "questions/interventions")}\n\n${exportText(entriesRef.current)}\n\n${t("Notes éditoriales privées", "Private editorial notes")}: ${note}`;
   }
   return (
-    <section className="studio-dashboard">
+    <section className={`studio-dashboard${active && liveView ? " is-live" : ""}`}>
+      {active && liveView && (
+        <div className="studio-live-panel" role="region" aria-label={t("Commandes vocales en direct", "Live voice commands")}>
+          <header className="studio-live-header">
+            <div className="studio-live-brand">DOMINIQUE SOUCY <span>/ STUDIO LIVE</span></div>
+            <div className="studio-live-on"><span aria-hidden="true" />{t("EN DIRECT", "LIVE")} · {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</div>
+          </header>
+          <div className="studio-live-heading">
+            <p>{t("CONTRÔLE VOCAL", "VOICE CONTROL")}</p>
+            <h2>{t("MODE LIVE", "LIVE MODE")}</h2>
+            <span>{t("DIS LA COMMANDE À VOIX HAUTE", "SAY THE COMMAND OUT LOUD")}</span>
+          </div>
+          <div className="studio-live-commands">
+            {([
+              { cmd: "open" as Command, title: t("OUVRIR LES QUESTIONS", "OPEN QUESTIONS"), cue: t("Maintenant, on passe aux questions", "Let's open the questions"), enabled: mode !== "questions" && mode !== "speaking" && (demo || connection === "connected") },
+              { cmd: "next" as Command, title: t("PROCHAINE QUESTION", "NEXT QUESTION"), cue: t("Prochaine question", "Next question"), enabled: mode === "questions" || mode === "speaking" },
+              { cmd: "repeat" as Command, title: t("RÉPÉTER", "REPEAT"), cue: t("Répète la question", "Repeat the question"), enabled: (mode === "questions" || mode === "speaking") && index >= 0 },
+              { cmd: "reflection" as Command, title: t("RÉFLEXION LIBRE", "FREE REFLECTION"), cue: t("Retour à la réflexion", "Back to reflection"), enabled: true },
+              { cmd: "silence" as Command, title: t("SILENCE IMMÉDIAT", "IMMEDIATE SILENCE"), cue: t("Attends, j'ai pas fini", "Let me finish"), enabled: true },
+              { cmd: "end" as Command, title: t("TERMINER", "END SESSION"), cue: t("Fin de conférence", "End conference"), enabled: true },
+            ]).map(({ cmd, title, cue, enabled }) => (
+              <button
+                key={cmd}
+                type="button"
+                className={`studio-live-command studio-live-command--${cmd}${lastVoiceCommand === cmd ? " is-recognized" : ""}${(cmd === "reflection" && mode === "reflection") || (cmd === "open" && mode === "questions") ? " is-current" : ""}`}
+                disabled={!enabled}
+                onClick={() => command(cmd)}
+                aria-label={`${title}. ${t("Commande vocale", "Voice command")}: ${cue}`}
+              >
+                <strong>{title}</strong>
+                <span>« {cue} »</span>
+              </button>
+            ))}
+          </div>
+          {error && <p className="studio-live-error" role="alert">{error}</p>}
+          <div className="studio-live-status">
+            <span>{t("JOURNALISTE", "JOURNALIST")}: <strong>{index >= 0 ? names[index] : "—"}</strong></span>
+            <span>{t("MODE", "MODE")}: <strong>{labels[lang][mode]}</strong></span>
+            <span>{t("MICRO", "MIC")}: <strong>{mode === "paused" ? t("COUPÉ", "OFF") : t("ACTIF", "ON")}</strong></span>
+            <span>{t("AUDIO", "AUDIO")}: <strong>{recording ? t("● ENREGISTREMENT", "● RECORDING") : t("NON ENREGISTRÉ", "NOT RECORDING")}</strong></span>
+            <span>{t("IA", "AI")}: <strong>{connection}</strong></span>
+          </div>
+          <footer className="studio-live-footer">
+            <p>{t("Lis la commande affichée sous chaque bouton. Dis-la seule, puis attends sa reconnaissance.", "Say the command shown below each button on its own.")}</p>
+            <button type="button" onClick={() => setLiveView(false)}>{t("RETOUR À LA RÉGIE", "BACK TO CONTROL ROOM")}</button>
+          </footer>
+        </div>
+      )}
       <div className="studio-topline">
         <p className="studio-kicker">
           DOMINIQUE SOUCY / {t("RÉGIE PRIVÉE", "PRIVATE CONTROL ROOM")}
@@ -663,6 +721,7 @@ export function StudioDashboard({
             </div>
           </div>
           <div className="studio-controls">
+            {active && !liveView && <button type="button" className="studio-open-live" onClick={() => setLiveView(true)}>{t("AFFICHER LE MODE LIVE · COMMANDES VOCALES", "OPEN LIVE MODE · VOICE COMMANDS")}</button>}
             <button
               className="studio-primary"
               onClick={(event) => {
