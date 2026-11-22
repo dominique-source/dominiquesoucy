@@ -162,7 +162,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       if(latest.current.id!==id)throw Error("PROJECT_CHANGED");
       const info:SourceMedia={pathname:blob.pathname,filename:file.name,bytes:file.size,
         contentType:file.type||"application/octet-stream"};
-      const next={...latest.current,media:{...latest.current.media,[key]:info}};
+      const current=latest.current;
+      // A processed voice track becomes the default final sound while the
+      // original remains available for transcription and camera sync.
+      const next={...current,media:{...current.media,[key]:info},
+        timeline:key==="enhanced"?{...current.timeline,finalAudioSource:"enhanced" as const}:current.timeline};
       const r=await fetch("/api/analysis/projects",{
         method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(next),
       });
@@ -313,10 +317,10 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <div className="studio-audio-optimized">
         <h3>{fr?"PISTE AUDIO FINALE — VOIX OPTIMISÉE":"FINAL AUDIO — ENHANCED VOICE"}</h3>
         <p>{fr
-          ?"Améliore ton audio original avec Adobe Podcast Enhance, puis ajoute ici le fichier optimisé. Le Studio conserve les deux fichiers séparément et utilise l’audio optimisé à la prévisualisation et à l’export si tu le choisis."
-          :"Enhance your original audio with Adobe Podcast, then upload the processed track here. The Studio keeps both and lets you choose the final sound for preview and export."}</p>
+          ?"Améliore ton audio original avec Adobe Podcast Enhance, puis ajoute ici le fichier optimisé. Le Studio conserve les deux fichiers séparément et sélectionne automatiquement l’audio optimisé comme son final après sa sauvegarde."
+          :"Enhance your original audio with Adobe Podcast, then upload the processed track here. The Studio keeps both and selects the enhanced audio as the final soundtrack after it is saved."}</p>
         <a href="https://podcast.adobe.com/enhance-speech" target="_blank" rel="noopener noreferrer"
-          className="analysis-secondary">{fr?"OUVRIR ADOBE PODCAST ENHANCE ↗":"OPEN ADOBE PODCAST ENHANCE ↗"}</a>
+          className="analysis-secondary studio-enhance-cta">{fr?"✦ OPTIMISER L’AUDIO ↗":"✦ ENHANCE AUDIO ↗"}</a>
         {tile("enhanced")}
         <p className="analysis-note">{fr
           ?"Adobe Enhance n’est pas lancé automatiquement depuis ce bouton : aucun accès API public générique n’est disponible. Télécharge d’abord le résultat d’Adobe, puis importe-le ici."
