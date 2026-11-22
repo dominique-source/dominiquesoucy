@@ -14,6 +14,7 @@ export const mediaInfo = z.object({
 }).strict();
 export const offsetsSchema = z.object({
   audio:z.number().finite().min(-7200).max(7200),
+  enhanced:z.number().finite().min(-7200).max(7200).default(0),
   main:z.number().finite().min(-7200).max(7200),
   vertical:z.number().finite().min(-7200).max(7200),
   secondary:z.number().finite().min(-7200).max(7200),
@@ -23,6 +24,8 @@ export const timelineSchema = z.object({
   clipStart:z.number().finite().min(0).max(7200),
   clipEnd:z.number().finite().min(0).max(7200),
   audioSource:sourceIdSchema,
+  finalAudioSource:sourceIdSchema.default("audio"),
+  visualClaps:z.object({main:z.number().min(0).max(7200).nullable().default(null),vertical:z.number().min(0).max(7200).nullable().default(null),secondary:z.number().min(0).max(7200).nullable().default(null)}).strict().default({main:null,vertical:null,secondary:null}),
   offsets:offsetsSchema,
   claps:offsetsSchema,
   cuts:z.array(z.object({
@@ -72,7 +75,7 @@ export const projectSchema = z.object({
   selectedMoment:z.number().int().min(0).max(7),
   format:z.enum(["16:9","9:16","1:1"]),
   media:z.object({
-    audio:mediaInfo.optional(),main:mediaInfo.optional(),vertical:mediaInfo.optional(),secondary:mediaInfo.optional(),
+    audio:mediaInfo.optional(),enhanced:mediaInfo.optional(),main:mediaInfo.optional(),vertical:mediaInfo.optional(),secondary:mediaInfo.optional(),
   }).strict(),
   timeline:timelineSchema,
   updatedAt:z.number().int().nonnegative().optional(),
@@ -81,7 +84,7 @@ export type StudioProject=z.infer<typeof projectSchema>;
 export type SourceMedia=z.infer<typeof mediaInfo>;
 export function validProjectMediaPath(projectId:string,source:SourceKey,path:string) {
   return path.startsWith(`studio-projects/${projectId}/${source}/`) &&
-    /^studio-projects\/[a-f0-9-]{36}\/(audio|main|vertical|secondary)\/[a-f0-9-]{36}\.(mov|mp4|m4v|mp3|m4a|mpeg|wav|webm|ogg|flac)$/i.test(path);
+    /^studio-projects\/[a-f0-9-]{36}\/(audio|enhanced|main|vertical|secondary)\/[a-f0-9-]{36}\.(mov|mp4|m4v|mp3|m4a|mpeg|wav|webm|ogg|flac)$/i.test(path);
 }
 export function validProjectMedia(project:StudioProject) {
   for (const key of sourceIds) {
@@ -93,8 +96,8 @@ export function validProjectMedia(project:StudioProject) {
 export function freshProject():StudioProject {
   return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",events:[],capsules:[],selectedCapsuleId:"",timedWords:[],transcript:"",
     analysis:null,selectedMoment:0,format:"9:16",media:{},
-    timeline:{duration:300,clipStart:0,clipEnd:60,audioSource:"audio",offsets:{audio:0,main:0,vertical:0,secondary:0},
-      claps:{audio:0,main:0,vertical:0,secondary:0},cuts:[]}};
+    timeline:{duration:300,clipStart:0,clipEnd:60,audioSource:"audio",finalAudioSource:"audio",visualClaps:{main:null,vertical:null,secondary:null},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},
+      claps:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},cuts:[]}};
 }
 
 export function episodeCode(season:number,episode:number){
