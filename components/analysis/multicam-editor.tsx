@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderLocalMp4 } from "./local-mp4";
+import type { StudioProject } from "@/lib/analysis/project";
 import { alignCameraAudio, type CameraSyncResult } from "@/lib/analysis/browser-audio-fingerprint";
 import {
   activeCamera, cameraKeys, edl, labels, offsetFromClap,
@@ -13,12 +14,13 @@ const initialClaps: Record<SourceKey, number> = { audio:0, main:0, vertical:0, s
 
 type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
-export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange }: {
+export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
   mediaMetadata?:Partial<Record<SourceKey,MediaInfo>>;
   name: string; lang: "fr"|"en"; highlight?: string;
   savedTimeline?:Timeline; onTimelineChange?:(value:Timeline)=>void;
   format?:"16:9"|"9:16"|"1:1"; onFormatChange?:(format:"16:9"|"9:16"|"1:1")=>void;
+  capsule?:StudioProject["capsules"][number]; onExportOutcome?:(ok:boolean,details:string)=>void;
 }) {
   const fr = lang === "fr";
   const videos = cameraKeys.filter(key=>!!sources[key] || !!remoteUrls?.[key]);
@@ -170,6 +172,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     }catch(e){
       if(controller.signal.aborted)return;
       const code=e instanceof Error?e.message:"UNKNOWN";
+      onExportOutcome?.(false,`Échec MP4 : ${code}`);
       setError(fr?`Synchronisation automatique indisponible (${code}). Essaie les repères manuels ou un MP4 H.264 avec audio.`:
         `Automatic sync unavailable (${code}). Try manual markers or an H.264 MP4 with audio.`);
     }finally{
@@ -199,17 +202,20 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   }
   async function exportMp4(){
     if(rendering||!realCamera||!realAudioSource)return;
-    if(clipEnd<=clipStart || clipEnd>duration){setError(fr?"Choisis un début et une fin de clip valides.":"Choose a valid clip start and end.");return}
-    if(clipEnd-clipStart>600){setError(fr?"Le clip est limité à 10 minutes pour ce premier test.":"Clip is limited to 10 minutes.");return}
+    const renderStart=capsule?capsule.start:clipStart;
+    const renderEnd=capsule?capsule.end:clipEnd;
+    if(renderEnd<=renderStart || renderEnd>duration){setError(fr?"Choisis un début et une fin de clip valides.":"Choose a valid clip start and end.");return}
+    if(renderEnd-renderStart>600){setError(fr?"Le clip est limité à 10 minutes pour ce premier test.":"Clip is limited to 10 minutes.");return}
     if(!sources[realAudioSource] || videos.some(key=>!sources[key])){
       setError(fr?"Pour exporter, resélectionne les fichiers originaux de toutes les caméras et de la piste audio utilisée.":"For export, reselect original files for every camera and reference audio.");
       return;
     }
-    setError("");setSuccess("");pauseAll();seekAll(clipStart);setRendering(true);setRenderPercent(0);
+    setError("");setSuccess("");pauseAll();seekAll(renderStart);setRendering(true);setRenderPercent(0);
     try{
       const blob=await renderLocalMp4({
         nodes:elements.current,offsets,audioSource:realAudioSource,
-        cuts,fallback:realCamera,duration,start:clipStart,end:clipEnd,format:format||"16:9",
+        cuts,fallback:realCamera,duration,start:renderStart,end:renderEnd,format:capsule?.format||format||"16:9",
+        visual:capsule?{style:capsule.style,background:capsule.background,caption:capsule.caption,bubble:capsule.bubble,textPosition:capsule.textPosition}:undefined,
         onProgress:setRenderPercent,
       });
       const url=URL.createObjectURL(blob);
@@ -217,6 +223,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       a.href=url;a.download=`dom-soucy-${name.replace(/[^a-z0-9-]/gi,"-").slice(0,45)}.mp4`;a.click();
       setTimeout(()=>URL.revokeObjectURL(url),60000);
       setSuccess(fr?"Export MP4 produit dans le navigateur et proposé au téléchargement. Vérifie le son et l’image avant publication.":"MP4 rendered in your browser and offered for download. Review the result.");
+      onExportOutcome?.(true,`MP4 ${capsule?.title||name} exporté localement`);
     }catch(e){
       const code=e instanceof Error?e.message:"UNKNOWN";
       setError(fr?`Export MP4 impossible (${code}). Si ton navigateur ne le supporte pas, conserve le plan de montage JSON et essaie Safari.`:
@@ -350,6 +357,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         </label>
         <button type="button" className="analysis-secondary" onClick={()=>setClipEnd(playhead)}>{fr?"FIN = POSITION":"END = PLAYHEAD"}</button>
       </div>
+      {capsule&&<p className="analysis-multi-highlight"><strong>{fr?"CAPSULE SÉLECTIONNÉE":"SELECTED CAPSULE"} : {capsule.title}</strong>
+        <br/>{fr?"L’export utilise les timecodes, les textes, les bulles et le format propres à cette capsule.":"Export uses this capsule’s times, graphics, bubbles and format."}</p>}
       <div className="analysis-multi-actions">
         <label className="analysis-multi-render-format">{fr?"FORMAT DU CLIP":"CLIP FORMAT"}
           <select value={format||"16:9"} onChange={e=>onFormatChange?.(e.target.value as "16:9"|"9:16"|"1:1")}>
@@ -358,7 +367,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
           </select>
         </label>
         <button type="button" disabled={rendering} className="analysis-primary" onClick={exportMp4}>
-          {rendering?`EXPORT MP4… ${renderPercent}%`:(fr?"EXPORTER MP4 · BÊTA":"EXPORT MP4 · BETA")}
+          {rendering?`EXPORT MP4… ${renderPercent}%`:(fr?(capsule?"EXPORTER CETTE CAPSULE MP4 · BÊTA":"EXPORTER MP4 · BÊTA"):(capsule?"EXPORT SELECTED CAPSULE · BETA":"EXPORT MP4 · BETA"))}
         </button>
         <button type="button" onClick={markCut} className="analysis-secondary">{fr?"MARQUER L’ANGLE ACTUEL":"MARK CURRENT ANGLE"}</button>
         <button type="button" onClick={exportEdl} className="analysis-secondary">{fr?"TÉLÉCHARGER LE PLAN DE MONTAGE (.JSON)":"DOWNLOAD EDIT PLAN (.JSON)"}</button>
