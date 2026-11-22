@@ -28,11 +28,19 @@ export function StudioGate({ lang }: { lang: "fr" | "en" }) {
               : "Too many attempts. Try again in 15 minutes."
             : r.status === 503
               ? fr
-                ? "L’accès privé attend sa configuration serveur."
-                : "Private access requires server configuration."
-              : fr
-                ? "Code incorrect."
-                : "Incorrect code.",
+                ? "Studio indisponible côté serveur. Vérifie STUDIO_ACCESS_CODE et Redis dans Vercel, puis redéploie."
+                : "Studio unavailable on the server. Check STUDIO_ACCESS_CODE and Redis in Vercel, then redeploy."
+              : r.status === 403
+                ? fr
+                  ? "Requête refusée. Recharge cette page sur le domaine officiel."
+                  : "Request blocked. Reload this page on the official domain."
+                : r.status === 401
+                  ? fr
+                    ? "Code incorrect."
+                    : "Incorrect code."
+                  : fr
+                    ? "Connexion impossible. Réessaie ou contacte l’administrateur."
+                    : "Unable to sign in. Retry or contact the administrator.",
         );
     } catch {
       setError(
