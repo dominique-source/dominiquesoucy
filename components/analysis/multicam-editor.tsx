@@ -509,8 +509,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       <div className="studio-auto-edit-panel">
         <strong>{fr?"MONTER LES 3 CAMÉRAS":"EDIT ALL 3 CAMERAS"}</strong>
         <p>{fr?
-          "Crée une première proposition de changements d’angle avec les vidéos disponibles. La Canon reste majoritaire, et les autres angles ajoutent du rythme. Le résultat n’analyse pas encore automatiquement les expressions ou les gestes.":
-          "Generate a first camera-switching edit from available sources. The main camera remains dominant while alternatives add pacing. This is not yet AI-driven gesture or emotion analysis."}</p>
+          "Crée une première proposition avec la Canon dominante, de courts passages iPhone et Samsung, un zoom d’ouverture pour le hook et des zooms/dézooms discrets (environ 9 à 12 %). Les effets seront rendus dans le MP4. Le plan ne prétend pas analyser les expressions ou les gestes.":
+          "Generate a paced edit with a dominant Canon angle, short iPhone/Samsung cutaways, an opening hook push-in and restrained zooms. Effects are rendered into the MP4; this does not yet analyze emotions or gestures."}</p>
         <button type="button" className="analysis-primary studio-auto-edit-cta" disabled={videos.length===0||rendering} onClick={proposeEdit}>
           {fr?"✦ PROPOSER UN MONTAGE AVEC LES 3 CAMÉRAS":"✦ SUGGEST A MULTICAMERA EDIT"}
         </button>
@@ -518,7 +518,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
           <strong>{fr?"PROPOSITION À VALIDER":"EDIT SUGGESTION — REVIEW FIRST"}</strong>
           <p>{suggestedCuts.length} {fr?"changements d’angle proposés pour cette capsule":"suggested camera decisions for this clip"}</p>
           <div className="studio-auto-edit-shotlist">
-            {suggestedCuts.map(c=><span key={c.id}><b>{timeCode(c.at)}</b> {labels[c.camera]}</span>)}
+            {suggestedCuts.map(c=><span key={c.id}><b>{timeCode(c.at)}</b> {labels[c.camera]} {c.zoomStart!==undefined&&c.zoomEnd!==undefined?(Math.abs(c.zoomEnd-c.zoomStart)>.015?`· ZOOM ${Math.round(c.zoomStart*100)}→${Math.round(c.zoomEnd*100)}%`:c.zoomStart>1.03?`· CADRAGE ${Math.round(c.zoomStart*100)}%`:""):""}</span>)}
           </div>
           <div className="studio-auto-edit-actions">
             <button type="button" className="analysis-primary" onClick={applySuggestedEdit}>
@@ -534,7 +534,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
           "No camera switches yet: without an edit plan, the MP4 stays on one camera."}</p>}
       </div>
       <div className="analysis-multi-cuts">
-        {cuts.length? cuts.map(c=><div key={c.id}><strong>{timeCode(c.at)}</strong><span>{labels[c.camera]}</span>
+        {cuts.length? cuts.map(c=><div key={c.id}><strong>{timeCode(c.at)}</strong><span>{labels[c.camera]} {c.zoomStart!==undefined&&c.zoomEnd!==undefined?`· ${Math.round(c.zoomStart*100)} → ${Math.round(c.zoomEnd*100)} %`:""}</span>
           <button type="button" onClick={()=>setCuts(prev=>prev.filter(x=>x.id!==c.id))}>{fr?"RETIRER":"REMOVE"}</button>
         </div>):<p>{fr?"Aucune coupe choisie.":"No cuts selected yet."}</p>}
       </div>
