@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderLocalMp4 } from "./local-mp4";
+import type { StudioProject } from "@/lib/analysis/project";
 import { alignCameraAudio, type CameraSyncResult } from "@/lib/analysis/browser-audio-fingerprint";
 import {
   activeCamera, cameraKeys, edl, labels, offsetFromClap,
@@ -8,22 +9,26 @@ import {
   type CameraKey, type Cut, type SourceFiles, type SourceKey
 } from "@/lib/analysis/multicam";
 
-const initialOffsets: Record<SourceKey, number> = { audio:0, main:0, vertical:0, secondary:0 };
-const initialClaps: Record<SourceKey, number> = { audio:0, main:0, vertical:0, secondary:0 };
+const initialOffsets: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, vertical:0, secondary:0 };
+const initialClaps: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, vertical:0, secondary:0 };
 
-type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
+type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; finalAudioSource:SourceKey; visualClaps:Record<CameraKey,number|null>; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
-export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange }: {
+export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
   mediaMetadata?:Partial<Record<SourceKey,MediaInfo>>;
   name: string; lang: "fr"|"en"; highlight?: string;
   savedTimeline?:Timeline; onTimelineChange?:(value:Timeline)=>void;
   format?:"16:9"|"9:16"|"1:1"; onFormatChange?:(format:"16:9"|"9:16"|"1:1")=>void;
+  capsule?:StudioProject["capsules"][number]; onExportOutcome?:(ok:boolean,details:string)=>void;
 }) {
   const fr = lang === "fr";
   const videos = cameraKeys.filter(key=>!!sources[key] || !!remoteUrls?.[key]);
-  const availableAudio: SourceKey[] = (sources.audio || remoteUrls?.audio) ? ["audio",...videos] : videos;
+  const availableAudio: SourceKey[] = [ ...(sources.audio || remoteUrls?.audio ? ["audio" as const] : []), ...(sources.enhanced || remoteUrls?.enhanced ? ["enhanced" as const] : []), ...videos ];
   const [audioSource, setAudioSource] = useState<SourceKey>(savedTimeline?.audioSource || "audio");
+  const [finalAudioSource,setFinalAudioSource]=useState<SourceKey>(savedTimeline?.finalAudioSource || "audio");
+  const [visualClaps,setVisualClaps]=useState<Record<CameraKey,number|null>>(savedTimeline?.visualClaps || {main:null,vertical:null,secondary:null});
+
   const [selectedCamera, setSelectedCamera] = useState<CameraKey>("main");
   const [offsets,setOffsets] = useState(savedTimeline?.offsets || initialOffsets);
   const [claps,setClaps] = useState(savedTimeline?.claps || initialClaps);
@@ -54,7 +59,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   },[sources]);
   useEffect(()=>()=>Object.values(urls).forEach(url=>URL.revokeObjectURL(url)),[urls]);
   const playbackUrls={...remoteUrls,...urls};
-  const timeline={duration,clipStart,clipEnd,audioSource,offsets,claps,cuts};
+  const timeline={duration,clipStart,clipEnd,audioSource,finalAudioSource,visualClaps,offsets,claps,cuts};
   const lastPersisted=useRef(JSON.stringify(savedTimeline||timeline));
   useEffect(()=>{
     if(!onTimelineChange)return;
@@ -62,9 +67,10 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     if(next===lastPersisted.current)return;
     lastPersisted.current=next;
     onTimelineChange(timeline);
-  },[duration,clipStart,clipEnd,audioSource,offsets,claps,cuts,onTimelineChange]);
+  },[duration,clipStart,clipEnd,audioSource,finalAudioSource,visualClaps,offsets,claps,cuts,onTimelineChange]);
 
   const realAudioSource = availableAudio.includes(audioSource) ? audioSource : availableAudio[0];
+  const realFinalAudioSource=availableAudio.includes(finalAudioSource)?finalAudioSource:(availableAudio.includes("enhanced")?"enhanced":realAudioSource);
   const realCamera = videos.includes(selectedCamera) ? selectedCamera : videos[0];
   const selected = activeCamera(cuts,playhead,realCamera);
   const effectiveCamera = videos.includes(selected) ? selected : realCamera;
@@ -108,7 +114,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       // corrected against the chosen audio clock while playback continues.
       await Promise.all(active.map(async([key,el])=>{
         if(!el)return;
-        el.muted = key!==realAudioSource;
+        el.muted = key!==realFinalAudioSource;
         await el.play();
       }));
       setPlaying(true);
@@ -170,6 +176,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     }catch(e){
       if(controller.signal.aborted)return;
       const code=e instanceof Error?e.message:"UNKNOWN";
+      onExportOutcome?.(false,`Échec MP4 : ${code}`);
       setError(fr?`Synchronisation automatique indisponible (${code}). Essaie les repères manuels ou un MP4 H.264 avec audio.`:
         `Automatic sync unavailable (${code}). Try manual markers or an H.264 MP4 with audio.`);
     }finally{
@@ -199,17 +206,20 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   }
   async function exportMp4(){
     if(rendering||!realCamera||!realAudioSource)return;
-    if(clipEnd<=clipStart || clipEnd>duration){setError(fr?"Choisis un début et une fin de clip valides.":"Choose a valid clip start and end.");return}
-    if(clipEnd-clipStart>600){setError(fr?"Le clip est limité à 10 minutes pour ce premier test.":"Clip is limited to 10 minutes.");return}
-    if(!sources[realAudioSource] || videos.some(key=>!sources[key])){
+    const renderStart=capsule?capsule.start:clipStart;
+    const renderEnd=capsule?capsule.end:clipEnd;
+    if(renderEnd<=renderStart || renderEnd>duration){setError(fr?"Choisis un début et une fin de clip valides.":"Choose a valid clip start and end.");return}
+    if(renderEnd-renderStart>600){setError(fr?"Le clip est limité à 10 minutes pour ce premier test.":"Clip is limited to 10 minutes.");return}
+    if(!sources[realFinalAudioSource] || videos.some(key=>!sources[key])){
       setError(fr?"Pour exporter, resélectionne les fichiers originaux de toutes les caméras et de la piste audio utilisée.":"For export, reselect original files for every camera and reference audio.");
       return;
     }
-    setError("");setSuccess("");pauseAll();seekAll(clipStart);setRendering(true);setRenderPercent(0);
+    setError("");setSuccess("");pauseAll();seekAll(renderStart);setRendering(true);setRenderPercent(0);
     try{
       const blob=await renderLocalMp4({
-        nodes:elements.current,offsets,audioSource:realAudioSource,
-        cuts,fallback:realCamera,duration,start:clipStart,end:clipEnd,format:format||"16:9",
+        nodes:elements.current,offsets,audioSource:realAudioSource,finalAudioSource:realFinalAudioSource,
+        cuts,fallback:realCamera,duration,start:renderStart,end:renderEnd,format:capsule?.format||format||"16:9",
+        visual:capsule?{style:capsule.style,background:capsule.background,caption:capsule.caption,bubble:capsule.bubble,textPosition:capsule.textPosition}:undefined,
         onProgress:setRenderPercent,
       });
       const url=URL.createObjectURL(blob);
@@ -217,6 +227,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       a.href=url;a.download=`dom-soucy-${name.replace(/[^a-z0-9-]/gi,"-").slice(0,45)}.mp4`;a.click();
       setTimeout(()=>URL.revokeObjectURL(url),60000);
       setSuccess(fr?"Export MP4 produit dans le navigateur et proposé au téléchargement. Vérifie le son et l’image avant publication.":"MP4 rendered in your browser and offered for download. Review the result.");
+      onExportOutcome?.(true,`MP4 ${capsule?.title||name} exporté localement`);
     }catch(e){
       const code=e instanceof Error?e.message:"UNKNOWN";
       setError(fr?`Export MP4 impossible (${code}). Si ton navigateur ne le supporte pas, conserve le plan de montage JSON et essaie Safari.`:
@@ -256,6 +267,11 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     <div className="analysis-multi-controls">
       <label>{fr?"AUDIO DE RÉFÉRENCE":"REFERENCE AUDIO"}
         <select value={realAudioSource} onChange={e=>{pauseAll();setAudioSource(e.target.value as SourceKey)}}>
+          {availableAudio.map(k=><option key={k} value={k}>{labels[k]}</option>)}
+        </select>
+      </label>
+      <label>{fr?"AUDIO FINAL À ENTENDRE":"FINAL AUDIO TRACK"}
+        <select value={realFinalAudioSource} onChange={e=>{pauseAll();setFinalAudioSource(e.target.value as SourceKey)}}>
           {availableAudio.map(k=><option key={k} value={k}>{labels[k]}</option>)}
         </select>
       </label>
@@ -301,17 +317,63 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       {success&&<p role="status" className="analysis-multi-success">{success}</p>}
     </div>
 
+    <div className="analysis-multi-claps">
+      <strong>{fr?"ALIGNEMENT PAR CLAP VISUEL EN FIN D’ENREGISTREMENT":"VISUAL END-OF-RECORDING CLAP"}</strong>
+      <p>{fr
+        ?"Si le micro Canon est mauvais : utilise la barre de lecture de chaque vidéo à l’étape 06 pour trouver l’image exacte où tes mains se touchent à la fin, puis clique ici sur « Marquer l’image actuelle » pour chaque caméra. Aucun son Canon n’est nécessaire."
+        :"If a camera microphone is poor, use each camera video’s controls in step 06 to find the exact frame where hands touch at the end, then mark that frame here. No camera audio needed."}</p>
+      <div className="analysis-multi-visual-claps">
+        {videos.map(key=><div key={key}>
+          <strong>{labels[key]}</strong><span>{visualClaps[key]===null?"—":`${visualClaps[key]?.toFixed(2)} s`}</span>
+          <button type="button" className="analysis-secondary" onClick={()=>{
+            const node=elements.current[key];
+            if(!node||!Number.isFinite(node.currentTime))return;
+            setVisualClaps(old=>({...old,[key]:Math.round(node.currentTime*100)/100}));
+          }}>{fr?"MARQUER L’IMAGE ACTUELLE":"MARK CURRENT FRAME"}</button>
+        </div>)}
+      </div>
+      <button type="button" className="analysis-primary" onClick={()=>{
+        const keys=videos.filter(key=>visualClaps[key]!==null);
+        if(keys.length<2){setError(fr?"Marque la même image de clap sur au moins deux vidéos.":"Mark the same clap frame on at least two videos.");return}
+        // Prefer a camera already matched to the external reference audio.
+        // The visual clap then transfers that trusted offset to the silent Canon.
+        const confirmed=autoSyncResults.find(r=>keys.includes(r.source as CameraKey) &&
+          r.match.confidence!=="unreliable"&&!r.error);
+        const anchor=(confirmed?.source as CameraKey|undefined) ||
+          (keys.includes(realAudioSource as CameraKey)?realAudioSource as CameraKey:undefined) ||
+          (keys.includes("main")?"main":keys[0]);
+        const base=visualClaps[anchor]||0;
+        const anchorOffset=offsets[anchor];
+        const next={...offsets};
+        for(const key of keys)next[key]=anchorOffset+(visualClaps[key]||0)-base;
+        synchronize(next);
+        setError("");
+        setSuccess(fr?
+          `Clap visuel aligné pour ${keys.length} caméras. ${confirmed?"Référence audio transférée depuis la caméra fiable.":"Alignement relatif des caméras seulement : vérifie le son final."} Vérifie aussi le début de la vidéo.`:
+          `Visual clap matched for ${keys.length} cameras. ${confirmed?"Transferred timing from a trusted audio match.":"Cameras aligned relative to each other; check final audio."} Verify the start as well.`);
+      }}>{fr?"ALIGNER SUR LE CLAP VISUEL":"ALIGN USING VISUAL CLAP"}</button>
+      <p className="analysis-note">{fr
+        ?"Le clap doit être visible dans au moins deux caméras. Si une caméra est déjà alignée au son principal, son repère est transmis aux autres. Sinon, les caméras sont alignées entre elles seulement. Vérifie la voix finale."
+        :"If one camera has a trusted audio match, the clap transfers its offset to the other cameras. Otherwise, only relative alignment is possible. Verify final voice timing."}</p>
+    </div>
     <div className="analysis-multi-player-header">
       <strong>{fr?"06 · PRÉVISUALISER LES ANGLES":"06 · ANGLE PREVIEW"}</strong>
       <span>{timeCode(playhead)} / {timeCode(duration)}</span>
     </div>
     <div className="analysis-multi-grid">
       {videos.map(key=><div key={key} className={`analysis-multi-camera ${effectiveCamera===key?"is-active":""}`}>
-        <video key={renderNonce} ref={el=>{elements.current[key]=el}} src={playbackUrls[key]} playsInline preload="metadata" muted
+        <video key={renderNonce} ref={el=>{elements.current[key]=el}} src={playbackUrls[key]} controls playsInline preload="metadata" muted
           onTimeUpdate={realAudioSource===key?onClock:undefined}
           onError={()=>setError(fr?`Impossible de lire ${labels[key]}. Essaie de convertir ce fichier en MP4 H.264.`:`Cannot play ${labels[key]}. Try converting it to H.264 MP4.`)}
           aria-label={labels[key]}/>
         <div className="analysis-multi-camera-label"><span>{labels[key]}</span>
+          <button type="button" className="studio-clap-mark" onClick={()=>{
+            const node=elements.current[key];
+            if(!node||!Number.isFinite(node.currentTime))return;
+            setVisualClaps(old=>({...old,[key]:Math.round(node.currentTime*100)/100}));
+            setSuccess(fr?`Clap ${labels[key]} marqué à ${node.currentTime.toFixed(2)} seconde(s).`:
+              `Marked ${labels[key]} clap at ${node.currentTime.toFixed(2)} seconds.`);
+          }}>{fr?"MARQUER CLAP":"MARK CLAP"}</button>
           <button type="button" onClick={()=>{setSelectedCamera(key);setCuts(prev=>[
             ...prev.filter(c=>Math.abs(c.at-playhead)>.15),
             {id:crypto.randomUUID(),at:safeCutTime(playhead,duration),camera:key}
@@ -321,6 +383,9 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     </div>
     {(sources.audio || remoteUrls?.audio) && <audio key={renderNonce} ref={el=>{elements.current.audio=el}} src={playbackUrls.audio} preload="metadata"
       onTimeUpdate={realAudioSource==="audio"?onClock:undefined}/>}
+    {(sources.enhanced || remoteUrls?.enhanced)&&<audio key={renderNonce} ref={el=>{elements.current.enhanced=el}}
+      src={playbackUrls.enhanced} preload="metadata"
+      onTimeUpdate={realAudioSource==="enhanced"?onClock:undefined}/>}
     <div className="analysis-multi-playback">
       <button className="analysis-primary" type="button" onClick={play}>{playing?(fr?"❚❚ PAUSE":"❚❚ PAUSE"):(fr?"▶ LIRE LES CAMÉRAS":"▶ PLAY CAMERAS")}</button>
       <button className="analysis-secondary" onClick={()=>{pauseAll();seekAll(0)}} type="button">{fr?"RETOUR DÉBUT":"REWIND"}</button>
@@ -350,6 +415,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         </label>
         <button type="button" className="analysis-secondary" onClick={()=>setClipEnd(playhead)}>{fr?"FIN = POSITION":"END = PLAYHEAD"}</button>
       </div>
+      {capsule&&<p className="analysis-multi-highlight"><strong>{fr?"CAPSULE SÉLECTIONNÉE":"SELECTED CAPSULE"} : {capsule.title}</strong>
+        <br/>{fr?"L’export utilise les timecodes, les textes, les bulles et le format propres à cette capsule.":"Export uses this capsule’s times, graphics, bubbles and format."}</p>}
       <div className="analysis-multi-actions">
         <label className="analysis-multi-render-format">{fr?"FORMAT DU CLIP":"CLIP FORMAT"}
           <select value={format||"16:9"} onChange={e=>onFormatChange?.(e.target.value as "16:9"|"9:16"|"1:1")}>
@@ -358,7 +425,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
           </select>
         </label>
         <button type="button" disabled={rendering} className="analysis-primary" onClick={exportMp4}>
-          {rendering?`EXPORT MP4… ${renderPercent}%`:(fr?"EXPORTER MP4 · BÊTA":"EXPORT MP4 · BETA")}
+          {rendering?`EXPORT MP4… ${renderPercent}%`:(fr?(capsule?"EXPORTER CETTE CAPSULE MP4 · BÊTA":"EXPORTER MP4 · BÊTA"):(capsule?"EXPORT SELECTED CAPSULE · BETA":"EXPORT MP4 · BETA"))}
         </button>
         <button type="button" onClick={markCut} className="analysis-secondary">{fr?"MARQUER L’ANGLE ACTUEL":"MARK CURRENT ANGLE"}</button>
         <button type="button" onClick={exportEdl} className="analysis-secondary">{fr?"TÉLÉCHARGER LE PLAN DE MONTAGE (.JSON)":"DOWNLOAD EDIT PLAN (.JSON)"}</button>

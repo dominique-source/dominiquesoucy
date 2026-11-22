@@ -1,15 +1,18 @@
+import { drawStudioFrame, type CanvasVisual } from "./canvas-overlays";
 import { activeCamera, sourceTime, type CameraKey, type Cut, type SourceKey } from "@/lib/analysis/multicam";
 
 type RenderOptions={
   nodes:Partial<Record<SourceKey,HTMLMediaElement|null>>;
   offsets:Record<SourceKey,number>;
   audioSource:SourceKey;
+  finalAudioSource?:SourceKey;
   cuts:Cut[];
   fallback:CameraKey;
   duration:number;
   start:number;
   end:number;
   format:"16:9"|"9:16"|"1:1";
+  visual?:CanvasVisual;
   onProgress:(percentage:number)=>void;
 };
 
@@ -21,7 +24,8 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
   const mime=formats.find(m=>MediaRecorder.isTypeSupported(m));
   if(!mime)throw new Error("MP4_NOT_SUPPORTED");
   const master=opts.nodes[opts.audioSource];
-  if(!master)throw new Error("AUDIO_NOT_READY");
+  const finalTrack=opts.nodes[opts.finalAudioSource||opts.audioSource];
+  if(!master||!finalTrack)throw new Error("AUDIO_NOT_READY");
   const available=(Object.entries(opts.nodes) as [SourceKey,HTMLMediaElement|null][]).filter(([,v])=>v);
   if(!available.length)throw new Error("NO_VIDEO");
   const width=opts.format==="9:16"?720:opts.format==="1:1"?960:1280;
@@ -31,10 +35,10 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
   const painter=canvas.getContext("2d",{alpha:false});
   if(!painter)throw new Error("NO_CANVAS");
   const ctx=new AudioContext();
-  const source=ctx.createMediaElementSource(master);
+  const source=ctx.createMediaElementSource(finalTrack);
   const audioOut=ctx.createMediaStreamDestination();
   source.connect(audioOut);
-  // Keep monitoring while rendering, without duplicating tracks into output.
+  // Only the selected final audio gets encoded, irrespective of sync reference.
   source.connect(ctx.destination);
   const stream=new MediaStream([...canvas.captureStream(30).getVideoTracks(),...audioOut.stream.getAudioTracks()]);
   const chunks:Blob[]=[];
@@ -54,7 +58,7 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
     for(const [key,el] of available){
       if(!el)continue;
       el.pause();
-      el.muted=key!==opts.audioSource;
+      el.muted=key!==(opts.finalAudioSource||opts.audioSource);
       if(!Number.isFinite(el.duration)||el.readyState<1)throw new Error("MEDIA_NOT_READY");
       el.currentTime=Math.min(Math.max(0,el.duration-.1),sourceTime(opts.start,opts.offsets[key]));
     }
@@ -66,14 +70,9 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
         const t=Math.max(0,master.currentTime-opts.offsets[opts.audioSource]);
         const camera=activeCamera(opts.cuts,t,opts.fallback);
         const video=opts.nodes[camera] as HTMLVideoElement|undefined;
-        painter.fillStyle="#080808";painter.fillRect(0,0,width,height);
-        if(video&&video.readyState>=2&&video.videoWidth&&video.videoHeight){
-          try{
-            const scale=Math.max(width/video.videoWidth,height/video.videoHeight);
-            const w=video.videoWidth*scale,h=video.videoHeight*scale;
-            painter.drawImage(video,(width-w)/2,(height-h)/2,w,h);
-          }catch{reject(new Error("VIDEO_CANVAS_BLOCKED"));return}
-        }
+        try{
+          drawStudioFrame(painter,video,width,height,t,opts.start,opts.visual);
+        }catch{reject(new Error("VIDEO_CANVAS_BLOCKED"));return}
         opts.onProgress(Math.min(100,Math.round((t-opts.start)/(opts.end-opts.start)*100)));
         if(t>=opts.end-.05||master.ended){resolve();return}
         frame=requestAnimationFrame(draw);

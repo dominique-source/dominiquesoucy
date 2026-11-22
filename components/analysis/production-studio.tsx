@@ -4,12 +4,14 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "reac
 import Link from "next/link";
 import { capsuleById } from "@/lib/analysis/catalog";
 import { MultiCamEditor } from "./multicam-editor";
-import { freshProject, MAX_PROJECT_MEDIA_BYTES, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
+import { EpisodeDashboard, type EpisodeRow } from "./episode-dashboard";
+import { CapsuleWorkshop } from "./capsule-workshop";
+import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
 
-const names:Record<SourceKey,string>={audio:"AUDIO PRINCIPAL",main:"CANON · PLAN PRINCIPAL",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
-const allowed:Record<SourceKey,RegExp>={audio:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,main:/\.(mov|mp4|m4v|webm)$/i,vertical:/\.(mov|mp4|m4v|webm)$/i,secondary:/\.(mov|mp4|m4v|webm)$/i};
-type ProjectRow={id:string;name:string;updatedAt:number};
+const names:Record<SourceKey,string>={audio:"AUDIO ORIGINAL",enhanced:"AUDIO FINAL OPTIMISÉ",main:"CANON · PLAN PRINCIPAL",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
+const allowed:Record<SourceKey,RegExp>={audio:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,enhanced:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,main:/\.(mov|mp4|m4v|webm)$/i,vertical:/\.(mov|mp4|m4v|webm)$/i,secondary:/\.(mov|mp4|m4v|webm)$/i};
+type ProjectRow=EpisodeRow;
 type UploadState={progress:number;busy:boolean;error?:string};
 type PendingUploads=Partial<Record<SourceKey,UploadState>>;
 function download(filename:string,content:string,mime="application/json"){
@@ -37,6 +39,10 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   useEffect(()=>{latest.current=project},[project]);
   const modify=useCallback((patch:Partial<StudioProject>)=>{
     setProject(prev=>({...prev,...patch}));
+    setStatus("pending");
+  },[]);
+  const record=useCallback((kind:StudioProject["events"][number]["type"],note:string,outcome:StudioProject["events"][number]["status"]="info")=>{
+    setProject(prev=>({...prev,events:[eventFor(kind,note,outcome),...prev.events].slice(0,100)}));
     setStatus("pending");
   },[]);
   const list=useCallback(async()=>{
@@ -95,7 +101,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         const result=await r.json() as {updatedAt:number};
         if(ticket!==revision.current)return;
         persisted.current=snapshot;setStatus("saved");setError("");
-        setProjects(old=>[{id:project.id,name:project.name,updatedAt:result.updatedAt},
+        setProjects(old=>[{id:project.id,name:project.name,season:project.season,episode:project.episode,stage:project.stage,recordingDate:project.recordingDate,capsuleCount:project.capsules.length,failedCount:project.events.filter(e=>e.status==="failure").length,mediaCount:Object.keys(project.media).length,hasTranscript:!!project.transcript,hasAnalysis:!!project.analysis,updatedAt:result.updatedAt},
           ...old.filter(p=>p.id!==project.id)].slice(0,100));
       }catch{
         if(ticket!==revision.current)return;
@@ -164,9 +170,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       setProject(next);
       setUploads(p=>({...p,[key]:{busy:false,progress:100}}));
       setMessage(fr?`${file.name} enregistré dans le stockage privé.`:`${file.name} saved privately.`);
+      record("upload",`${key} : fichier privé enregistré`,"success");
     }catch{
       setUploads(p=>({...p,[key]:{busy:false,progress:0,error:"UPLOAD_FAILED"}}));
       setError(fr?"Transfert non confirmé. Garde le fichier original et réessaie.":"Upload not confirmed. Keep your original and retry.");
+      record("error",`Transfert média ${key} échoué`,"failure");
     }
   };
   const transcribe=async()=>{
@@ -185,9 +193,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       });
       const data=await response.json() as {transcript?:string;error?:string};
       if(!response.ok||!data.transcript)throw Error(data.error||"TRANSCRIBE_FAILED");
-      modify({transcript:data.transcript,analysis:null,selectedMoment:0});
+      modify({transcript:data.transcript,analysis:null,selectedMoment:0,stage:"transcription"});
+      record("transcription","Transcription générée","success");
       setMessage(fr?"Transcription obtenue. Vérifie le texte ci-dessous.":"Transcript received. Review the text below.");
     }catch(e){
+      record("error",`Échec transcription : ${e instanceof Error?e.message:"UNKNOWN"}`,"failure");
       setError(fr?`Transcription impossible (${e instanceof Error?e.message:"ERROR"}). Le fichier reste sélectionné.`:
         `Transcription failed (${e instanceof Error?e.message:"ERROR"}). Your file remains selected.`);
     }finally{setBusy("")}
@@ -200,9 +210,10 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         body:JSON.stringify({consent:true,lang,transcript:project.transcript})});
       if(!r.ok)throw Error("ANALYSIS_FAILED");
       const value=await r.json() as NonNullable<StudioProject["analysis"]>;
-      modify({analysis:value,selectedMoment:0});
+      modify({analysis:value,selectedMoment:0,stage:"analysis"});
+      record("analysis",`Analyse terminée : ${value.moments.length} extrait(s)`,"success");
       setMessage(fr?"Analyse terminée. Les extraits seront enregistrés dans le projet.":"Analysis complete. Highlights will be saved in the project.");
-    }catch{setError(fr?"Analyse IA indisponible. La transcription est conservée.":"AI analysis unavailable. Transcript is preserved.")}
+    }catch{record("error","Échec analyse IA","failure");setError(fr?"Analyse IA indisponible. La transcription est conservée.":"AI analysis unavailable. Transcript is preserved.")}
     finally{setBusy("")}
   };
   const openProject=async(id:string)=>{
@@ -215,7 +226,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   };
   const newProject=()=>{
     if(uploading||status==="pending"||status==="saving")return;
-    const p=freshProject();setFiles({});setUploads({});setRemoteUrls({});
+    const last=[project,...projects].reduce((n,item)=>item.season===project.season?Math.max(n,item.episode):n,0);
+    const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});setUploads({});setRemoteUrls({});
     setProject(p);setStatus("pending");setError("");setMessage("");
   };
   const step=(n:number,title:string,meta:string,children:React.ReactNode)=><section className="analysis-panel studio-step">
@@ -228,7 +240,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <label className="analysis-source-pick">
         {file?(fr?"REMPLACER":"REPLACE"):(fr?"+ CHOISIR UN FICHIER":"+ CHOOSE FILE")}
         <input aria-label={names[key]} type="file"
-          accept={key==="audio"?"audio/*,.mp3,.m4a,.wav,.ogg,.flac":"video/*,.mov,.mp4,.m4v,.webm"}
+          accept={key==="audio"||key==="enhanced"?"audio/*,.mp3,.m4a,.wav,.ogg,.flac":"video/*,.mov,.mp4,.m4v,.webm"}
           disabled={progress?.busy} onChange={e=>choose(key,e)}/>
       </label>
       {file&&<p>{file.name} · {(file.size/1e6).toFixed(1)} Mo</p>}
@@ -256,7 +268,24 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         status==="saving"?"SAUVEGARDE EN COURS":status==="saved"?"✓ PROJET SAUVEGARDÉ":"ÉCHEC DE SAUVEGARDE"}
       </div>
     </header>
+    <EpisodeDashboard lang={lang} episodes={projects} currentId={project.id} onOpen={openProject}
+      onNew={newProject} disabled={!ready||uploading||status==="pending"||status==="saving"}/>
     {step(0,fr?"PROJET ET SAUVEGARDE":"PROJECT & SAVE","AUTO-SAVE",<>
+      <div className="studio-episode-identity">
+        <label>{fr?"SAISON":"SEASON"}
+          <input type="number" min={1} max={999} value={project.season}
+            onChange={e=>modify({season:Math.max(1,Math.min(999,Number(e.target.value)||1))})}/>
+        </label>
+        <label>{fr?"ÉPISODE":"EPISODE"}
+          <input type="number" min={1} max={999} value={project.episode}
+            onChange={e=>modify({episode:Math.max(1,Math.min(999,Number(e.target.value)||1))})}/>
+        </label>
+        <label>{fr?"DATE D’ENREGISTREMENT":"RECORDING DATE"}
+          <input type="date" value={project.recordingDate}
+            onChange={e=>modify({recordingDate:e.target.value})}/>
+        </label>
+        <strong>{episodeCode(project.season,project.episode)}</strong>
+      </div>
       <label className="studio-project-field">{fr?"NOM DU PROJET":"PROJECT NAME"}
         <input maxLength={100} value={project.name} onChange={e=>modify({name:e.target.value})} disabled={!ready}/>
       </label>
@@ -279,8 +308,20 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       </button>
     </>)}
     {step(1,fr?"AUDIO PRINCIPAL":"MAIN AUDIO",project.media.audio?"✓ MÉDIA SAUVEGARDÉ":"M4A / MP3",<>
-      <p>{fr?"Dépose d’abord le son de la conférence. Un MP3 ou M4A compressé facilite la transcription.":"Start with the conference audio; compressed MP3 or M4A works best."}</p>
+      <p>{fr?"Dépose d’abord le son original de ta conférence. Tu peux ensuite ajouter une deuxième piste améliorée pour le montage final.":"Start with your original recording. Add a separate enhanced voice track for final editing."}</p>
       {tile("audio")}
+      <div className="studio-audio-optimized">
+        <h3>{fr?"PISTE AUDIO FINALE — VOIX OPTIMISÉE":"FINAL AUDIO — ENHANCED VOICE"}</h3>
+        <p>{fr
+          ?"Améliore ton audio original avec Adobe Podcast Enhance, puis ajoute ici le fichier optimisé. Le Studio conserve les deux fichiers séparément et utilise l’audio optimisé à la prévisualisation et à l’export si tu le choisis."
+          :"Enhance your original audio with Adobe Podcast, then upload the processed track here. The Studio keeps both and lets you choose the final sound for preview and export."}</p>
+        <a href="https://podcast.adobe.com/enhance-speech" target="_blank" rel="noopener noreferrer"
+          className="analysis-secondary">{fr?"OUVRIR ADOBE PODCAST ENHANCE ↗":"OPEN ADOBE PODCAST ENHANCE ↗"}</a>
+        {tile("enhanced")}
+        <p className="analysis-note">{fr
+          ?"Adobe Enhance n’est pas lancé automatiquement depuis ce bouton : aucun accès API public générique n’est disponible. Télécharge d’abord le résultat d’Adobe, puis importe-le ici."
+          :"Adobe Enhance does not run inside this Studio. Download the processed audio from Adobe first, then import it here."}</p>
+      </div>
       <label className="analysis-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>
         <span>{fr?"J’autorise la transcription et l’analyse privées de ma conférence par l’IA.":"I authorize private AI transcription and analysis."}</span>
       </label>
@@ -323,11 +364,25 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     <MultiCamEditor key={project.id} sources={files} remoteUrls={remoteUrls} mediaMetadata={project.media}
       name={project.name} lang={lang} highlight={project.analysis?.moments[project.selectedMoment]?.excerpt}
       savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}
-      format={project.format} onFormatChange={format=>modify({format})}/>
+      format={project.format} onFormatChange={format=>modify({format})}
+      capsule={project.capsules.find(c=>c.id===project.selectedCapsuleId)}
+      onExportOutcome={(ok,details)=>{
+        record(ok?"export":"error",details,ok?"success":"failure");
+        const id=project.selectedCapsuleId;
+        if(id)modify({capsules:project.capsules.map(c=>c.id===id?{...c,status:ok?"rendered":"failed"}:c)});
+      }}/>
+    <CapsuleWorkshop lang={lang} project={project}
+      onChange={patch=>modify(patch)} onEvent={record}/>
     {step(8,fr?"EXPORT VIDÉO":"VIDEO EXPORT","MP4 BÊTA",<>
       <p>{fr
         ?"Ton projet et tes décisions de montage sont sauvegardés. Dans l’étape 07, essaie « Exporter MP4 · Bêta » : l’export est fait sur ton ordinateur, en temps réel, seulement si ton navigateur accepte MP4/H.264. Le rendu serveur haute qualité sera une phase suivante."
         :"Your project and edit decisions are saved. In step 07, try Export MP4 · Beta. Rendering runs locally in real time and requires browser MP4/H.264 support. High-quality server rendering comes later."}</p>
+    </>)}
+    {step(9,fr?"HISTORIQUE ET INCIDENTS":"HISTORY & ISSUES",`${project.events.length} LOGS`,<>
+      <p>{fr?"Tableau de bord de cet épisode : retrouve les événements, les transferts, les erreurs de traitement et les exports. Les détails techniques confidentiels ne sont pas enregistrés.":"Episode dashboard: processing events and recoverable errors. Sensitive technical details are not logged."}</p>
+      <div className="studio-event-log">{project.events.length?project.events.map(e=><div key={e.id} className={`studio-event ${e.status}`}>
+        <span>{new Date(e.date).toLocaleString(fr?"fr-CA":"en-CA")}</span><strong>{e.type.toUpperCase()}</strong><p>{e.message}</p>
+      </div>):<p>{fr?"Aucun événement pour le moment.":"No events yet."}</p>}</div>
     </>)}
     {message&&<p className="analysis-media-ok" role="status">{message}</p>}
     {error&&<p className="analysis-error" role="alert">{error}</p>}
