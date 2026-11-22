@@ -20,6 +20,8 @@ export const offsetsSchema = z.object({
 }).strict();
 export const timelineSchema = z.object({
   duration:z.number().finite().min(10).max(7200),
+  clipStart:z.number().finite().min(0).max(7200),
+  clipEnd:z.number().finite().min(0).max(7200),
   audioSource:sourceIdSchema,
   offsets:offsetsSchema,
   claps:offsetsSchema,
@@ -58,6 +60,6 @@ export function validProjectMedia(project:StudioProject) {
 export function freshProject():StudioProject {
   return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",transcript:"",
     analysis:null,selectedMoment:0,format:"9:16",media:{},
-    timeline:{duration:300,audioSource:"audio",offsets:{audio:0,main:0,vertical:0,secondary:0},
+    timeline:{duration:300,clipStart:0,clipEnd:60,audioSource:"audio",offsets:{audio:0,main:0,vertical:0,secondary:0},
       claps:{audio:0,main:0,vertical:0,secondary:0},cuts:[]}};
 }
