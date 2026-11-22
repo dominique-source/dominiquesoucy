@@ -7,6 +7,8 @@ type RenderOptions={
   cuts:Cut[];
   fallback:CameraKey;
   duration:number;
+  start:number;
+  end:number;
   format:"16:9"|"9:16"|"1:1";
   onProgress:(percentage:number)=>void;
 };
@@ -54,7 +56,7 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
       el.pause();
       el.muted=key!==opts.audioSource;
       if(!Number.isFinite(el.duration)||el.readyState<1)throw new Error("MEDIA_NOT_READY");
-      el.currentTime=Math.min(Math.max(0,el.duration-.1),sourceTime(0,opts.offsets[key]));
+      el.currentTime=Math.min(Math.max(0,el.duration-.1),sourceTime(opts.start,opts.offsets[key]));
     }
     await ctx.resume();
     recorder.start(1000);
@@ -72,8 +74,8 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
             painter.drawImage(video,(width-w)/2,(height-h)/2,w,h);
           }catch{reject(new Error("VIDEO_CANVAS_BLOCKED"));return}
         }
-        opts.onProgress(Math.min(100,Math.round(t/opts.duration*100)));
-        if(t>=opts.duration-.05||master.ended){resolve();return}
+        opts.onProgress(Math.min(100,Math.round((t-opts.start)/(opts.end-opts.start)*100)));
+        if(t>=opts.end-.05||master.ended){resolve();return}
         frame=requestAnimationFrame(draw);
       };
       frame=requestAnimationFrame(draw);
