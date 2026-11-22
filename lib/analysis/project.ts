@@ -58,6 +58,7 @@ export const projectSchema = z.object({
   stage:z.enum(["recording","transcription","analysis","editing","ready"]).default("recording"),
   events:z.array(episodeEventSchema).max(100).default([]),
   capsules:z.array(capsuleSchema).max(40).default([]),
+  selectedCapsuleId:z.string().max(64).default(""),
   id:z.string().uuid(),
   name:z.string().trim().min(1).max(100),
   transcript:z.string().max(26000),
@@ -84,7 +85,7 @@ export function validProjectMedia(project:StudioProject) {
   return true;
 }
 export function freshProject():StudioProject {
-  return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",events:[],capsules:[],transcript:"",
+  return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",events:[],capsules:[],selectedCapsuleId:"",transcript:"",
     analysis:null,selectedMoment:0,format:"9:16",media:{},
     timeline:{duration:300,clipStart:0,clipEnd:60,audioSource:"audio",offsets:{audio:0,main:0,vertical:0,secondary:0},
       claps:{audio:0,main:0,vertical:0,secondary:0},cuts:[]}};
