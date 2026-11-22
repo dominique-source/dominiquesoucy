@@ -87,9 +87,26 @@ export function MediaImport({ lang, consent, onTranscript }: {
       });
       const data = await r.json() as Transcription & {error?:string};
       if (!r.ok || !data.transcript) {
-        const message = data.error === "BLOB_NOT_CONFIGURED" ? (fr ? "Stockage privé non configuré sur Vercel." : "Private Blob storage is not configured.") :
-          data.error === "AI_NOT_CONFIGURED" ? (fr ? "Clé IA non configurée." : "AI key not configured.") :
-          fr ? "Transcription impossible. Vérifie le format et réessaie." : "Transcription failed. Check file format and retry.";
+        const messages: Record<string, [string, string]> = {
+          BLOB_NOT_CONFIGURED: ["Stockage privé non configuré sur Vercel.", "Private Blob storage is not configured."],
+          AI_NOT_CONFIGURED: ["Clé IA non configurée.", "AI key is not configured."],
+          MEDIA_NOT_OWNED: ["La session du fichier a expiré. Relance la transcription avec le fichier déjà sélectionné.", "The file session expired. Retry with the locally selected file."],
+          MEDIA_NOT_FOUND: ["Le média temporaire est introuvable. Relance l’envoi.", "Temporary media is missing. Upload again."],
+          MEDIA_READ_FAILED: ["Impossible de lire l’audio dans le stockage privé. Réessaie.", "Could not read private audio storage. Try again."],
+          AUDIO_REJECTED: ["Le fournisseur IA a refusé le format audio. Convertis-le en MP3 ou M4A et réessaie.", "The AI provider rejected this audio format. Convert to MP3 or M4A and retry."],
+          AI_RATE_LIMITED: ["Le fournisseur IA limite temporairement les demandes. Réessaie plus tard.", "The AI provider rate limit was reached. Try again later."],
+          AI_AUTH_FAILED: ["L’accès au fournisseur IA doit être corrigé dans la configuration du site.", "The AI provider credentials need to be fixed in site configuration."],
+          TRANSCRIPTION_PROVIDER_FAILED: ["Le fournisseur IA n’a pas pu transcrire cet audio. Essaie un MP3 plus léger.", "The AI provider could not transcribe this audio. Try a smaller MP3."],
+          TRANSCRIPTION_TIMEOUT: ["La transcription a pris trop de temps. Essaie un fichier MP3 plus léger.", "Transcription timed out. Try a smaller MP3."],
+          TRANSCRIPTION_EMPTY: ["Aucune parole détectée dans la transcription. Vérifie la piste audio.", "No speech was found. Check the audio track."],
+          TRANSCRIPTION_UNAVAILABLE: ["Le service de transcription a rencontré un problème technique. Réessaie.", "The transcription service encountered a technical issue. Try again."],
+          RATE_LIMITED: ["Trop d’essais rapprochés. Réessaie un peu plus tard.", "Too many attempts. Try later."],
+          UNAUTHORIZED: ["Ta session a expiré. Reconnecte-toi au Studio.", "Your session expired. Sign in to the Studio again."],
+        };
+        const message = (messages[data.error || ""] || [
+          "Erreur pendant la transcription. Ton fichier local est conservé; tu peux réessayer.",
+          "Transcription failed. Your local file is still selected; you can retry.",
+        ])[fr ? 0 : 1];
         throw new Error(message);
       }
       setSegments(data.segments || []);
