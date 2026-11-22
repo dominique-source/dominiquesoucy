@@ -10,7 +10,7 @@ import {
 const initialOffsets: Record<SourceKey, number> = { audio:0, main:0, vertical:0, secondary:0 };
 const initialClaps: Record<SourceKey, number> = { audio:0, main:0, vertical:0, secondary:0 };
 
-type Timeline={ duration:number; audioSource:SourceKey; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
+type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
 export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
@@ -27,6 +27,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [offsets,setOffsets] = useState(savedTimeline?.offsets || initialOffsets);
   const [claps,setClaps] = useState(savedTimeline?.claps || initialClaps);
   const [duration,setDuration] = useState(savedTimeline?.duration || 300);
+  const [clipStart,setClipStart]=useState(savedTimeline?.clipStart ?? 0);
+  const [clipEnd,setClipEnd]=useState(savedTimeline?.clipEnd ?? 60);
   const [playhead,setPlayhead] = useState(0);
   const [playing,setPlaying] = useState(false);
   const [cuts,setCuts] = useState<Cut[]>(savedTimeline?.cuts || []);
@@ -46,7 +48,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   },[sources]);
   useEffect(()=>()=>Object.values(urls).forEach(url=>URL.revokeObjectURL(url)),[urls]);
   const playbackUrls={...remoteUrls,...urls};
-  const timeline={duration,audioSource,offsets,claps,cuts};
+  const timeline={duration,clipStart,clipEnd,audioSource,offsets,claps,cuts};
   const lastPersisted=useRef(JSON.stringify(savedTimeline||timeline));
   useEffect(()=>{
     if(!onTimelineChange)return;
@@ -54,7 +56,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     if(next===lastPersisted.current)return;
     lastPersisted.current=next;
     onTimelineChange(timeline);
-  },[duration,audioSource,offsets,claps,cuts,onTimelineChange]);
+  },[duration,clipStart,clipEnd,audioSource,offsets,claps,cuts,onTimelineChange]);
 
   const realAudioSource = availableAudio.includes(audioSource) ? audioSource : availableAudio[0];
   const realCamera = videos.includes(selectedCamera) ? selectedCamera : videos[0];
@@ -152,16 +154,17 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   }
   async function exportMp4(){
     if(rendering||!realCamera||!realAudioSource)return;
-    if(duration>600){setError(fr?"L’export navigateur est limité à 10 minutes pour ce premier test.":"Browser rendering is limited to 10 minutes.");return}
+    if(clipEnd<=clipStart || clipEnd>duration){setError(fr?"Choisis un début et une fin de clip valides.":"Choose a valid clip start and end.");return}
+    if(clipEnd-clipStart>600){setError(fr?"Le clip est limité à 10 minutes pour ce premier test.":"Clip is limited to 10 minutes.");return}
     if(!sources[realAudioSource] || videos.some(key=>!sources[key])){
       setError(fr?"Pour exporter, resélectionne les fichiers originaux de toutes les caméras et de la piste audio utilisée.":"For export, reselect original files for every camera and reference audio.");
       return;
     }
-    setError("");setSuccess("");pauseAll();seekAll(0);setRendering(true);setRenderPercent(0);
+    setError("");setSuccess("");pauseAll();seekAll(clipStart);setRendering(true);setRenderPercent(0);
     try{
       const blob=await renderLocalMp4({
         nodes:elements.current,offsets,audioSource:realAudioSource,
-        cuts,fallback:realCamera,duration,format:format||"16:9",
+        cuts,fallback:realCamera,duration,start:clipStart,end:clipEnd,format:format||"16:9",
         onProgress:setRenderPercent,
       });
       const url=URL.createObjectURL(blob);
@@ -267,6 +270,19 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         {cuts.length? cuts.map(c=><div key={c.id}><strong>{timeCode(c.at)}</strong><span>{labels[c.camera]}</span>
           <button type="button" onClick={()=>setCuts(prev=>prev.filter(x=>x.id!==c.id))}>{fr?"RETIRER":"REMOVE"}</button>
         </div>):<p>{fr?"Aucune coupe choisie.":"No cuts selected yet."}</p>}
+      </div>
+      <div className="analysis-multi-clip-range">
+        <strong>{fr?"DÉBUT ET FIN DU CLIP":"CLIP START AND END"}</strong>
+        <label>{fr?"DÉBUT (S)":"START (SEC)"}
+          <input type="number" min={0} max={duration} step={0.1} value={clipStart}
+            onChange={e=>setClipStart(safeCutTime(Number(e.target.value),duration))}/>
+        </label>
+        <button type="button" className="analysis-secondary" onClick={()=>setClipStart(playhead)}>{fr?"DÉBUT = POSITION":"START = PLAYHEAD"}</button>
+        <label>{fr?"FIN (S)":"END (SEC)"}
+          <input type="number" min={0} max={duration} step={0.1} value={clipEnd}
+            onChange={e=>setClipEnd(safeCutTime(Number(e.target.value),duration))}/>
+        </label>
+        <button type="button" className="analysis-secondary" onClick={()=>setClipEnd(playhead)}>{fr?"FIN = POSITION":"END = PLAYHEAD"}</button>
       </div>
       <div className="analysis-multi-actions">
         <label className="analysis-multi-render-format">{fr?"FORMAT DU CLIP":"CLIP FORMAT"}
