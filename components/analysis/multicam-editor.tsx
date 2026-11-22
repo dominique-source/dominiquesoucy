@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderLocalMp4 } from "./local-mp4";
+import { alignCameraAudio, type CameraSyncResult } from "@/lib/analysis/browser-audio-fingerprint";
 import {
   activeCamera, cameraKeys, edl, labels, offsetFromClap,
   safeCutTime, sourceTime, timeCode,
@@ -37,6 +38,11 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [rendering,setRendering]=useState(false);
   const [renderPercent,setRenderPercent]=useState(0);
   const [renderNonce,setRenderNonce]=useState(0);
+  const [autoSyncBusy,setAutoSyncBusy]=useState(false);
+  const [autoSyncProgress,setAutoSyncProgress]=useState("");
+  const [autoSyncResults,setAutoSyncResults]=useState<CameraSyncResult[]>([]);
+  const autoSyncController=useRef<AbortController|null>(null);
+  useEffect(()=>()=>autoSyncController.current?.abort(),[]);
   const elements=useRef<Partial<Record<SourceKey,HTMLMediaElement|null>>>({});
   const urls=useMemo(() => {
     // Browser object URLs do not copy gigabyte-sized camera files to JavaScript memory.
@@ -132,6 +138,45 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       });
   };
 
+  async function synchronizeAutomatically(){
+    if(autoSyncBusy||rendering||!realAudioSource||!videos.length)return;
+    pauseAll();setError("");setSuccess("");setAutoSyncResults([]);
+    const controller=new AbortController();
+    autoSyncController.current=controller;
+    setAutoSyncBusy(true);
+    setAutoSyncProgress(fr?"Préparation de l’audio de référence…":"Preparing reference audio…");
+    try{
+      const results=await alignCameraAudio({
+        urls:playbackUrls,master:realAudioSource,sources:videos,
+        signal:controller.signal,
+        onProgress:key=>setAutoSyncProgress(
+          key==="REFERENCE"?(fr?"Lecture de l’audio de référence…":"Scanning reference audio…"):
+          (fr?`Analyse du son : ${labels[key as SourceKey]}…`:`Scanning audio: ${labels[key as SourceKey]}…`)
+        ),
+      });
+      if(controller.signal.aborted)return;
+      setAutoSyncResults(results);
+      const accepted=results.filter(r=>r.match.confidence!=="unreliable"&&!r.error);
+      if(accepted.length){
+        const next={...offsets,[realAudioSource]:0};
+        for(const entry of accepted)next[entry.source]=entry.match.lagSeconds;
+        synchronize(next);
+      }
+      const failed=results.length-accepted.length;
+      setSuccess(accepted.length
+        ? fr?`${accepted.length} caméra(s) alignée(s) automatiquement et sauvegardée(s). ${failed? `${failed} à vérifier manuellement.`:"Vérifie le résultat à l’écoute."}`:
+          `${accepted.length} camera(s) aligned and saved. ${failed? `${failed} require manual review.`:"Verify by listening."}`
+        : fr?"Aucune synchronisation suffisamment fiable. Les réglages existants ont été conservés.":"No sufficiently reliable audio match. Existing offsets were preserved.");
+    }catch(e){
+      if(controller.signal.aborted)return;
+      const code=e instanceof Error?e.message:"UNKNOWN";
+      setError(fr?`Synchronisation automatique indisponible (${code}). Essaie les repères manuels ou un MP4 H.264 avec audio.`:
+        `Automatic sync unavailable (${code}). Try manual markers or an H.264 MP4 with audio.`);
+    }finally{
+      if(autoSyncController.current===controller)autoSyncController.current=null;
+      setAutoSyncBusy(false);setAutoSyncProgress("");
+    }
+  }
   function setClap(key:SourceKey,value:number){
     setClaps(prev=>({...prev,[key]:Math.max(0,Number.isFinite(value)?value:0)}));
   }
@@ -201,8 +246,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   return <section className="analysis-panel analysis-multicam" aria-label={fr?"Montage multicaméra":"Multicamera editor"}>
     <div className="analysis-panel-head"><h2>05 / {fr?"ALIGNER LES CAMÉRAS":"ALIGN CAMERAS"}</h2><span>{videos.length} / 3 CAMÉRAS · LOCAL</span></div>
     <p>{fr
-      ? "Première version : lecture locale des caméras, alignement par repères de clap, choix des angles et export d’un plan de montage. Les fichiers restent sur ton Mac : aucun MP4 n’est généré pour le moment."
-      : "First version: local camera preview, manual clap alignment, angle selection and edit decision list export. Files stay on your computer; no MP4 is rendered yet."}</p>
+      ? "Alignement automatique expérimental par analyse du son, prévisualisation et montage. Les fichiers locaux ne sont pas envoyés à un service supplémentaire pour cette opération."
+      : "Experimental automatic audio alignment, angle preview and editing. Locally selected files are processed in your browser for this operation."}</p>
     {highlight && <div className="analysis-multi-highlight">
       <strong>{fr?"EXTRAIT SÉLECTIONNÉ DANS L’ANALYSE":"HIGHLIGHT SELECTED IN ANALYSIS"}</strong>
       <p>« {highlight.slice(0,280)}{highlight.length>280?"…":""} »</p>
@@ -220,18 +265,39 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     </div>
 
     <div className="analysis-multi-claps">
-      <strong>{fr?"05 · REPÈRES DE CLAP (SECONDES DANS CHAQUE FICHIER)":"05 · CLAP MARKERS (SECONDS IN EACH FILE)"}</strong>
+      <strong>{fr?"05 · ALIGNEMENT AUTOMATIQUE PAR LE SON":"05 · AUTOMATIC AUDIO ALIGNMENT"}</strong>
       <p>{fr
-        ?"Écoute ou repère le clap dans chaque fichier, puis saisis son moment exact. Exemple : audio 00:04, Canon 00:09. La timeline les alignera. Aucun alignement automatique n’est revendiqué."
-        :"Locate the clap in each file and enter its timestamp. Example: audio 00:04, Canon 00:09. The timeline will align them. This is not automatic syncing."}</p>
-      <div className="analysis-multi-clap-grid">
-        {(Object.keys(sources) as SourceKey[]).map(key=><label key={key}>{labels[key]}
-          <input type="number" min={0} step={0.1} value={claps[key]} onChange={e=>setClap(key,Number(e.target.value))}/>
-        </label>)}
-      </div>
-      <button className="analysis-secondary" type="button" onClick={syncFromClap}>
-        {fr?"ALIGNER LES CAMÉRAS SUR LES CLAPS":"ALIGN CAMERAS USING CLAPS"}
+        ?"Clique une seule fois. Le Studio compare un court extrait sonore de chaque caméra avec l’audio de référence et calcule le décalage. Aucun clap ni réglage de secondes requis si le son est suffisamment clair."
+        :"One click compares a short sound sample from each camera with the reference audio and estimates offsets. No manual clap needed when the audio is clear."}</p>
+      <button className="analysis-primary analysis-auto-sync-button" type="button" disabled={autoSyncBusy||rendering||!realAudioSource}
+        onClick={synchronizeAutomatically}>
+        {autoSyncBusy?(fr?"◉ ALIGNEMENT EN COURS…":"◉ SYNCING…"):(fr?"✦ ALIGNER AUTOMATIQUEMENT LES CAMÉRAS":"✦ AUTO-SYNC CAMERAS")}
       </button>
+      {autoSyncBusy&&<p role="status" className="analysis-multi-sync-progress">
+        <span className="analysis-multi-sync-spinner" aria-hidden="true"/> {autoSyncProgress}
+      </p>}
+      {!!autoSyncResults.length&&<div className="analysis-multi-sync-results">
+        {autoSyncResults.map(r=><div key={r.source} className="analysis-multi-sync-result">
+          <strong>{labels[r.source]}</strong>
+          <span>{r.error? (fr?"Son non décodable":"Audio unavailable") :
+            r.match.confidence==="unreliable"?(fr?"À vérifier — pas de correspondance fiable":"Needs review — weak match"):
+            `${r.match.lagSeconds>=0?"+":""}${r.match.lagSeconds.toFixed(2)} s · ${r.match.confidence==="strong"?(fr?"CONFIANCE ÉLEVÉE":"HIGH CONFIDENCE"):(fr?"À VÉRIFIER":"REVIEW")}`}</span>
+        </div>)}
+      </div>}
+      <details className="analysis-multi-manual">
+        <summary>{fr?"AJUSTEMENT MANUEL (SI NÉCESSAIRE)":"MANUAL ALIGNMENT (IF NEEDED)"}</summary>
+        <p>{fr
+          ?"Si le son d’une caméra est inexploitable, repère un clap commun et saisis la seconde dans chaque fichier. Exemple : audio 4, Canon 9."
+          :"If audio matching fails, identify a common clap and enter its time in each file. Example: audio 4, Canon 9."}</p>
+        <div className="analysis-multi-clap-grid">
+          {(Object.keys(playbackUrls) as SourceKey[]).map(key=><label key={key}>{labels[key]}
+            <input type="number" min={0} step={0.1} value={claps[key]} onChange={e=>setClap(key,Number(e.target.value))}/>
+          </label>)}
+        </div>
+        <button className="analysis-secondary" type="button" disabled={autoSyncBusy} onClick={syncFromClap}>
+          {fr?"APPLIQUER LES REPÈRES MANUELS":"APPLY MANUAL MARKERS"}
+        </button>
+      </details>
       {success&&<p role="status" className="analysis-multi-success">{success}</p>}
     </div>
 
@@ -300,7 +366,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     </div>
     {error&&<p role="alert" className="analysis-error">{error}</p>}
     <p className="analysis-note">{fr
-      ?"Limites : les MOV non compatibles ne seront pas lus, les grosses vidéos peuvent ralentir ton navigateur, et la synchronisation manuelle peut dériver. N’efface pas les originaux. L’export MP4 local est expérimental et prend le temps réel du clip. Un moteur serveur haute qualité, les sous-titres et la synchronisation automatique restent à développer."
-      :"Limits: unsupported MOV files cannot play, large videos may slow down the browser, and manual synchronization can drift. Keep originals. Local MP4 export is experimental and runs in real time. Server rendering, captions and automatic synchronization remain to be built."}</p>
+      ?"Limites : les MOV non compatibles ne seront pas lus, les grosses vidéos peuvent ralentir ton navigateur, et l’alignement automatique dépend de la présence de son exploitable sur chaque caméra. N’efface pas les originaux. L’export MP4 local est expérimental et prend le temps réel du clip. Un moteur serveur haute qualité, les sous-titres et une synchronisation professionnelle avec correction de dérive restent à développer."
+      :"Limits: unsupported MOV files cannot play, large videos may slow down the browser, and automatic alignment requires usable audio on each camera. Keep originals. Local MP4 export is experimental and runs in real time. Server rendering, captions and professional drift-corrected synchronization remain to be built."}</p>
   </section>;
 }
