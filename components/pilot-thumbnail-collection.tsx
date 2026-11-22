@@ -23,25 +23,26 @@ export function PilotThumbnailCollection({
     >
       <div className="content-shell">
         <div className="pilot-thumbnails-heading">
-          <div>
+          <div className="pilot-thumbnails-title-group">
             <p className="eyebrow accent">
-              {lang === "fr"
-                ? "TROIS REGARDS / UN MÊME PILOTE"
-                : "THREE PERSPECTIVES / ONE PILOT"}
+              {lang === "fr" ? "DOM SOUCY MEDIA / ÉPISODE 00" : "DOM SOUCY MEDIA / EPISODE 00"}
             </p>
             <h2 id="pilot-thumbnails-title">
               {lang === "fr" ? "À VOIR." : "WATCH."}
-              <span className="accent"> / 00</span>
             </h2>
           </div>
-          <p>
+          <p className="pilot-thumbnails-intro">
             {lang === "fr"
-              ? "Trois portes d’entrée visuelles vers le pilote de la série."
-              : "Three visual ways into the series pilot."}
+              ? "Un même pilote. Trois regards complémentaires pour questionner, comprendre et confronter le sport."
+              : "One pilot. Three perspectives to question, understand, and challenge sport."}
           </p>
+          <a className="pilot-thumbnails-main-cta" href="#pilote">
+            <span aria-hidden="true">▶</span>
+            {lang === "fr" ? "REGARDER LE PILOTE 00" : "WATCH PILOT 00"}
+          </a>
         </div>
         <div className="pilot-thumbnails-grid">
-          {entries.map((style) => {
+          {entries.map((style, index) => {
             const label = thumbnailStyleLabels[style.style][lang];
             const href = thumbnailDestination(style);
             return (
@@ -76,6 +77,9 @@ export function PilotThumbnailCollection({
                     />
                   )}
                   <span className="pilot-thumbnail-slash" aria-hidden="true" />
+                  <span className="pilot-thumbnail-index" aria-hidden="true">
+                    {String(index + 1).padStart(2, "0")} <span>—</span>
+                  </span>
                   <span className="pilot-thumbnail-copy" aria-hidden="true">
                     <span>{style.title[lang][0]}</span>
                     <strong>{style.title[lang][1]}</strong>
@@ -86,15 +90,15 @@ export function PilotThumbnailCollection({
                     </svg>
                   </span>
                 </div>
-                <div className="pilot-thumbnail-meta">
-                  <span>{label}</span>
-                  <span>{style.episodeLabel[lang]}</span>
+                <div className="pilot-thumbnail-footer">
+                  <div className="pilot-thumbnail-meta">
+                    <span>{label}</span>
+                    <span>{style.episodeLabel[lang]}</span>
+                  </div>
+                  {style.subtitle && (
+                    <p className="pilot-thumbnail-subtitle">{style.subtitle[lang]}</p>
+                  )}
                 </div>
-                {style.subtitle && (
-                  <p className="pilot-thumbnail-subtitle">
-                    {style.subtitle[lang]}
-                  </p>
-                )}
               </PilotThumbnailLink>
             );
           })}
