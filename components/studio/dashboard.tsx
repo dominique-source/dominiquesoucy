@@ -12,6 +12,7 @@ import {
   type Mode,
 } from "@/lib/studio/domain";
 import { microphone, RealtimeStudio } from "@/lib/studio/realtime";
+import { StudioAudioRecording } from "@/lib/studio/recording";
 import { AudioMeter } from "./meter";
 import { StudioGuide } from "./guide";
 const labels = {
@@ -57,6 +58,9 @@ export function StudioDashboard({
   const [mode, setMode] = useState<Mode>("reflection");
   const modeRef = useRef<Mode>("reflection");
   const [active, setActive] = useState(false);
+  const [liveView, setLiveView] = useState(false);
+  const [lastVoiceCommand, setLastVoiceCommand] = useState<Command | null>(null);
+  const voiceFlash = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
@@ -65,6 +69,10 @@ export function StudioDashboard({
   const [demo, setDemo] = useState(!provider);
   const demoRef = useRef(!provider);
   const [consent, setConsent] = useState(false);
+  const [recordConsent, setRecordConsent] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const capture = useRef<StudioAudioRecording | null>(null);
+  const [recordedFile, setRecordedFile] = useState<{ blob: Blob; extension: string } | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const entriesRef = useRef<Entry[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -182,6 +190,20 @@ export function StudioDashboard({
     busyRef.current = false;
     setBusy(false);
   }
+  function stopRecording() {
+    capture.current?.stop();
+    capture.current = null;
+    setRecording(false);
+  }
+  function downloadRecording() {
+    if (!recordedFile) return;
+    const url = URL.createObjectURL(recordedFile.blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dom-soucy-studio-live-${new Date().toISOString().slice(0, 10)}.${recordedFile.extension}`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
   function stopMedia() {
     engine.current?.close();
     engine.current = null;
@@ -190,6 +212,8 @@ export function StudioDashboard({
     setStream(null);
   }
   function finish() {
+    setLiveView(false);
+    stopRecording();
     silence();
     activeRef.current = false;
     setActive(false);
@@ -286,6 +310,9 @@ export function StudioDashboard({
     }
   }
   function command(c: Command) {
+    setLastVoiceCommand(c);
+    if (voiceFlash.current) clearTimeout(voiceFlash.current);
+    voiceFlash.current = setTimeout(() => setLastVoiceCommand(null), 1600);
     if (c === "end") {
       finish();
       return;
@@ -351,8 +378,27 @@ export function StudioDashboard({
   }
   function mediaError(e: unknown) {
     const name = e instanceof Error ? e.name : "";
+    const message = e instanceof Error ? e.message : "";
     setError(
-      name === "NotAllowedError"
+      message.includes("PROVIDER_INVALID_KEY")
+        ? t("OpenAI refuse la clé API (401/403). Vérifie qu’elle appartient au bon projet et qu’elle autorise Realtime.", "OpenAI rejected the API key (401/403). Check the project and Realtime access.")
+        : message.includes("PROVIDER_QUOTA")
+          ? t("OpenAI refuse la connexion : limite de facturation ou de requêtes. Vérifie Billing, les crédits et les limites API.", "OpenAI connection refused: billing or rate limit. Check Billing, credits and API limits.")
+        : message.includes("PROVIDER_BAD_REQUEST")
+          ? t("OpenAI refuse les paramètres Realtime. Le Studio doit ajuster sa configuration vocale.", "OpenAI rejected the Realtime session configuration.")
+        : message === "RECORDING_UNAVAILABLE"
+        ? t("Impossible de lancer l’enregistrement audio. Vérifie les permissions et essaie Chrome ou Safari récent.", "Unable to start audio recording. Check permissions and try a recent version of Chrome or Safari.")
+        : message.includes("STUDIO_HTTP_401_")
+        ? t("Ta session a expiré. Recharge la page et reconnecte-toi.", "Your session expired. Reload and sign in again.")
+        : message.includes("STUDIO_HTTP_429_")
+          ? t("Limite de connexions atteinte. Réessaie dans 15 minutes.", "Connection limit reached. Try again in 15 minutes.")
+          : message.includes("PROVIDER_NOT_CONFIGURED")
+            ? t("OPENAI_API_KEY n’est pas configurée sur le serveur. Active la démonstration ou configure la clé dans Vercel.", "OPENAI_API_KEY is not configured. Use demo mode or add the key in Vercel.")
+            : message.includes("PROVIDER_UNAVAILABLE") || message.includes("STUDIO_HTTP_502_")
+              ? t("Le fournisseur vocal IA est indisponible. Vérifie la clé et le modèle Realtime configuré.", "The AI voice provider is unavailable. Check the configured API key and Realtime model.")
+              : message.includes("STUDIO_HTTP_503_")
+                ? t("Le Studio est indisponible côté serveur. Vérifie les paramètres Vercel et Redis.", "Studio is unavailable on the server. Check Vercel and Redis settings.")
+                : name === "NotAllowedError"
         ? t(
             "Permission micro refusée. Autorise-la dans les réglages du navigateur, puis réessaie.",
             "Microphone permission denied. Allow it in browser settings, then retry.",
@@ -366,8 +412,10 @@ export function StudioDashboard({
     );
   }
   async function startSession(now: number) {
-    if (activeRef.current || testingRef.current || !consent) return;
+    if (activeRef.current || testingRef.current || !consent || (recordConsent && demo)) return;
     setError("");
+    if (recordedFile && !window.confirm(t("Le dernier enregistrement n’a peut-être pas été téléchargé. Commencer une nouvelle séance et l’effacer?", "Your previous recording may not be downloaded. Start a new session and discard it?"))) return;
+    setRecordedFile(null);
     silence();
     stopMedia();
     setCurrent("reflection");
@@ -384,6 +432,7 @@ export function StudioDashboard({
     setActive(true);
     if (demo) {
       status("demo");
+      setLiveView(true);
       return;
     }
     try {
@@ -395,7 +444,20 @@ export function StudioDashboard({
       streamRef.current = s;
       setStream(s);
       await listDevices();
+      if (recordConsent) {
+        try {
+          capture.current = await StudioAudioRecording.start(
+            s,
+            (blob, extension) => setRecordedFile({ blob, extension }),
+            () => setError(t("Échec de l’enregistrement local. Vérifie l’espace disponible et réessaie.", "Local recording failed. Check available storage and try again.")),
+          );
+          setRecording(true);
+        } catch {
+          throw new Error("RECORDING_UNAVAILABLE");
+        }
+      }
       const call = new RealtimeStudio({
+        remoteAudio: (remote) => capture.current?.attachRemote(remote),
         transcript: receive,
         utterance: afterUtterance,
         userSpeaking: () => {
@@ -421,6 +483,7 @@ export function StudioDashboard({
       });
       engine.current = call;
       await call.connect(s, lang, output);
+      if (activeRef.current) setLiveView(true);
     } catch (e) {
       finish();
       mediaError(e);
@@ -459,12 +522,15 @@ export function StudioDashboard({
       if (activeRef.current)
         setSeconds(Math.floor((Date.now() - started.current) / 1000));
       if (Date.now() >= expires) {
+        stopRecording();
         engine.current?.close();
         streamRef.current?.getTracks().forEach((x) => x.stop());
         activeRef.current = false;
         router.refresh();
       }
       if (activeRef.current && Date.now() - started.current >= 15 * 60 * 1000) {
+        stopRecording();
+        setLiveView(false);
         engine.current?.close();
         streamRef.current?.getTracks().forEach((x) => x.stop());
         activeRef.current = false;
@@ -476,6 +542,7 @@ export function StudioDashboard({
       }
     }, 1000);
     const offline = () => {
+      stopRecording();
       engine.current?.silence();
       streamRef.current?.getAudioTracks().forEach((x) => (x.enabled = false));
       modeRef.current = "paused";
@@ -493,11 +560,13 @@ export function StudioDashboard({
       summaryAbort.current?.abort();
       clearInterval(id);
       window.removeEventListener("offline", offline);
+      capture.current?.stop();
       engine.current?.close();
       streamRef.current?.getTracks().forEach((x) => x.stop());
       if (timer.current) clearTimeout(timer.current);
       if (watchdog.current) clearTimeout(watchdog.current);
       if (testTimer.current) clearTimeout(testTimer.current);
+      if (voiceFlash.current) clearTimeout(voiceFlash.current);
     };
   }, [expires, router, fr]);
   function updateEntry(id: string, visibility: Entry["visibility"]) {
@@ -510,7 +579,54 @@ export function StudioDashboard({
     return `${t("BILAN LOCAL — extraits non interprétés, pas une synthèse IA", "LOCAL REVIEW — uninterpreted excerpts, not an AI summary")}\n${Math.floor(seconds / 60)} min ${seconds % 60}s · ${entriesRef.current.filter((e) => e.speaker !== "Dominique").length} ${t("questions/interventions", "questions/interventions")}\n\n${exportText(entriesRef.current)}\n\n${t("Notes éditoriales privées", "Private editorial notes")}: ${note}`;
   }
   return (
-    <section className="studio-dashboard">
+    <section className={`studio-dashboard${active && liveView ? " is-live" : ""}`}>
+      {active && liveView && (
+        <div className="studio-live-panel" role="region" aria-label={t("Commandes vocales en direct", "Live voice commands")}>
+          <header className="studio-live-header">
+            <div className="studio-live-brand">DOMINIQUE SOUCY <span>/ STUDIO LIVE</span></div>
+            <div className="studio-live-on"><span aria-hidden="true" />{t("EN DIRECT", "LIVE")} · {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</div>
+          </header>
+          <div className="studio-live-heading">
+            <p>{t("CONTRÔLE VOCAL", "VOICE CONTROL")}</p>
+            <h2>{t("MODE LIVE", "LIVE MODE")}</h2>
+            <span>{t("DIS LA COMMANDE À VOIX HAUTE", "SAY THE COMMAND OUT LOUD")}</span>
+          </div>
+          <div className="studio-live-commands">
+            {([
+              { cmd: "open" as Command, title: t("OUVRIR LES QUESTIONS", "OPEN QUESTIONS"), cue: t("Maintenant, on passe aux questions", "Let's open the questions"), enabled: mode !== "questions" && mode !== "speaking" && (demo || connection === "connected") },
+              { cmd: "next" as Command, title: t("PROCHAINE QUESTION", "NEXT QUESTION"), cue: t("Prochaine question", "Next question"), enabled: mode === "questions" || mode === "speaking" },
+              { cmd: "repeat" as Command, title: t("RÉPÉTER", "REPEAT"), cue: t("Répète la question", "Repeat the question"), enabled: (mode === "questions" || mode === "speaking") && index >= 0 },
+              { cmd: "reflection" as Command, title: t("RÉFLEXION LIBRE", "FREE REFLECTION"), cue: t("Retour à la réflexion", "Back to reflection"), enabled: true },
+              { cmd: "silence" as Command, title: t("SILENCE IMMÉDIAT", "IMMEDIATE SILENCE"), cue: t("Attends, j'ai pas fini", "Let me finish"), enabled: true },
+              { cmd: "end" as Command, title: t("TERMINER", "END SESSION"), cue: t("Fin de conférence", "End conference"), enabled: true },
+            ]).map(({ cmd, title, cue, enabled }) => (
+              <button
+                key={cmd}
+                type="button"
+                className={`studio-live-command studio-live-command--${cmd}${lastVoiceCommand === cmd ? " is-recognized" : ""}${(cmd === "reflection" && mode === "reflection") || (cmd === "open" && mode === "questions") ? " is-current" : ""}`}
+                disabled={!enabled}
+                onClick={() => command(cmd)}
+                aria-label={`${title}. ${t("Commande vocale", "Voice command")}: ${cue}`}
+              >
+                <strong>{title}</strong>
+                <span>« {cue} »</span>
+              </button>
+            ))}
+          </div>
+          {error && <p className="studio-live-error" role="alert">{error}</p>}
+          <div className="studio-live-status">
+            <span>{t("JOURNALISTE", "JOURNALIST")}: <strong>{index >= 0 ? names[index] : "—"}</strong></span>
+            <span>{t("MODE", "MODE")}: <strong>{labels[lang][mode]}</strong></span>
+            <span>{t("MICRO", "MIC")}: <strong>{mode === "paused" ? t("COUPÉ", "OFF") : t("ACTIF", "ON")}</strong></span>
+            <span>{t("AUDIO", "AUDIO")}: <strong>{recording ? t("● ENREGISTREMENT", "● RECORDING") : t("NON ENREGISTRÉ", "NOT RECORDING")}</strong></span>
+            <span>{t("IA", "AI")}: <strong>{connection}</strong></span>
+          </div>
+          <footer className="studio-live-footer">
+            <p>{t("Lis la commande affichée sous chaque bouton. Dis-la seule, puis attends sa reconnaissance.", "Say the command shown below each button on its own.")}</p>
+            <button type="button" onClick={() => setLiveView(false)}>{t("RETOUR À LA RÉGIE", "BACK TO CONTROL ROOM")}</button>
+          </footer>
+        </div>
+      )}
       <div className="studio-topline">
         <p className="studio-kicker">
           DOMINIQUE SOUCY / {t("RÉGIE PRIVÉE", "PRIVATE CONTROL ROOM")}
@@ -605,12 +721,13 @@ export function StudioDashboard({
             </div>
           </div>
           <div className="studio-controls">
+            {active && !liveView && <button type="button" className="studio-open-live" onClick={() => setLiveView(true)}>{t("AFFICHER LE MODE LIVE · COMMANDES VOCALES", "OPEN LIVE MODE · VOICE COMMANDS")}</button>}
             <button
               className="studio-primary"
               onClick={(event) => {
                 void startSession(performance.timeOrigin + event.timeStamp);
               }}
-              disabled={active || !consent || testing}
+              disabled={active || !consent || testing || (recordConsent && demo)}
             >
               {t("DÉMARRER LA SÉANCE", "START SESSION")}
             </button>
@@ -669,9 +786,19 @@ export function StudioDashboard({
               {t("TERMINER", "END SESSION")}
             </button>
           </div>
-          <p className="studio-error" role="alert">
-            {error}
-          </p>
+          {error && (
+            <div className="studio-start-error" role="alert">
+              <strong>{t("LA SÉANCE N’A PAS DÉMARRÉ", "SESSION DID NOT START")}</strong>
+              <p>{error}</p>
+            </div>
+          )}
+          <div className="studio-recording-panel">
+            <strong>{recording ? t("● ENREGISTREMENT AUDIO EN COURS", "● AUDIO RECORDING IN PROGRESS") : recordedFile ? t("Enregistrement prêt à télécharger", "Recording ready to download") : t("Enregistrement audio local", "Local audio recording")}</strong>
+            <p>{t("Ta voix et celle des journalistes IA seront enregistrées ensemble, dans le navigateur. Aucun fichier n’est envoyé au serveur. Télécharge-le avant de fermer cette page.", "Your voice and AI journalists are recorded together in the browser. No file is uploaded. Download it before closing this page.")}</p>
+            <button type="button" disabled={!recordedFile || active} onClick={downloadRecording}>
+              {t("TÉLÉCHARGER L’AUDIO", "DOWNLOAD AUDIO")} {recordedFile ? `(${(recordedFile.blob.size / 1048576).toFixed(1)} Mo)` : ""}
+            </button>
+          </div>
           <div className="studio-status">
             <span>
               {t("Connexion IA", "AI connection")} <strong>{connection}</strong>
@@ -683,8 +810,8 @@ export function StudioDashboard({
               </strong>
             </span>
             <span>
-              {t("Enregistrement OBS", "OBS recording")}{" "}
-              <strong>{t("Non confirmé", "Not confirmed")}</strong>
+              {t("Enregistrement audio", "Audio recording")}{" "}
+              <strong>{recording ? t("En cours", "Recording") : recordedFile ? t("À télécharger", "Ready to download") : t("Inactif", "Inactive")}</strong>
             </span>
             <span>
               {t("Micro", "Mic")}{" "}
@@ -740,9 +867,18 @@ export function StudioDashboard({
               onChange={(e) => setConsent(e.target.checked)}
             />
             {t(
-              "J’accepte la transcription temporaire de cette séance et, en mode connecté, l’envoi de mon audio à OpenAI. OBS se règle séparément.",
-              "I consent to temporary session transcription and, in connected mode, sending my audio to OpenAI. OBS is configured separately.",
+              "J’accepte la transcription temporaire de cette séance et, en mode connecté, l’envoi de mon audio à OpenAI.",
+              "I consent to temporary session transcription and, in connected mode, sending my audio to OpenAI.",
             )}
+          </label>
+          <label className="studio-check">
+            <input
+              type="checkbox"
+              checked={recordConsent}
+              disabled={active}
+              onChange={(e) => setRecordConsent(e.target.checked)}
+            />
+            {t("Enregistrer ma voix et les journalistes IA dans un fichier audio local, à télécharger à la fin de la séance.", "Record my voice and the AI journalists into a local audio file to download at the end of the session.")}
           </label>
           <label className="studio-check">
             <input

@@ -5,6 +5,7 @@ export type Callbacks = {
   connection: (status: string) => void;
   utterance: () => void;
   userSpeaking?: () => void;
+  remoteAudio?: (stream: MediaStream) => void;
 };
 export class RealtimeStudio {
   private pc?: RTCPeerConnection;
@@ -28,6 +29,7 @@ export class RealtimeStudio {
       audio.muted = true;
       if (sink && "setSinkId" in audio) await audio.setSinkId(sink);
       pc.ontrack = (e) => {
+        this.callbacks.remoteAudio?.(e.streams[0]);
         audio.srcObject = e.streams[0];
         audio.play().catch(() => this.callbacks.connection("audio-blocked"));
       };
@@ -118,8 +120,19 @@ export class RealtimeStudio {
         body: JSON.stringify({ sdp: offer.sdp, lang, consent: true }),
         signal: this.connecting.signal,
       });
-      if (!response.ok)
-        throw new Error(response.status === 401 ? "expired" : "provider-error");
+      if (!response.ok) {
+        // Surface only our own API error code, never upstream secrets or responses.
+        let code = "PROVIDER_UNAVAILABLE";
+        try {
+          const body: unknown = await response.json();
+          if (body && typeof body === "object" && "error" in body && typeof body.error === "string") {
+            code = body.error;
+          }
+        } catch {
+          // Preserve the status if a proxy returns a non-JSON error.
+        }
+        throw new Error(`STUDIO_HTTP_${response.status}_${code}`);
+      }
       const answer = await response.text();
       if (this.stopped) return;
       await pc.setRemoteDescription({ type: "answer", sdp: answer });

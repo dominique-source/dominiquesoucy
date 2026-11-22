@@ -89,3 +89,8 @@ Captures réelles : [MacBook FR](review/1440-fr-dashboard.png), [mobile EN](revi
 ## Résumé éditorial facultatif
 
 Après la séance, le panneau **Résumé éditorial IA** permet un envoi volontaire de la transcription à OpenAI, avec un consentement séparé. Le résumé est privé, modifiable et exportable après relecture. L’API Responses utilise `store: false`, un texte limité à 40 000 caractères et cinq demandes par session sur 15 minutes. Le coût du modèle de résumé s’ajoute à la voix; voir la [fiche officielle GPT-4.1 mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini). L’intégration est testée avec un fournisseur simulé; aucun résumé fournisseur réel n’a été généré sans clé. Le bilan local reste disponible hors connexion.
+
+
+## Enregistrement audio local (proposition)
+
+La régie peut capturer dans un unique fichier la piste microphone et le son entrant des journalistes IA, via Web Audio API et MediaRecorder. Cocher volontairement « Enregistrer ma voix et les journalistes IA » avant de commencer une séance connectée. La démonstration n'enregistre pas de faux journalistes. Un indicateur de prise s'affiche, puis un bouton permet le téléchargement lorsque la séance est terminée. Le fichier est conservé uniquement en mémoire du navigateur et **sera perdu si l'onglet est fermé/rechargé avant téléchargement**. Aucun audio n'est téléversé sur nos serveurs. Les fichiers peuvent être WebM/Opus ou M4A selon le navigateur. Cette fonctionnalité ne produit pas de vidéo, n'enregistre pas les caméras et n'est pas une archive persistante : enregistrer séparément les caméras et synchroniser au clap. Exiger un essai réel de 30 secondes (micro + voix IA + téléchargement) sur le Mac avant un épisode complet.

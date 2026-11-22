@@ -106,7 +106,16 @@ export async function POST(
       body: form,
       signal: AbortSignal.timeout(20000),
     });
-    if (!response.ok) return json({ error: "PROVIDER_UNAVAILABLE" }, 502);
+    if (!response.ok) {
+      // Report only a coarse status category; never disclose provider response data.
+      if (response.status === 401 || response.status === 403)
+        return json({ error: "PROVIDER_INVALID_KEY" }, 502);
+      if (response.status === 429 || response.status === 402)
+        return json({ error: "PROVIDER_QUOTA" }, 502);
+      if (response.status === 400 || response.status === 422)
+        return json({ error: "PROVIDER_BAD_REQUEST" }, 502);
+      return json({ error: "PROVIDER_UNAVAILABLE" }, 502);
+    }
     return new Response(await response.text(), {
       headers: { ...headers, "Content-Type": "application/sdp" },
     });
