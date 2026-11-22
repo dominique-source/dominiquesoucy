@@ -9,20 +9,25 @@ import {
 const initialOffsets: Record<SourceKey, number> = { audio:0, main:0, vertical:0, secondary:0 };
 const initialClaps: Record<SourceKey, number> = { audio:0, main:0, vertical:0, secondary:0 };
 
-export function MultiCamEditor({ sources, name, lang, highlight }: {
-  sources: SourceFiles; name: string; lang: "fr"|"en"; highlight?: string;
+type Timeline={ duration:number; audioSource:SourceKey; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
+type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
+export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange }: {
+  sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
+  mediaMetadata?:Partial<Record<SourceKey,MediaInfo>>;
+  name: string; lang: "fr"|"en"; highlight?: string;
+  savedTimeline?:Timeline; onTimelineChange?:(value:Timeline)=>void;
 }) {
   const fr = lang === "fr";
-  const videos = cameraKeys.filter(key=>!!sources[key]);
-  const availableAudio: SourceKey[] = sources.audio ? ["audio",...videos] : videos;
-  const [audioSource, setAudioSource] = useState<SourceKey>("audio");
+  const videos = cameraKeys.filter(key=>!!sources[key] || !!remoteUrls?.[key]);
+  const availableAudio: SourceKey[] = (sources.audio || remoteUrls?.audio) ? ["audio",...videos] : videos;
+  const [audioSource, setAudioSource] = useState<SourceKey>(savedTimeline?.audioSource || "audio");
   const [selectedCamera, setSelectedCamera] = useState<CameraKey>("main");
-  const [offsets,setOffsets] = useState(initialOffsets);
-  const [claps,setClaps] = useState(initialClaps);
-  const [duration,setDuration] = useState(300);
+  const [offsets,setOffsets] = useState(savedTimeline?.offsets || initialOffsets);
+  const [claps,setClaps] = useState(savedTimeline?.claps || initialClaps);
+  const [duration,setDuration] = useState(savedTimeline?.duration || 300);
   const [playhead,setPlayhead] = useState(0);
   const [playing,setPlaying] = useState(false);
-  const [cuts,setCuts] = useState<Cut[]>([]);
+  const [cuts,setCuts] = useState<Cut[]>(savedTimeline?.cuts || []);
   const [error,setError] = useState("");
   const [success,setSuccess] = useState("");
   const elements=useRef<Partial<Record<SourceKey,HTMLMediaElement|null>>>({});
@@ -35,6 +40,16 @@ export function MultiCamEditor({ sources, name, lang, highlight }: {
     return created;
   },[sources]);
   useEffect(()=>()=>Object.values(urls).forEach(url=>URL.revokeObjectURL(url)),[urls]);
+  const playbackUrls={...remoteUrls,...urls};
+  const timeline={duration,audioSource,offsets,claps,cuts};
+  const lastPersisted=useRef(JSON.stringify(savedTimeline||timeline));
+  useEffect(()=>{
+    if(!onTimelineChange)return;
+    const next=JSON.stringify(timeline);
+    if(next===lastPersisted.current)return;
+    lastPersisted.current=next;
+    onTimelineChange(timeline);
+  },[duration,audioSource,offsets,claps,cuts,onTimelineChange]);
 
   const realAudioSource = availableAudio.includes(audioSource) ? audioSource : availableAudio[0];
   const realCamera = videos.includes(selectedCamera) ? selectedCamera : videos[0];
@@ -59,13 +74,9 @@ export function MultiCamEditor({ sources, name, lang, highlight }: {
     setPlaying(false);
   },[]);
   useEffect(()=>{
-    // Files changed, so never keep a previous edit running against new media.
+    // Source replacement should not erase existing saved edits or clap markers.
     pauseAll();
     setPlayhead(0);
-    setCuts([]);
-    setClaps(initialClaps);
-    setOffsets(initialOffsets);
-    setSuccess("");
   },[urls,pauseAll]);
 
   const synchronize=useCallback((newOffsets:Record<SourceKey,number>)=>{
@@ -120,7 +131,7 @@ export function MultiCamEditor({ sources, name, lang, highlight }: {
   function syncFromClap(){
     const reference = realAudioSource;
     const next = {...initialOffsets};
-    (Object.keys(sources) as SourceKey[]).forEach(key=>{
+    (Object.keys(playbackUrls) as SourceKey[]).forEach(key=>{
       next[key]=offsetFromClap(claps[reference],claps[key]);
     });
     synchronize(next);
@@ -137,7 +148,7 @@ export function MultiCamEditor({ sources, name, lang, highlight }: {
   function exportEdl(){
     const result=edl({
       projectName:name,duration,offsets,cuts,
-      sourceNames:Object.fromEntries((Object.entries(sources) as [SourceKey,File][]).map(([key,file])=>[key,file.name])),
+      sourceNames:Object.fromEntries(Object.keys(playbackUrls).map(key=>[key,sources[key as SourceKey]?.name||mediaMetadata?.[key as SourceKey]?.filename||""])),
       audioSource:realAudioSource,
     });
     const data=new Blob([JSON.stringify(result,null,2)],{type:"application/json"});
@@ -147,12 +158,12 @@ export function MultiCamEditor({ sources, name, lang, highlight }: {
   }
 
   if(!videos.length)return <section className="analysis-panel analysis-multicam">
-    <div className="analysis-panel-head"><h2>04 / {fr?"MONTAGE MULTICAMÉRA":"MULTICAMERA EDITOR"}</h2><span>LOCAL / V1</span></div>
+    <div className="analysis-panel-head"><h2>05 / {fr?"ALIGNER LES CAMÉRAS":"ALIGN CAMERAS"}</h2><span>LOCAL / V1</span></div>
     <p>{fr?"Sélectionne au moins une caméra dans les cases ci-dessus pour ouvrir la timeline.":"Select at least one camera above to open the timeline."}</p>
   </section>;
 
   return <section className="analysis-panel analysis-multicam" aria-label={fr?"Montage multicaméra":"Multicamera editor"}>
-    <div className="analysis-panel-head"><h2>04 / {fr?"MONTAGE MULTICAMÉRA":"MULTICAMERA EDITOR"}</h2><span>{videos.length} / 3 CAMÉRAS · LOCAL</span></div>
+    <div className="analysis-panel-head"><h2>05 / {fr?"ALIGNER LES CAMÉRAS":"ALIGN CAMERAS"}</h2><span>{videos.length} / 3 CAMÉRAS · LOCAL</span></div>
     <p>{fr
       ? "Première version : lecture locale des caméras, alignement par repères de clap, choix des angles et export d’un plan de montage. Les fichiers restent sur ton Mac : aucun MP4 n’est généré pour le moment."
       : "First version: local camera preview, manual clap alignment, angle selection and edit decision list export. Files stay on your computer; no MP4 is rendered yet."}</p>
@@ -173,7 +184,7 @@ export function MultiCamEditor({ sources, name, lang, highlight }: {
     </div>
 
     <div className="analysis-multi-claps">
-      <strong>{fr?"1 · REPÈRES DE CLAP (SECONDES DANS CHAQUE FICHIER)":"1 · CLAP MARKERS (SECONDS IN EACH FILE)"}</strong>
+      <strong>{fr?"05 · REPÈRES DE CLAP (SECONDES DANS CHAQUE FICHIER)":"05 · CLAP MARKERS (SECONDS IN EACH FILE)"}</strong>
       <p>{fr
         ?"Écoute ou repère le clap dans chaque fichier, puis saisis son moment exact. Exemple : audio 00:04, Canon 00:09. La timeline les alignera. Aucun alignement automatique n’est revendiqué."
         :"Locate the clap in each file and enter its timestamp. Example: audio 00:04, Canon 00:09. The timeline will align them. This is not automatic syncing."}</p>
@@ -189,12 +200,12 @@ export function MultiCamEditor({ sources, name, lang, highlight }: {
     </div>
 
     <div className="analysis-multi-player-header">
-      <strong>{fr?"2 · PRÉVISUALISATION DES ANGLES":"2 · ANGLE PREVIEW"}</strong>
+      <strong>{fr?"06 · PRÉVISUALISER LES ANGLES":"06 · ANGLE PREVIEW"}</strong>
       <span>{timeCode(playhead)} / {timeCode(duration)}</span>
     </div>
     <div className="analysis-multi-grid">
       {videos.map(key=><div key={key} className={`analysis-multi-camera ${effectiveCamera===key?"is-active":""}`}>
-        <video ref={el=>{elements.current[key]=el}} src={urls[key]} playsInline preload="metadata" muted
+        <video ref={el=>{elements.current[key]=el}} src={playbackUrls[key]} playsInline preload="metadata" muted
           onTimeUpdate={realAudioSource===key?onClock:undefined}
           onError={()=>setError(fr?`Impossible de lire ${labels[key]}. Essaie de convertir ce fichier en MP4 H.264.`:`Cannot play ${labels[key]}. Try converting it to H.264 MP4.`)}
           aria-label={labels[key]}/>
@@ -206,7 +217,7 @@ export function MultiCamEditor({ sources, name, lang, highlight }: {
         </div>
       </div>)}
     </div>
-    {sources.audio && <audio ref={el=>{elements.current.audio=el}} src={urls.audio} preload="metadata"
+    {(sources.audio || remoteUrls?.audio) && <audio ref={el=>{elements.current.audio=el}} src={playbackUrls.audio} preload="metadata"
       onTimeUpdate={realAudioSource==="audio"?onClock:undefined}/>}
     <div className="analysis-multi-playback">
       <button className="analysis-primary" type="button" onClick={play}>{playing?(fr?"❚❚ PAUSE":"❚❚ PAUSE"):(fr?"▶ LIRE LES CAMÉRAS":"▶ PLAY CAMERAS")}</button>
@@ -217,7 +228,7 @@ export function MultiCamEditor({ sources, name, lang, highlight }: {
         onChange={e=>{pauseAll();seekAll(Number(e.target.value))}} />
     </label>
     <div className="analysis-multi-edit">
-      <strong>{fr?"3 · PLAN DE MONTAGE":"3 · EDIT DECISION LIST"}</strong>
+      <strong>{fr?"07 · PREMIER CLIP DE MONTAGE":"07 · FIRST VIDEO CLIP EDIT"}</strong>
       <p>{fr?"Clique « Couper ici » sur une caméra pour la choisir à la position courante. Le plan est mémorisé dans cet onglet et téléchargeable en JSON, sans fabriquer de vidéo.":"Click Cut Here on a camera to select it at the current position. This edit plan is kept in this tab and can be exported as JSON, not yet a video."}</p>
       <div className="analysis-multi-cuts">
         {cuts.length? cuts.map(c=><div key={c.id}><strong>{timeCode(c.at)}</strong><span>{labels[c.camera]}</span>
