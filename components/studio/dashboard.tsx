@@ -14,6 +14,7 @@ import {
 import { microphone, RealtimeStudio } from "@/lib/studio/realtime";
 import { AudioMeter } from "./meter";
 import { StudioGuide } from "./guide";
+import { episode001, completedEpisodeTurn } from "@/lib/studio/episode001";
 const labels = {
   fr: {
     reflection: "Réflexion en cours",
@@ -57,6 +58,8 @@ export function StudioDashboard({
   const [mode, setMode] = useState<Mode>("reflection");
   const modeRef = useRef<Mode>("reflection");
   const [active, setActive] = useState(false);
+  const [episodeMode, setEpisodeMode] = useState(false);
+  const episodeRef = useRef(false);
   const [liveView, setLiveView] = useState(false);
   const activeRef = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -190,6 +193,20 @@ export function StudioDashboard({
     streamRef.current = null;
     setStream(null);
   }
+  function prepareEpisode001() {
+    if (activeRef.current) return;
+    setEpisodeMode(true);
+    episodeRef.current = true;
+    setNames((old) => [...episode001.names, ...old.slice(3)]);
+    setStyles((old) => [...episode001.styles, ...old.slice(3)]);
+    setMemory(episode001.editorialContext);
+    memoryRef.current = episode001.editorialContext;
+    setDelay(10000);
+    delayRef.current = 10000;
+    setDemo(false);
+    demoRef.current = false;
+    setError("");
+  }
   function finish() {
     silence();
     activeRef.current = false;
@@ -218,7 +235,7 @@ export function StudioDashboard({
     clearTimers();
     const next = repeat
       ? Math.max(0, indexRef.current)
-      : (indexRef.current + 1) % 5;
+      : (indexRef.current + 1) % (episodeRef.current ? 3 : 5);
     indexRef.current = next;
     setIndex(next);
     busyRef.current = true;
@@ -293,6 +310,12 @@ export function StudioDashboard({
       return;
     }
     if (!activeRef.current) return;
+    if (episodeRef.current && c === "open" && activeRef.current) {
+      silence();
+      setCurrent("questions");
+      ask();
+      return;
+    }
     if (c === "next" || c === "repeat") {
       if (modeRef.current !== "questions" && modeRef.current !== "speaking")
         return;
@@ -311,16 +334,21 @@ export function StudioDashboard({
   }
   function receive(speaker: "Dominique" | "journalist", text: string) {
     if (!activeRef.current || modeRef.current === "paused") return;
+    const isEpisodeFin = speaker === "Dominique" && episodeRef.current && completedEpisodeTurn(text);
     const c = speaker === "Dominique" ? voiceCommand(text) : undefined;
+    // FIN is a control cue, not part of the published interview.
+    const cleanText = isEpisodeFin ? text.replace(/(?:^|[\\s.,!?;:])fin[.!?…\\s]*$/i, "").trim() : text;
     append(
       speaker === "Dominique"
         ? "Dominique"
         : namesRef.current[Math.max(0, indexRef.current)],
-      text,
+      cleanText,
     );
+    if (isEpisodeFin) { command("open"); return; }
     if (c) command(c);
   }
   function afterUtterance() {
+    if (episodeRef.current) return; // Only FIN authorizes the next question.
     if (!activeRef.current || !canAsk(modeRef.current, busyRef.current)) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => ask(), delayRef.current);
@@ -378,6 +406,7 @@ export function StudioDashboard({
     indexRef.current = -1;
     setIndex(-1);
     demoRef.current = demo;
+    episodeRef.current = episodeMode;
     setAiSummary("");
     summaryAbort.current?.abort();
     started.current = now;
@@ -551,8 +580,13 @@ export function StudioDashboard({
           <div className="studio-live-heading">
             <p>{t("CONTRÔLE VOCAL", "VOICE CONTROL")}</p>
             <h2>{t("MODE LIVE", "LIVE MODE")}</h2>
-            <span>{t("DIS LA COMMANDE À VOIX HAUTE", "SAY THE COMMAND OUT LOUD")}</span>
+            <span>{episodeMode
+              ? t("ÉPISODE 001 · DIS « FIN » POUR LA QUESTION SUIVANTE", "EPISODE 001 · SAY 'FIN' FOR THE NEXT QUESTION")
+              : t("DIS LA COMMANDE À VOIX HAUTE", "SAY THE COMMAND OUT LOUD")}</span>
           </div>
+          {episodeMode && <div className="studio-episode-banner">
+            {t("À QUOI SERT VRAIMENT LE SPORT ? · 3 JOURNALISTES · 1 QUESTION À LA FOIS", "WHAT IS SPORT REALLY FOR? · 3 JOURNALISTS · ONE QUESTION AT A TIME")}
+          </div>}
           <div className="studio-live-commands">
             {([
               { cmd: "open" as Command, title: t("OUVRIR LES QUESTIONS", "OPEN QUESTIONS"), cue: t("Maintenant, on passe aux questions", "Let's open the questions"), enabled: mode !== "questions" && mode !== "speaking" && (demo || connection === "connected") },
@@ -846,7 +880,7 @@ export function StudioDashboard({
           <p className="studio-kicker">
             {t("LES JOURNALISTES", "THE JOURNALISTS")} / 05
           </p>
-          {journalists.map((j, i) => (
+          {(episodeMode ? journalists.slice(0, 3) : journalists).map((j, i) => (
             <div
               key={j.name}
               className={`studio-journalist ${index === i && mode === "speaking" ? "is-speaking" : ""}`}
@@ -854,7 +888,7 @@ export function StudioDashboard({
               <span className="studio-journalist-number">0{i + 1}</span>
               <div>
                 <h3>{names[i]}</h3>
-                <p>{j.role[fr ? 0 : 1]}</p>
+                <p>{episodeMode ? episode001.roles[i] : j.role[fr ? 0 : 1]}</p>
               </div>
               <span className="studio-mic-state">
                 {index === i && busy ? "◉" : t("MUET", "MUTED")}
@@ -872,6 +906,21 @@ export function StudioDashboard({
       <div className="studio-lower">
         <section className="studio-settings">
           <h2>{t("Avant de prendre l’antenne.", "Before going on air.")}</h2>
+          <div className="studio-episode-setup">
+            <span>{t("PREMIER TOURNAGE / DOM SOUCY MEDIA", "FIRST SHOOT / DOM SOUCY MEDIA")}</span>
+            <strong>001 — À quoi sert vraiment le sport ?</strong>
+            <p>{t(
+              "Prépare 3 journalistes, l'ouverture, le questionnement et la règle « FIN ». Une fois la séance ON AIR, ouvre les questions. Il n'y aura aucune relance automatique : dis « fin » après chaque réponse.",
+              "Configure 3 journalists, the opening question and FIN gating. Once ON AIR, open the questions. No automatic follow-ups: say 'fin' after each answer."
+            )}</p>
+            <button type="button" disabled={active} onClick={prepareEpisode001} className="studio-episode-prepare">
+              {episodeMode ? t("✓ ÉPISODE 001 PRÉPARÉ", "✓ EPISODE 001 PREPARED") : t("PRÉPARER L’ÉPISODE 001", "PREPARE EPISODE 001")}
+            </button>
+            {episodeMode && <p className="studio-episode-caveat">{t(
+              "Trois rôles journalistiques distincts, mais une seule voix synthétique dans cette version. Le site ne déclenche pas ni n'enregistre OBS ou tes trois caméras.",
+              "Three distinct editorial roles, but one synthetic voice in this version. This site does not control or record OBS or your three cameras."
+            )}</p>}
+          </div>
           <label className="studio-check">
             <input
               type="checkbox"
@@ -1008,7 +1057,7 @@ export function StudioDashboard({
             <summary>
               {t("PERSONNALISER LES JOURNALISTES", "CUSTOMIZE JOURNALISTS")}
             </summary>
-            {journalists.map((j, i) => (
+            {(episodeMode ? journalists.slice(0, 3) : journalists).map((j, i) => (
               <fieldset key={j.name}>
                 <legend>{j.role[fr ? 0 : 1]}</legend>
                 <label>
