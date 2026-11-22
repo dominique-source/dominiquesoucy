@@ -8,6 +8,7 @@ import "./brand-v4.css";
 import "./homepage-v5.css";
 import "./homepage-v6.css";
 import "./pilot-thumbnails.css";
+import "./pilot-thumbnails-premium.css";
 import "./homepage-v6-3.css";
 import "./homepage-premium.css";
 import "./studio-live.css";
