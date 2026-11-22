@@ -30,7 +30,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [ready,setReady]=useState(false);
   const [status,setStatus]=useState<"loading"|"pending"|"saving"|"saved"|"error">("loading");
   const [consent,setConsent]=useState(false);
-  const [busy,setBusy]=useState<""|"transcribe"|"analyze">("");
+  const [busy,setBusy]=useState<""|"transcribe"|"analyze"|"questions">("");
   const [error,setError]=useState("");
   const [saveFailure,setSaveFailure]=useState("");
   const [localBackup,setLocalBackup]=useState<StudioProject|null>(null);
@@ -244,6 +244,24 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         `Transcription failed (${e instanceof Error?e.message:"ERROR"}). Your file remains selected.`);
     }finally{setBusy("")}
   };
+  const reconstructQuestions=async()=>{
+    if(!consent||project.transcript.length<100||busy)return;
+    setBusy("questions");setError("");
+    try{
+      const res=await fetch("/api/analysis/reconstruct-questions",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({transcript:project.transcript,lang}),
+      });
+      const body=await res.json() as {proposals?:StudioProject["reconstructedQuestions"];error?:string};
+      if(!res.ok||!body.proposals)throw Error(body.error||"FAILED");
+      modify({reconstructedQuestions:body.proposals});
+      record("analysis",`${body.proposals.length} questions hypothétiques proposées à partir des réponses`,"success");
+      setMessage(fr?"Questions hypothétiques générées et enregistrées. Ce ne sont pas les questions originales.":"Hypothetical questions saved; these are not original audio.");
+    }catch(e){
+      setError(fr?`Reconstruction indisponible (${e instanceof Error?e.message:"ERROR"}).`:
+        `Question reconstruction unavailable (${e instanceof Error?e.message:"ERROR"}).`);
+    }finally{setBusy("")}
+  };
   const analyze=async()=>{
     if(!consent||project.transcript.length<100||busy)return;
     setBusy("analyze");setError("");
@@ -409,6 +427,36 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <button type="button" className="analysis-primary" disabled={!consent||project.transcript.trim().length<100||!!busy} onClick={analyze}>
         {busy==="analyze"?"ANALYSE EN COURS…":fr?"ANALYSER LA SÉANCE":"ANALYZE SESSION"}
       </button>
+      <div className="studio-reconstructed">
+        <h3>{fr?"RECRÉER LES QUESTIONS MANQUANTES POUR LES BULLES":"REBUILD MISSING QUESTIONS FOR BUBBLES"}</h3>
+        <p>{fr
+          ?"Si tu n’as plus l’audio des journalistes, l’IA peut proposer des questions plausibles à partir des réponses réellement filmées. Ce sont des propositions de montage, pas les paroles originales des journalistes."
+          :"If the journalists' audio was lost, AI can suggest plausible on-screen questions grounded in your filmed responses. These are editing suggestions, not original speech."}</p>
+        <button type="button" className="analysis-secondary" onClick={reconstructQuestions}
+          disabled={!consent||project.transcript.trim().length<100||!!busy}>
+          {busy==="questions"?(fr?"RECONSTRUCTION EN COURS…":"RECONSTRUCTING…"):
+           (fr?"✦ PROPOSER LES QUESTIONS POUR LES BULLES":"✦ SUGGEST QUESTIONS FOR BUBBLES")}
+        </button>
+        {!!project.reconstructedQuestions.length&&<div className="studio-reconstructed-list">
+          {project.reconstructedQuestions.map((q,i)=><div key={q.id}>
+            <strong>{fr?"QUESTION RECONSTRUITE (NON ORIGINALE)":"RECONSTRUCTED QUESTION (NOT ORIGINAL)"} · {i+1}</strong>
+            <label>{fr?"TEXTE MODIFIABLE DE LA BULLE":"EDITABLE BUBBLE TEXT"}
+              <textarea rows={2} value={q.question} maxLength={300} onChange={e=>
+                modify({reconstructedQuestions:project.reconstructedQuestions.map(x=>x.id===q.id?{...x,question:e.target.value}:x)})}/>
+            </label>
+            <small>{fr?"Réponse utilisée comme contexte":"Supporting answer excerpt"} : « {q.answerExcerpt} »</small>
+            <button className="analysis-secondary" type="button" onClick={()=>{
+              const id=crypto.randomUUID();
+              modify({capsules:[...project.capsules,{
+                id,title:`Question ${i+1}`,start:0,end:0,format:project.format,
+                style:"conversation",caption:q.answerExcerpt.slice(0,500),bubble:q.question,
+                background:"dark",textPosition:"bottom",status:"draft",
+              }].slice(0,40),selectedCapsuleId:id,stage:"editing"});
+              document.getElementById("studio-capsule-workshop")?.scrollIntoView({behavior:"smooth",block:"start"});
+            }}>{fr?"UTILISER CETTE BULLE DANS UNE CAPSULE":"USE THIS BUBBLE IN A CAPSULE"}</button>
+          </div>)}
+        </div>}
+      </div>
       {project.analysis&&<><p className="analysis-synopsis">{project.analysis.synopsis}</p>
         <div className="analysis-tags">{project.analysis.themes.map((t,i)=><span key={i}>{t}</span>)}</div>
         <div className="analysis-moment-list">{project.analysis.moments.map((m,i)=><button
