@@ -254,3 +254,6 @@
 .analysis-multi-visual-claps span{color:#ccff00;font-variant-numeric:tabular-nums;font-size:16px;font-weight:850}
 .analysis-multi-visual-claps button{font-size:11px}
 @media(max-width:760px){.analysis-multi-visual-claps{grid-template-columns:1fr}}
+
+.analysis-multi-camera-label{flex-wrap:wrap}
+.analysis-multi-camera-label .studio-clap-mark{background:#242f15;color:#ccff00;border:1px solid #87a54c}
