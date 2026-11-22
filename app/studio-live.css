@@ -631,3 +631,16 @@
     animation: none !important;
   }
 }
+
+/* Native, local-only audio recording controls */
+.studio-recording-panel {
+  margin-top: 14px;
+  padding: 18px 20px;
+  border: 1px solid rgba(204, 255, 0, 0.35);
+  background: rgba(204, 255, 0, 0.045);
+  display: grid;
+  gap: 10px;
+}
+.studio-recording-panel strong { color: #ccff00; font-size: 12px; letter-spacing: .05em; }
+.studio-recording-panel p { margin: 0; color: #d7dace; font-size: 12px; line-height: 1.6; }
+.studio-recording-panel button { justify-self: start; }
