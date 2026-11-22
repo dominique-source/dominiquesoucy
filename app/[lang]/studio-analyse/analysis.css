@@ -82,3 +82,28 @@
 .analysis-handoff{border:2px solid #ccff00;border-radius:12px;background:#192109;color:#f4f4ef;padding:18px 22px}
 .analysis-handoff strong{color:#ccff00;letter-spacing:.09em;font-size:13px}
 .analysis-handoff p{color:#d9dfce;line-height:1.6;font-size:13px;margin:8px 0 0}
+
+/* Four clearly distinguished local source slots. No unsupported sync claim. */
+.analysis-project-name{display:block;color:#ccff00;font-size:11px;font-weight:800;letter-spacing:.13em;margin:22px 0 8px}
+.analysis-project-name input{display:block;width:100%;padding:12px 15px;margin-top:8px;border:1px solid #586045;background:#0b0d0a;color:#f4f4ef;font:650 14px Inter,sans-serif;border-radius:8px;letter-spacing:0}
+.analysis-four-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:18px 0}
+.analysis-source-card{min-width:0;display:flex;flex-direction:column;gap:9px;border:1px dashed #778b42;background:#1b2116;border-radius:13px;padding:20px;min-height:213px}
+.analysis-source-card.is-selected{border-style:solid;border-color:#ccff00;background:#202918}
+.analysis-source-card-head{display:flex;align-items:center;justify-content:space-between;color:#ccff00;font-weight:900;font-size:12px}
+.analysis-source-card-head b{font-size:30px;font-family:Arial,sans-serif;line-height:1}
+.analysis-source-card>strong{color:#fff;font:900 italic clamp(17px,2vw,25px)/1.06 "Barlow Condensed",Impact,sans-serif}
+.analysis-source-card>small{color:#bfc8b0;font-size:11px}
+.analysis-source-pick{position:relative;display:block;padding:12px;border:1px solid #879d46;border-radius:7px;background:#303c1a;text-align:center;color:#ccff00;font-size:12px;font-weight:800;cursor:pointer;margin-top:auto}
+.analysis-source-pick input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.analysis-source-pick:focus-within{outline:3px solid #ccff00;outline-offset:3px}
+.analysis-source-loaded{display:flex;flex-wrap:wrap;gap:5px;align-items:center;overflow-wrap:anywhere}
+.analysis-source-loaded>span{font-size:12px;color:#fff;min-width:0;width:100%;word-break:break-all}
+.analysis-source-loaded>small{color:#ccff00;font-size:10px}
+.analysis-dashboard button,.analysis-source-loaded button{font-size:10px}
+.analysis-source-loaded button{background:transparent;color:#ccc;border:1px solid #56634c;border-radius:6px;padding:5px 10px;cursor:pointer}
+.analysis-source-status{border-left:3px solid #ccff00;background:#151b10;padding:14px 17px;margin-bottom:18px}
+.analysis-source-status strong{color:#ccff00;font-size:12px}
+.analysis-source-status p,.analysis-media-reference>p{color:#c6cabd;font-size:12px;line-height:1.7}
+.analysis-media-reference{border-top:1px solid #536044;padding-top:20px;margin-top:20px}
+.analysis-media-reference h3{font:900 italic 24px "Barlow Condensed",Impact,sans-serif;color:#fff}
+@media(max-width:650px){.analysis-four-grid{grid-template-columns:1fr 1fr;gap:8px}.analysis-source-card{padding:12px;min-height:175px}.analysis-source-card>strong{font-size:19px}.analysis-source-pick{font-size:10px;padding:10px 6px}}
