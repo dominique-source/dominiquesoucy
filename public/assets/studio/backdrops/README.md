@@ -9,8 +9,8 @@ Six murs approuvés, images d'origine uniquement (pas de remplacement par le mur
 - `tennis.webp` — **Studio média tennis monochrome et lime**
 - `football.webp` — **Toile de fond football néon DOM SOUCY MEDIA**
 
-Déposer les six fichiers .webp optimisés à cet emplacement avant fusionner la PR.
-Le zip de livraison fournit exactement cette structure.
+Les six fichiers WebP haute qualité (1672 × 941 px) ont été déposés et vérifiés dans le dépôt.
+Le ZIP de livraison fournit une copie de sauvegarde de la même structure.
 
 Le registre `lib/analysis/studio-backdrops.ts` relie les fichiers à la galerie et
 au rendu MP4. Les trois modes sont : manuel, aléatoire stable par épisode et
