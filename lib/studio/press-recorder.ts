@@ -55,6 +55,7 @@ export class PressRecorder{
  private id=crypto.randomUUID();
  private pending:Promise<void>[]=[];
  private stopped=false;
+ private stopSpeech?:()=>void;
  private voices:Set<MediaElementAudioSourceNode>=new Set();
  public onError?:(code:string)=>void;
  constructor(microphone:MediaStream){
@@ -87,19 +88,26 @@ export class PressRecorder{
   node.connect(this.destination);
   node.connect(this.context.destination);
   this.voices.add(node);
+  let cancel:()=>void=()=>{};
+  const completed=new Promise<void>((resolve,reject)=>{
+   audio.onended=()=>resolve();
+   audio.onerror=()=>reject(Error("JOURNALIST_AUDIO_ERROR"));
+   cancel=()=>resolve();
+  });
+  this.stopSpeech=()=>{audio.pause();cancel()};
   try{
    await audio.play();
-   await new Promise<void>((resolve,reject)=>{
-    audio.onended=()=>resolve();
-    audio.onerror=()=>reject(Error("JOURNALIST_AUDIO_ERROR"));
-   });
+   await completed;
   }finally{
+   this.stopSpeech=undefined;
    audio.pause();audio.src="";audio.load();
    node.disconnect();this.voices.delete(node);
    URL.revokeObjectURL(url);
   }
  }
+ cancelSpeech(){this.stopSpeech?.()}
  async stop():Promise<Blob>{
+  this.cancelSpeech();
   if(this.stopped)return new Blob(this.chunks,{type:this.recorder.mimeType});
   this.stopped=true;
   if(this.recorder.state!=="inactive"){
