@@ -23,11 +23,7 @@ export async function GET(request:Request){
     if(!item||!validProjectMediaPath(id,source.data,item.pathname))
       return json({error:"MEDIA_NOT_FOUND"},404);
     const expires=Date.now()+15*60*1000;
-    const token=await issueSignedToken({
-      pathname:item.pathname,
-      operations:["get"],
-      validUntil:expires,
-    });
+    const token=await issueSignedToken({ operations:["get"] });
     const signed=await presignUrl(token,{
       pathname:item.pathname,operation:"get",validUntil:expires,
     });
