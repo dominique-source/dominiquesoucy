@@ -106,11 +106,40 @@ export function PilotFeature({ lang }: { lang: Locale }) {
           <p className="eyebrow accent">
             {pilotPoster.title[lang]} — {pilotPoster.episode[lang]}
           </p>
-          <h2 id="home-pilot-title">{d.positioning}</h2>
-          <p className="pilot-statement">{d.mission}</p>
-          <Link className="text-link" href={`/${lang}/reflexions`}>
-            {d.explore}
-          </Link>
+          <h2 id="home-pilot-title">
+            {lang === "fr"
+              ? "Le sport, révélateur de notre société."
+              : "Sport reveals our society."}
+          </h2>
+          <p className="pilot-statement">
+            {lang === "fr"
+              ? "À travers le sport, ce pilote explore nos valeurs, nos contradictions et les grands enjeux qui nous rassemblent."
+              : "Through sport, this pilot explores our values, our contradictions, and the issues that bring us together."}
+          </p>
+          <div className="pilot-keywords" aria-label={lang === "fr" ? "Trois thèmes du pilote" : "Three pilot themes"}>
+            <div className="pilot-keyword">
+              <span className="pilot-keyword-icon" aria-hidden="true">?</span>
+              <span>{lang === "fr" ? "Des questions qui dérangent." : "Questions that challenge us."}</span>
+            </div>
+            <div className="pilot-keyword">
+              <span className="pilot-keyword-icon" aria-hidden="true">◇</span>
+              <span>{lang === "fr" ? "Des réflexions qui éclairent." : "Perspectives that illuminate."}</span>
+            </div>
+            <div className="pilot-keyword">
+              <span className="pilot-keyword-icon" aria-hidden="true">◎</span>
+              <span>{lang === "fr" ? "Une conversation qui nous concerne tous." : "A conversation that concerns us all."}</span>
+            </div>
+          </div>
+          <div className="pilot-feature-actions">
+            <a className="pilot-feature-watch" href="#pilote">
+              <span aria-hidden="true">▶</span>
+              {lang === "fr" ? "REGARDER LE PILOTE 00" : "WATCH PILOT 00"}
+            </a>
+            <Link className="pilot-feature-explore" href={`/${lang}/reflexions`}>
+              {lang === "fr" ? "Explorer les réflexions" : "Explore reflections"}
+              <span aria-hidden="true">→</span>
+            </Link>
+          </div>
         </div>
         <div
           id="pilote"
