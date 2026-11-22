@@ -2,6 +2,7 @@
 import { upload } from "@vercel/blob/client";
 import { useEffect, useState, type ChangeEvent } from "react";
 import { isMediaFile } from "@/lib/analysis/media";
+import type { SourceFiles } from "@/lib/analysis/multicam";
 
 type SourceKey = "audio" | "main" | "vertical" | "secondary";
 type SourceItem = {key: SourceKey; title: string; en: string; hint: string; icon: string; accept: string};
@@ -18,10 +19,12 @@ type Transcription = {
   truncated: boolean;
 };
 
-export function MediaImport({ lang, consent, onTranscript }: {
+export function MediaImport({ lang, consent, onTranscript, onSourcesChange, onProjectNameChange }: {
   lang: "fr" | "en";
   consent: boolean;
   onTranscript: (text: string) => void;
+  onSourcesChange?: (sources: SourceFiles) => void;
+  onProjectNameChange?: (name: string) => void;
 }) {
   const fr = lang === "fr";
   const [files, setFiles] = useState<Files>({});
@@ -54,11 +57,15 @@ export function MediaImport({ lang, consent, onTranscript }: {
     setError("");
     setDone(false);
     setSegments([]);
-    setFiles(prev => ({...prev, [key]: incoming}));
+    const next = {...files, [key]: incoming};
+    setFiles(next);
+    onSourcesChange?.(next);
   }
   function clear(key: SourceKey) {
     if (phase !== "idle") return;
-    setFiles(prev => { const next = {...prev}; delete next[key]; return next; });
+    const next = {...files}; delete next[key];
+    setFiles(next);
+    onSourcesChange?.(next);
     setDone(false); setError(""); setSegments([]);
   }
   async function transcribe() {
@@ -126,7 +133,7 @@ export function MediaImport({ lang, consent, onTranscript }: {
     <div className="analysis-panel-head"><h2>01 / {fr ? "SOURCES DE TA CONFÉRENCE" : "YOUR CONFERENCE SOURCES"}</h2><span>{count} / 4 {fr ? "FICHIERS CHOISIS" : "FILES SELECTED"}</span></div>
     <label className="analysis-project-name">
       {fr ? "NOM DU PROJET" : "PROJECT NAME"}
-      <input value={projectName} onChange={e => setProjectName(e.target.value)} maxLength={100} aria-label={fr ? "Nom du projet" : "Project name"} />
+      <input value={projectName} onChange={e => { setProjectName(e.target.value); onProjectNameChange?.(e.target.value); }} maxLength={100} aria-label={fr ? "Nom du projet" : "Project name"} />
     </label>
     <p>{fr
       ? "Sélectionne tes quatre fichiers séparément. Ils restent pour l’instant sur ton appareil : cette version ne les envoie pas ensemble et ne les synchronise pas encore."
