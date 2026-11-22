@@ -1,3 +1,4 @@
+import { drawStudioFrame, type CanvasVisual } from "./canvas-overlays";
 import { activeCamera, sourceTime, type CameraKey, type Cut, type SourceKey } from "@/lib/analysis/multicam";
 
 type RenderOptions={
@@ -10,6 +11,7 @@ type RenderOptions={
   start:number;
   end:number;
   format:"16:9"|"9:16"|"1:1";
+  visual?:CanvasVisual;
   onProgress:(percentage:number)=>void;
 };
 
@@ -66,14 +68,9 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
         const t=Math.max(0,master.currentTime-opts.offsets[opts.audioSource]);
         const camera=activeCamera(opts.cuts,t,opts.fallback);
         const video=opts.nodes[camera] as HTMLVideoElement|undefined;
-        painter.fillStyle="#080808";painter.fillRect(0,0,width,height);
-        if(video&&video.readyState>=2&&video.videoWidth&&video.videoHeight){
-          try{
-            const scale=Math.max(width/video.videoWidth,height/video.videoHeight);
-            const w=video.videoWidth*scale,h=video.videoHeight*scale;
-            painter.drawImage(video,(width-w)/2,(height-h)/2,w,h);
-          }catch{reject(new Error("VIDEO_CANVAS_BLOCKED"));return}
-        }
+        try{
+          drawStudioFrame(painter,video,width,height,t,opts.start,opts.visual);
+        }catch{reject(new Error("VIDEO_CANVAS_BLOCKED"));return}
         opts.onProgress(Math.min(100,Math.round((t-opts.start)/(opts.end-opts.start)*100)));
         if(t>=opts.end-.05||master.ended){resolve();return}
         frame=requestAnimationFrame(draw);
