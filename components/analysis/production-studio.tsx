@@ -32,11 +32,37 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [consent,setConsent]=useState(false);
   const [busy,setBusy]=useState<""|"transcribe"|"analyze">("");
   const [error,setError]=useState("");
+  const [saveFailure,setSaveFailure]=useState("");
+  const [localBackup,setLocalBackup]=useState<StudioProject|null>(null);
+  const [localBackupError,setLocalBackupError]=useState("");
+  const [retryKey,setRetryKey]=useState(0);
   const [message,setMessage]=useState("");
   const revision=useRef(0);
   const latest=useRef(project);
   const persisted=useRef("");
   useEffect(()=>{latest.current=project},[project]);
+  // Browser recovery contains project metadata and transcripts, never media bytes.
+  const recoveryKey="ds-studio-project-recovery";
+  useEffect(()=>{
+    try{
+      const raw=localStorage.getItem(recoveryKey);
+      if(!raw)return;
+      const p=JSON.parse(raw) as StudioProject;
+      if(p?.id && p?.timeline?.visualClaps)setLocalBackup(p);
+    }catch{}
+  },[]);
+  useEffect(()=>{
+    if(!ready)return;
+    try{
+      localStorage.setItem(recoveryKey,JSON.stringify(project));
+      setLocalBackup(project);
+      setLocalBackupError("");
+    }catch{
+      setLocalBackupError(fr?
+        "Copie locale non disponible : télécharge une copie JSON du projet.":
+        "Local recovery is unavailable: download the project JSON.");
+    }
+  },[project,ready,fr]);
   const modify=useCallback((patch:Partial<StudioProject>)=>{
     setProject(prev=>({...prev,...patch}));
     setStatus("pending");
@@ -97,20 +123,33 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         const r=await fetch("/api/analysis/projects",{
           method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(project),
         });
-        if(!r.ok)throw Error("SAVE_FAILED");
+        if(!r.ok){
+          const data=await r.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string};
+          throw Error(`${r.status}:${data.error||"SAVE_FAILED"}`);
+        }
         const result=await r.json() as {updatedAt:number};
         if(ticket!==revision.current)return;
-        persisted.current=snapshot;setStatus("saved");setError("");
+        persisted.current=snapshot;setStatus("saved");setError("");setSaveFailure("");
         setProjects(old=>[{id:project.id,name:project.name,season:project.season,episode:project.episode,stage:project.stage,recordingDate:project.recordingDate,capsuleCount:project.capsules.length,failedCount:project.events.filter(e=>e.status==="failure").length,mediaCount:Object.keys(project.media).length,hasTranscript:!!project.transcript,hasAnalysis:!!project.analysis,updatedAt:result.updatedAt},
           ...old.filter(p=>p.id!==project.id)].slice(0,100));
-      }catch{
+      }catch(err){
         if(ticket!==revision.current)return;
         setStatus("error");
-        setError(fr?"Impossible de sauvegarder ce projet sur le serveur. Garde cet onglet ouvert.":"Could not save the project on the server. Keep this tab open.");
+        const code=err instanceof Error?err.message:"SAVE_FAILED";
+        setSaveFailure(code);
+        const unauthorized=code.startsWith("401:");
+        const invalid=code.includes("BAD_PROJECT")||code.includes("TOO_LARGE");
+        setError(fr?
+          unauthorized?"Session Studio expirée. Une copie locale existe dans ce navigateur. Reconnecte-toi sans fermer cet onglet.":
+          invalid?"Le serveur refuse une donnée du projet. Télécharge la copie JSON de secours.":
+          "Le serveur n’a pas confirmé la sauvegarde. Conserve la copie locale et réessaie.":
+          unauthorized?"Studio session expired. Local recovery exists. Sign in again without closing this tab.":
+          invalid?"Server rejected project data. Download the recovery JSON.":
+          "Server save was not confirmed. Keep your recovery copy and try again.");
       }
     },1000);
     return()=>clearTimeout(timeout);
-  },[project,ready,fr,uploading]);
+  },[project,ready,fr,uploading,retryKey]);
   useEffect(()=>{
     if(!ready)return;
     const controller=new AbortController();
@@ -303,6 +342,28 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         </label>
         <button type="button" className="analysis-secondary" onClick={newProject} disabled={!ready||uploading}>+ {fr?"NOUVEAU PROJET":"NEW PROJECT"}</button>
       </div>
+      {status==="error"&&<div className="studio-recovery-alert" role="alert">
+        <strong>{fr?"SAUVEGARDE SERVEUR NON CONFIRMÉE":"SERVER SAVE NOT CONFIRMED"}</strong>
+        <p>{error}</p>
+        <small>{fr?"Code d’erreur":"Error code"} : {saveFailure||"UNKNOWN"}</small>
+        <div className="studio-recovery-actions">
+          <button type="button" className="analysis-primary" onClick={()=>setRetryKey(n=>n+1)}
+            disabled={uploading}>{fr?"RÉESSAYER LA SAUVEGARDE":"RETRY SAVE"}</button>
+          <button type="button" className="analysis-secondary"
+            onClick={()=>download(`dom-soucy-${project.season}-${project.episode}-recuperation.json`,JSON.stringify(project,null,2))}>
+            {fr?"TÉLÉCHARGER UNE COPIE DE SECOURS":"DOWNLOAD RECOVERY COPY"}
+          </button>
+        </div>
+      </div>}
+      {localBackupError&&<p className="analysis-error">{localBackupError}</p>}
+      {localBackup&&localBackup.id!==project.id&&<div className="studio-recovery-available">
+        <strong>{fr?"COPIE LOCALE D’UN AUTRE PROJET":"LOCAL BACKUP OF ANOTHER PROJECT"}</strong>
+        <p>{localBackup.name}</p>
+        <button type="button" className="analysis-secondary" onClick={()=>{
+          if(status==="saving"||uploading)return;
+          setProject(localBackup);setStatus("pending");setRetryKey(n=>n+1);
+        }}>{fr?"RESTAURER LA COPIE LOCALE":"RESTORE LOCAL BACKUP"}</button>
+      </div>}
       <p className="analysis-note">{fr
         ?"Sauvegarde automatique de la transcription, de l’analyse et des coupes. Les médias doivent être enregistrés séparément avec « Sauvegarder le média ». Attends « Projet sauvegardé » avant de quitter."
         :"Auto-save for transcript, analysis and edits. Media must be saved separately. Wait for Project Saved before leaving."}</p>
