@@ -4,6 +4,8 @@ import Link from "next/link";
 import { capsuleModels, capsuleById, formats } from "@/lib/analysis/catalog";
 import type { AnalysisResult } from "@/lib/analysis/schema";
 import { MediaImport } from "@/components/analysis/media-import";
+import { MultiCamEditor } from "@/components/analysis/multicam-editor";
+import type { SourceFiles } from "@/lib/analysis/multicam";
 
 type AnalysisResponse = AnalysisResult & { original_count: number; notice: string };
 const MAX_TRANSCRIPT = 26000;
@@ -11,6 +13,8 @@ const MAX_TRANSCRIPT = 26000;
 export function AnalysisStudio({ lang }: { lang: "fr" | "en" }) {
   const fr = lang === "fr";
   const [transcript, setTranscript] = useState("");
+  const [cameraSources, setCameraSources] = useState<SourceFiles>({});
+  const [projectName, setProjectName] = useState("DOM SOUCY MEDIA — ÉPISODE 001");
   const [consent, setConsent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -105,7 +109,7 @@ export function AnalysisStudio({ lang }: { lang: "fr" | "en" }) {
       <div className="analysis-logo">DOMINIQUE SOUCY <span>/ STUDIO VIDÉO & CONTENU</span></div>
       <Link href={`/${lang}/studio-live`}>{fr ? "RETOUR AU STUDIO LIVE" : "BACK TO LIVE STUDIO"} ↗</Link>
     </div>
-    <div className="analysis-flow"><span className="done">✓ Projet</span><span className="done">✓ Importation média / texte</span><strong>03 / {fr ? "ANALYSE IA" : "AI ANALYSIS"}</strong><span>04 / {fr ? "Montage (à venir)" : "Editing (upcoming)"}</span><span>05 / {fr ? "Export vidéo (à venir)" : "Video export (upcoming)"}</span></div>
+    <div className="analysis-flow"><span className="done">✓ Projet</span><span className="done">✓ Importation média / texte</span><strong>03 / {fr ? "ANALYSE IA" : "AI ANALYSIS"}</strong><span>04 / {fr ? "Timeline locale" : "Local timeline"}</span><span>05 / {fr ? "Export vidéo (à venir)" : "Video export (upcoming)"}</span></div>
     <div className="analysis-heading">
       <div><p className="analysis-kicker">{fr ? "STUDIO PRIVÉ / PREMIÈRE VERSION" : "PRIVATE STUDIO / FIRST VERSION"}</p><h1>{fr ? "ANALYSE IA" : "AI ANALYSIS"}<em>.</em></h1><p>{fr ? "De ta transcription aux moments forts, avec une suggestion parmi nos 12 modèles approuvés." : "From transcript to highlights, mapped to your 12 approved capsule models."}</p></div>
       <div className="analysis-count"><b>12</b><span>{fr ? "MODÈLES DE CAPSULES" : "CAPSULE MODELS"}</span><small>16:9 / 9:16 / 1:1</small></div>
@@ -117,7 +121,9 @@ export function AnalysisStudio({ lang }: { lang: "fr" | "en" }) {
           <p>{fr ? "La séance a été transférée uniquement dans cet onglet. Relis le texte et coche l’autorisation avant l’analyse IA." : "The session was transferred within this tab only. Review the text and opt in before AI analysis."}</p>
           {importWarning && <p>{fr ? "Texte limité à 26 000 caractères. Le fichier complet a été téléchargé au moment du transfert." : "Text limited to 26,000 characters. The complete file was downloaded during transfer."}</p>}
         </div>}
-        <MediaImport lang={lang} consent={consent} onTranscript={(text) => { setTranscript(text); setResult(null); setSelected(0); }} />
+        <MediaImport lang={lang} consent={consent} onSourcesChange={setCameraSources} onProjectNameChange={setProjectName}
+          onTranscript={(text) => { setTranscript(text); setResult(null); setSelected(0); }} />
+        <MultiCamEditor sources={cameraSources} name={projectName} lang={lang} highlight={active?.excerpt}/>
         <div className="analysis-panel">
           <div className="analysis-panel-head"><h2>02 / {fr ? "IMPORTER UNE TRANSCRIPTION" : "IMPORT TRANSCRIPT"}</h2><span>.TXT / .SRT / .VTT</span></div>
           <p>{fr ? "Colle la transcription d’une conférence de presse, ou importe un fichier texte. Tu peux aussi importer un audio ou une vidéo ci-dessus." : "Paste a press-conference transcript or import a text file. You can also import audio or video above."}</p>
