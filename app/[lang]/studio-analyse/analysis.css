@@ -382,3 +382,8 @@
 .studio-sport-wall-apply{justify-self:start;margin:2px 0}
 @media(max-width:780px){.studio-sport-wall-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.studio-sport-wall-picker{padding:12px}.studio-sport-wall-gallery{gap:7px}.studio-sport-wall-tile span{font-size:11px}.studio-sport-wall-modes button{font-size:10px;padding:11px 3px}}
+
+#studio-episode-backdrops{scroll-margin-top:24px;margin:20px 0}
+.studio-workshop-wall-summary{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px;border:1px solid #617b3b;background:#141c10;border-radius:10px;margin:15px 0}
+.studio-workshop-wall-summary>strong{color:#ccff00;font-size:13px}
+.studio-workshop-wall-summary>button{margin-left:auto}
