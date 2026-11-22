@@ -1,10 +1,11 @@
+import Image from "next/image";
 import Link from "next/link";
 import { dict, type Locale } from "@/lib/i18n";
 import { pilotVideo } from "@/lib/config";
 import { pilotPoster } from "@/lib/homepage-media";
 import type { Entry } from "@/lib/content";
 import { featuredReflection } from "@/lib/content";
-import { archiveLabel } from "@/lib/photography";
+import { archiveLabel, photograph } from "@/lib/photography";
 import { AdaptiveVideo } from "./adaptive-video";
 import {
   ArchivePhoto,
@@ -181,30 +182,74 @@ export function PremiumHomeEditorial({
           <EditorialCard entry={featured} lang={lang} />
         </section>
       )}
-      <section className="home-journal">
+      <section className="home-journal observations-showcase" aria-labelledby="observations-showcase-title">
         <div className="content-shell">
-          <div className="journal-heading">
-            <p className="eyebrow">{w.preview}</p>
-            <h2>
-              {d.nav.observations}
-              <span className="accent">.</span>
-            </h2>
-          </div>
-          <PhotoStorySection className="journal-spread">
-            <PhotoWithCaption
-              photo="04_equipe_purathlete"
-              lang={lang}
-              caption={archiveLabel(lang)}
-            />
+          <header className="observations-showcase-heading">
             <div>
-              <p className="eyebrow">{w.photo}</p>
-              <h3>{w.field}</h3>
-              <p>{w.archiveContext}</p>
-              <Link className="text-link" href={`/${lang}/observations`}>
-                {w.open}
+              <p className="eyebrow observations-showcase-eyebrow">
+                {lang === "fr" ? "UN ESPACE ÉDITORIAL" : "AN EDITORIAL SPACE"}
+                <span aria-hidden="true" />
+              </p>
+              <h2 id="observations-showcase-title">{d.nav.observations}<span>.</span></h2>
+            </div>
+            <p className="observations-showcase-intro">
+              {lang === "fr"
+                ? "Réflexions, constats et prises de position sur le sport, la société et la culture."
+                : "Perspectives, observations and opinions on sport, society and culture."}
+            </p>
+          </header>
+          <div className="observations-showcase-grid">
+            <figure className="observations-showcase-feature">
+              {(() => {
+                const photo = photograph("04_equipe_purathlete", lang);
+                return <Image src={photo.src} alt={photo.alt} fill sizes="(max-width: 850px) 100vw, 55vw" className="observations-showcase-photo" />;
+              })()}
+              <figcaption className="observations-showcase-feature-copy">
+                <span className="observations-showcase-label">
+                  {lang === "fr" ? "LE SPORT / L'HUMAIN" : "SPORT / PEOPLE"}
+                </span>
+                <strong>{lang === "fr" ? "Le sport, bien plus qu’un jeu." : "Sport: more than a game."}</strong>
+              </figcaption>
+            </figure>
+            <div className="observations-showcase-side">
+              <p className="observations-showcase-side-label">
+                {lang === "fr" ? "DES SUJETS À QUESTIONNER" : "TOPICS TO QUESTION"}
+              </p>
+              {[
+                {
+                  category: lang === "fr" ? "SOCIÉTÉ" : "SOCIETY",
+                  title: lang === "fr" ? "Un stade vide à 400 M$ ? Vraiment ?" : "An empty $400M stadium? Really?",
+                  href: `/${lang}/societe`,
+                  icon: "▰",
+                },
+                {
+                  category: lang === "fr" ? "ÉDUCATION" : "EDUCATION",
+                  title: lang === "fr" ? "Des gyms pour nos jeunes, pas des mirages politiques." : "Gyms for our youth, not political mirages.",
+                  href: `/${lang}/observations`,
+                  icon: "▱",
+                },
+                {
+                  category: lang === "fr" ? "CULTURE" : "CULTURE",
+                  title: lang === "fr" ? "Québec : qu’est-ce qu’on défend vraiment ?" : "Québec: what are we really defending?",
+                  href: `/${lang}/observations`,
+                  icon: "◯",
+                },
+              ].map((topic) => (
+                <Link className="observations-showcase-topic" href={topic.href} key={topic.category}>
+                  <span className="observations-showcase-topic-art" aria-hidden="true">{topic.icon}</span>
+                  <span className="observations-showcase-topic-copy">
+                    <span className="observations-showcase-label">{topic.category}</span>
+                    <strong>{topic.title}</strong>
+                  </span>
+                  <span className="observations-showcase-arrow" aria-hidden="true">→</span>
+                </Link>
+              ))}
+              <Link className="observations-showcase-cta" href={`/${lang}/observations`}>
+                {lang === "fr" ? "Explorer les observations" : "Explore observations"}
+                <span aria-hidden="true">→</span>
               </Link>
             </div>
-          </PhotoStorySection>
+          </div>
         </div>
       </section>
       <section className="home-topics content-shell">

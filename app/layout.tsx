@@ -11,6 +11,7 @@ import "./pilot-thumbnails.css";
 import "./pilot-thumbnails-premium.css";
 import "./homepage-v6-3.css";
 import "./pilot-feature-editorial.css";
+import "./observations-editorial.css";
 import "./homepage-premium.css";
 import "./studio-live.css";
 import "./studio-universe.css";
