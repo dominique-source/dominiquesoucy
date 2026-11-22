@@ -12,7 +12,7 @@ export function sourceTime(projectTime: number, offset: number) {
   return Math.max(0, projectTime + offset);
 }
 export function offsetFromClap(referenceTime: number, sourceClap: number) {
-  return referenceTime - sourceClap;
+  return sourceClap - referenceTime;
 }
 export function timeCode(seconds: number) {
   if (!Number.isFinite(seconds)) return "00:00";
