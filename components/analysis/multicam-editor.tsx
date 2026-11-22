@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { renderLocalMp4 } from "./local-mp4";
 import {
   activeCamera, cameraKeys, edl, labels, offsetFromClap,
   safeCutTime, sourceTime, timeCode,
@@ -11,11 +12,12 @@ const initialClaps: Record<SourceKey, number> = { audio:0, main:0, vertical:0, s
 
 type Timeline={ duration:number; audioSource:SourceKey; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
-export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange }: {
+export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
   mediaMetadata?:Partial<Record<SourceKey,MediaInfo>>;
   name: string; lang: "fr"|"en"; highlight?: string;
   savedTimeline?:Timeline; onTimelineChange?:(value:Timeline)=>void;
+  format?:"16:9"|"9:16"|"1:1"; onFormatChange?:(format:"16:9"|"9:16"|"1:1")=>void;
 }) {
   const fr = lang === "fr";
   const videos = cameraKeys.filter(key=>!!sources[key] || !!remoteUrls?.[key]);
@@ -30,6 +32,9 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [cuts,setCuts] = useState<Cut[]>(savedTimeline?.cuts || []);
   const [error,setError] = useState("");
   const [success,setSuccess] = useState("");
+  const [rendering,setRendering]=useState(false);
+  const [renderPercent,setRenderPercent]=useState(0);
+  const [renderNonce,setRenderNonce]=useState(0);
   const elements=useRef<Partial<Record<SourceKey,HTMLMediaElement|null>>>({});
   const urls=useMemo(() => {
     // Browser object URLs do not copy gigabyte-sized camera files to JavaScript memory.
@@ -145,6 +150,34 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     setCuts(prev=>[...prev.filter(c=>Math.abs(c.at-cut.at)>.15),cut].sort((a,b)=>a.at-b.at));
     setSelectedCamera(realCamera);
   }
+  async function exportMp4(){
+    if(rendering||!realCamera||!realAudioSource)return;
+    if(duration>600){setError(fr?"L’export navigateur est limité à 10 minutes pour ce premier test.":"Browser rendering is limited to 10 minutes.");return}
+    if(!sources[realAudioSource] || videos.some(key=>!sources[key])){
+      setError(fr?"Pour exporter, resélectionne les fichiers originaux de toutes les caméras et de la piste audio utilisée.":"For export, reselect original files for every camera and reference audio.");
+      return;
+    }
+    setError("");setSuccess("");pauseAll();seekAll(0);setRendering(true);setRenderPercent(0);
+    try{
+      const blob=await renderLocalMp4({
+        nodes:elements.current,offsets,audioSource:realAudioSource,
+        cuts,fallback:realCamera,duration,format:format||"16:9",
+        onProgress:setRenderPercent,
+      });
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;a.download=`dom-soucy-${name.replace(/[^a-z0-9-]/gi,"-").slice(0,45)}.mp4`;a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      setSuccess(fr?"Export MP4 produit dans le navigateur et proposé au téléchargement. Vérifie le son et l’image avant publication.":"MP4 rendered in your browser and offered for download. Review the result.");
+    }catch(e){
+      const code=e instanceof Error?e.message:"UNKNOWN";
+      setError(fr?`Export MP4 impossible (${code}). Si ton navigateur ne le supporte pas, conserve le plan de montage JSON et essaie Safari.`:
+        `MP4 export failed (${code}). If unsupported, export EDL JSON or try Safari.`);
+    }finally{
+      setRendering(false);
+      setRenderNonce(v=>v+1);
+    }
+  }
   function exportEdl(){
     const result=edl({
       projectName:name,duration,offsets,cuts,
@@ -205,7 +238,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     </div>
     <div className="analysis-multi-grid">
       {videos.map(key=><div key={key} className={`analysis-multi-camera ${effectiveCamera===key?"is-active":""}`}>
-        <video ref={el=>{elements.current[key]=el}} src={playbackUrls[key]} playsInline preload="metadata" muted
+        <video key={renderNonce} ref={el=>{elements.current[key]=el}} src={playbackUrls[key]} playsInline preload="metadata" muted
           onTimeUpdate={realAudioSource===key?onClock:undefined}
           onError={()=>setError(fr?`Impossible de lire ${labels[key]}. Essaie de convertir ce fichier en MP4 H.264.`:`Cannot play ${labels[key]}. Try converting it to H.264 MP4.`)}
           aria-label={labels[key]}/>
@@ -217,7 +250,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         </div>
       </div>)}
     </div>
-    {(sources.audio || remoteUrls?.audio) && <audio ref={el=>{elements.current.audio=el}} src={playbackUrls.audio} preload="metadata"
+    {(sources.audio || remoteUrls?.audio) && <audio key={renderNonce} ref={el=>{elements.current.audio=el}} src={playbackUrls.audio} preload="metadata"
       onTimeUpdate={realAudioSource==="audio"?onClock:undefined}/>}
     <div className="analysis-multi-playback">
       <button className="analysis-primary" type="button" onClick={play}>{playing?(fr?"❚❚ PAUSE":"❚❚ PAUSE"):(fr?"▶ LIRE LES CAMÉRAS":"▶ PLAY CAMERAS")}</button>
@@ -236,13 +269,22 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         </div>):<p>{fr?"Aucune coupe choisie.":"No cuts selected yet."}</p>}
       </div>
       <div className="analysis-multi-actions">
+        <label className="analysis-multi-render-format">{fr?"FORMAT DU CLIP":"CLIP FORMAT"}
+          <select value={format||"16:9"} onChange={e=>onFormatChange?.(e.target.value as "16:9"|"9:16"|"1:1")}>
+            <option value="16:9">16:9 · YouTube</option><option value="9:16">9:16 · Reels / Shorts</option>
+            <option value="1:1">1:1 · Square</option>
+          </select>
+        </label>
+        <button type="button" disabled={rendering} className="analysis-primary" onClick={exportMp4}>
+          {rendering?`EXPORT MP4… ${renderPercent}%`:(fr?"EXPORTER MP4 · BÊTA":"EXPORT MP4 · BETA")}
+        </button>
         <button type="button" onClick={markCut} className="analysis-secondary">{fr?"MARQUER L’ANGLE ACTUEL":"MARK CURRENT ANGLE"}</button>
         <button type="button" onClick={exportEdl} className="analysis-secondary">{fr?"TÉLÉCHARGER LE PLAN DE MONTAGE (.JSON)":"DOWNLOAD EDIT PLAN (.JSON)"}</button>
       </div>
     </div>
     {error&&<p role="alert" className="analysis-error">{error}</p>}
     <p className="analysis-note">{fr
-      ?"Limites : les MOV non compatibles ne seront pas lus, les grosses vidéos peuvent ralentir ton navigateur, et la synchronisation manuelle peut dériver. N’efface pas les originaux. L’export MP4, les sous-titres et la synchronisation par empreinte audio restent à développer."
-      :"Limits: unsupported MOV files cannot play, large videos may slow down the browser, and manual synchronization can drift. Keep originals. MP4 rendering, captions and audio fingerprint synchronization remain to be built."}</p>
+      ?"Limites : les MOV non compatibles ne seront pas lus, les grosses vidéos peuvent ralentir ton navigateur, et la synchronisation manuelle peut dériver. N’efface pas les originaux. L’export MP4 local est expérimental et prend le temps réel du clip. Un moteur serveur haute qualité, les sous-titres et la synchronisation automatique restent à développer."
+      :"Limits: unsupported MOV files cannot play, large videos may slow down the browser, and manual synchronization can drift. Keep originals. Local MP4 export is experimental and runs in real time. Server rendering, captions and automatic synchronization remain to be built."}</p>
   </section>;
 }
