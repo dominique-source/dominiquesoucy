@@ -1,0 +1,176 @@
+/* Public homepage refinement — genuine original photograph references remain unchanged.
+   This stylesheet is deliberately scoped: Studio and editorial subpages are unaffected. */
+
+@media (min-width: 901px) {
+  .reference-home {
+    --reference-rail: clamp(220px, 16.5vw, 270px);
+    max-width: 1920px;
+  }
+  .reference-intro:has(.cinematic-collage) {
+    min-height: clamp(640px, 48vw, 770px);
+    padding: clamp(74px, 6vw, 110px) clamp(30px, 3vw, 64px) 84px;
+    background: #0a0a0a;
+  }
+  .reference-intro:has(.cinematic-collage) h1 {
+    font-family: var(--display);
+    font-size: clamp(53px, 4.7vw, 82px);
+    font-style: italic;
+    font-weight: 800;
+    line-height: .91;
+    letter-spacing: -.015em;
+    text-transform: uppercase;
+    max-width: min(56%, 690px);
+    text-wrap: balance;
+    margin-bottom: clamp(26px, 3vw, 45px);
+  }
+  .reference-intro .reference-eyebrow {
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: .16em;
+    margin-bottom: 28px;
+  }
+  .reference-intro .reference-mission {
+    font-size: clamp(17px, 1.3vw, 21px);
+    font-weight: 600;
+    letter-spacing: -.025em;
+    max-width: 515px;
+    margin-bottom: 15px;
+  }
+  .reference-intro:has(.cinematic-collage) .reference-description {
+    max-width: min(43%, 500px);
+    font-size: clamp(14px, 1vw, 16px);
+    line-height: 1.65;
+  }
+  .reference-intro .reference-actions {
+    margin-top: 34px;
+    gap: 25px;
+  }
+  .reference-intro .reference-actions .reference-primary {
+    font-family: var(--display);
+    font-style: italic;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: clamp(17px, 1.5vw, 22px);
+    min-height: 60px;
+    border-radius: 5px;
+    padding-inline: 28px;
+  }
+  .reference-intro .reference-actions .reference-secondary {
+    border: none;
+    border-bottom: 1px solid #b2b8a7;
+    padding-inline: 2px;
+    background: transparent;
+    min-height: 42px;
+    font-size: 13px;
+  }
+  .reference-intro .reference-actions .reference-secondary:hover {
+    border-bottom-color: #ccff00;
+  }
+  .cinematic-collage {
+    left: 38%;
+  }
+  .cinematic-portrait {
+    right: 13%;
+  }
+  .cinematic-moment {
+    border: 1px solid #a5d000;
+    box-shadow: 0 10px 28px #000b;
+  }
+  .cinematic-moment::after {
+    opacity: .95;
+  }
+  .cinematic-moment--human {
+    left: auto;
+    right: 4%;
+    top: 8%;
+    width: 140px;
+    height: 100px;
+    rotate: -4deg;
+  }
+  .cinematic-moment--community {
+    right: 3%;
+    top: 39%;
+    width: 140px;
+    height: 100px;
+    rotate: 3deg;
+  }
+  .cinematic-moment--sport {
+    right: 4%;
+    top: auto;
+    bottom: 10%;
+    width: 132px;
+    height: 148px;
+    rotate: -3deg;
+  }
+  .reference-profile {
+    padding: 34px 20px;
+    background: #151815;
+  }
+  .reference-profile header {
+    margin-bottom: 22px;
+  }
+  .reference-profile h2 {
+    font-size: clamp(23px, 1.6vw, 30px);
+  }
+  .reference-person, .reference-archive-card {
+    margin-bottom: 20px;
+  }
+  .reference-profile figcaption {
+    margin-top: 8px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1250px) {
+  .reference-intro:has(.cinematic-collage) {
+    padding-inline: 28px;
+  }
+  .reference-intro:has(.cinematic-collage) h1 {
+    font-size: clamp(46px, 4.4vw, 59px);
+    max-width: 60%;
+  }
+  .reference-intro:has(.cinematic-collage) .reference-description {
+    max-width: 47%;
+  }
+  .cinematic-moment--human, .cinematic-moment--community {
+    width: 110px;
+    height: 82px;
+  }
+  .cinematic-moment--sport {
+    width: 100px;
+    height: 120px;
+  }
+}
+@media (max-width: 900px) {
+  .reference-intro:has(.cinematic-collage) h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-style: italic;
+    text-transform: uppercase;
+    line-height: .95;
+    letter-spacing: -.015em;
+    font-size: clamp(48px, 7vw, 74px);
+    margin-bottom: 30px;
+  }
+  .reference-intro .reference-actions .reference-primary {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 800;
+    font-style: italic;
+    text-transform: uppercase;
+    min-height: 56px;
+  }
+  .reference-intro .reference-actions .reference-secondary {
+    background: transparent;
+  }
+  .cinematic-moments .cinematic-moment {
+    border: 1px solid #a5d000;
+  }
+}
+@media (max-width: 500px) {
+  .reference-intro:has(.cinematic-collage) h1 {
+    font-size: clamp(42px, 11vw, 56px);
+  }
+  .reference-intro .reference-actions {
+    margin-top: 28px;
+  }
+}

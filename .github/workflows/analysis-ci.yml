@@ -4,6 +4,8 @@ on:
     paths:
       - "app/api/analysis/**"
       - "app/[lang]/studio-analyse/**"
+      - "app/layout.tsx"
+      - "app/homepage-premium.css"
       - "components/analysis/**"
       - "lib/analysis/**"
       - "tests/analysis.test.ts"
