@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { capsuleModels, capsuleById, formats } from "@/lib/analysis/catalog";
 import type { AnalysisResult } from "@/lib/analysis/schema";
@@ -18,6 +18,24 @@ export function AnalysisStudio({ lang }: { lang: "fr" | "en" }) {
   const [selected, setSelected] = useState(0);
   const [format, setFormat] = useState<"16:9" | "9:16" | "1:1">("9:16");
   const inputFile = useRef<HTMLInputElement>(null);
+  const [importedLive, setImportedLive] = useState(false);
+  const [importWarning, setImportWarning] = useState(false);
+  useEffect(() => {
+    // Voluntary handoff from the completed live session, within the same tab.
+    // Clear immediately after reading; no persistence in the site's backend.
+    let pending: string | null = null;
+    try {
+      pending = sessionStorage.getItem("ds-studio-pending-analysis");
+      sessionStorage.removeItem("ds-studio-pending-analysis");
+    } catch {
+      return;
+    }
+    if (!pending) return;
+    setTranscript(pending.slice(0, MAX_TRANSCRIPT));
+    setImportedLive(true);
+    setImportWarning(pending.length >= MAX_TRANSCRIPT);
+  }, []);
+
 
   async function loadFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -94,6 +112,11 @@ export function AnalysisStudio({ lang }: { lang: "fr" | "en" }) {
     </div>
     <div className="analysis-columns">
       <div className="analysis-main">
+        {importedLive && <div className="analysis-handoff" role="status">
+          <strong>{fr ? "TRANSCRIPTION DU STUDIO LIVE REÇUE" : "LIVE STUDIO TRANSCRIPT RECEIVED"}</strong>
+          <p>{fr ? "La séance a été transférée uniquement dans cet onglet. Relis le texte et coche l’autorisation avant l’analyse IA." : "The session was transferred within this tab only. Review the text and opt in before AI analysis."}</p>
+          {importWarning && <p>{fr ? "Texte limité à 26 000 caractères. Le fichier complet a été téléchargé au moment du transfert." : "Text limited to 26,000 characters. The complete file was downloaded during transfer."}</p>}
+        </div>}
         <MediaImport lang={lang} consent={consent} onTranscript={(text) => { setTranscript(text); setResult(null); setSelected(0); }} />
         <div className="analysis-panel">
           <div className="analysis-panel-head"><h2>02 / {fr ? "IMPORTER UNE TRANSCRIPTION" : "IMPORT TRANSCRIPT"}</h2><span>.TXT / .SRT / .VTT</span></div>
