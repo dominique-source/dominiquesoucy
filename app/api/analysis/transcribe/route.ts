@@ -31,11 +31,11 @@ export async function POST(request: Request) {
   if (!parsed.success || !validMediaPath(parsed.data.pathname))
     return json({ error: "BAD_REQUEST" }, 400);
   const { pathname, lang } = parsed.data;
+  if ((await getStore(`media-owner:${pathname}`).catch(() => null)) !== user.key)
+    return json({ error: "MEDIA_NOT_OWNED" }, 403);
+  if (!(await limit(`transcribe:${user.key}`, 6, 3600).catch(() => false)))
+    return json({ error: "RATE_LIMITED" }, 429);
   try {
-    if ((await getStore(`media-owner:${pathname}`)) !== user.key)
-      return json({ error: "MEDIA_NOT_OWNED" }, 403);
-    if (!(await limit(`transcribe:${user.key}`, 6, 3600)))
-      return json({ error: "RATE_LIMITED" }, 429);
     const blob = await getBlob(pathname, { access: "private", useCache: false });
     if (!blob || blob.statusCode !== 200 || !blob.stream)
       return json({ error: "MEDIA_NOT_FOUND" }, 404);
