@@ -12,6 +12,7 @@ import {
   type Mode,
 } from "@/lib/studio/domain";
 import { microphone, RealtimeStudio } from "@/lib/studio/realtime";
+import { PressRecorder, downloadAudio, recentTake } from "@/lib/studio/press-recorder";
 import { AudioMeter } from "./meter";
 import { StudioGuide } from "./guide";
 import { episode001, completedEpisodeTurn } from "@/lib/studio/episode001";
@@ -72,6 +73,28 @@ export function StudioDashboard({
   const [entries, setEntries] = useState<Entry[]>([]);
   const entriesRef = useRef<Entry[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const recorderRef=useRef<PressRecorder|null>(null);
+  const questionTicket=useRef(0);
+  const [recordingActive,setRecordingActive]=useState(false);
+  const [recordingBlob,setRecordingBlob]=useState<Blob|null>(null);
+  const [recoveredTake,setRecoveredTake]=useState<{mime:string;chunks:Blob[]}|null>(null);
+  const [recordingError,setRecordingError]=useState("");
+  const [lastVoice,setLastVoice]=useState("");
+  useEffect(()=>{
+    recentTake().then(found=>{
+      if(found?.chunks.length)setRecoveredTake({mime:found.mime,chunks:found.chunks});
+    }).catch(()=>{});
+    try{
+      const backup=localStorage.getItem("ds-studio-last-transcript");
+      if(backup){
+        const entries=JSON.parse(backup) as Entry[];
+        if(Array.isArray(entries)&&entries.length){
+          entriesRef.current=entries.slice(-1000);
+          setEntries(entriesRef.current);
+        }
+      }
+    }catch{}
+  },[]);
   const streamRef = useRef<MediaStream | null>(null);
   const engine = useRef<RealtimeStudio | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -181,6 +204,8 @@ export function StudioDashboard({
     watchdog.current = null;
   }
   function silence() {
+    questionTicket.current++;
+    recorderRef.current?.cancelSpeech();
     clearTimers();
     engine.current?.silence();
     busyRef.current = false;
@@ -209,6 +234,19 @@ export function StudioDashboard({
   }
   function finish() {
     silence();
+    const recorder=recorderRef.current;
+    recorderRef.current=null;
+    if(recorder){
+      setRecordingActive(false);
+      void recorder.stop().then(blob=>{
+        setRecordingBlob(blob);
+        const ext=blob.type.includes("mp4")?"m4a":"webm";
+        downloadAudio(blob,`DOM-SOUCY-PRESSE-S001-E001-${new Date().toISOString().slice(0,19).replace(/:/g,"-")}.${ext}`);
+      }).catch(()=>setRecordingError(t(
+        "L’enregistrement audio n’a pas pu être finalisé. Vérifie la copie locale de récupération.",
+        "The audio recording could not be finalized. Check the local recovery copy."
+      )));
+    }
     activeRef.current = false;
     setActive(false);
     setLiveView(false);
@@ -229,6 +267,61 @@ export function StudioDashboard({
     ].slice(-1000);
     entriesRef.current = next;
     setEntries(next);
+    try{localStorage.setItem("ds-studio-last-transcript",JSON.stringify(next))}catch{}
+  }
+  async function askEpisodeJournalist(next:number,repeat:boolean,ticket:number){
+    try{
+      const last=[...entriesRef.current].reverse().find(e=>e.speaker!=="Dominique");
+      const response=await fetch("/api/studio/journalist-question",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          lang,journalist:next,name:namesRef.current[next],style:stylesRef.current[next],
+          context:memoryRef.current.slice(0,4000),
+          previous:entriesRef.current.slice(-18).map(e=>({speaker:e.speaker,text:e.text.slice(0,1800)})),
+          repeat:repeat?last?.text?.slice(0,700):undefined,
+        }),
+      });
+      const data=await response.json() as {question?:string;audioBase64?:string;voice?:string;error?:string};
+      if(!response.ok||!data.question||!data.audioBase64)throw Error(data.error||"QUESTION_FAILED");
+      if(ticket!==questionTicket.current||!activeRef.current)return;
+      append(namesRef.current[next],data.question);
+      setLastVoice(data.voice||"");
+      const binary=atob(data.audioBase64);
+      const bytes=new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+      const audio=new Blob([bytes],{type:"audio/mpeg"});
+      const recorder=recorderRef.current;
+      if(recorder)await recorder.playJournalist(audio);
+      else{
+        const url=URL.createObjectURL(audio);
+        const player=new Audio(url);
+        try{
+          await player.play();
+          await new Promise<void>((resolve,reject)=>{
+            player.onended=()=>resolve();
+            player.onerror=()=>reject(Error("PLAYBACK_FAILED"));
+          });
+        }finally{URL.revokeObjectURL(url)}
+      }
+      if(ticket!==questionTicket.current)return;
+      busyRef.current=false;setBusy(false);setCurrent("questions");
+    }catch(e){
+      if(ticket!==questionTicket.current)return;
+      busyRef.current=false;setBusy(false);setCurrent("questions");
+      setError(t("Question audio indisponible; vérifie la connexion et réessaie.",
+                 "Question audio unavailable. Check the connection and retry.")+
+        ` (${e instanceof Error?e.message:"UNKNOWN"})`);
+    }
+  }
+  function scheduleEpisodeQuestion(repeat=false){
+    if(!activeRef.current)return;
+    silence();
+    setCurrent("questions");
+    // Deliberate two-second space so the edit can include the journalist handoff.
+    timer.current=setTimeout(()=>{
+      if(!activeRef.current)return;
+      ask(repeat);
+    },2000);
   }
   function ask(repeat = false) {
     if (!activeRef.current || !canAsk(modeRef.current, busyRef.current)) return;
@@ -241,6 +334,11 @@ export function StudioDashboard({
     busyRef.current = true;
     setBusy(true);
     setCurrent("speaking");
+    if(episodeRef.current&&!demoRef.current){
+      const ticket=++questionTicket.current;
+      void askEpisodeJournalist(next,repeat,ticket);
+      return;
+    }
     if (demoRef.current) {
       const previous = [...entriesRef.current]
         .reverse()
@@ -311,17 +409,18 @@ export function StudioDashboard({
     }
     if (!activeRef.current) return;
     if (episodeRef.current && c === "open" && activeRef.current) {
-      silence();
-      setCurrent("questions");
-      ask();
+      scheduleEpisodeQuestion();
       return;
     }
     if (c === "next" || c === "repeat") {
-      if (modeRef.current !== "questions" && modeRef.current !== "speaking")
+      if (!episodeRef.current && modeRef.current !== "questions" && modeRef.current !== "speaking")
         return;
-      silence();
-      setCurrent("questions");
-      ask(c === "repeat");
+      if(episodeRef.current)scheduleEpisodeQuestion(c==="repeat");
+      else{
+        silence();
+        setCurrent("questions");
+        ask(c === "repeat");
+      }
       return;
     }
     silence();
@@ -337,15 +436,18 @@ export function StudioDashboard({
     const isEpisodeFin = speaker === "Dominique" && episodeRef.current && completedEpisodeTurn(text);
     const c = speaker === "Dominique" ? voiceCommand(text) : undefined;
     // FIN is a control cue, not part of the published interview.
-    const cleanText = isEpisodeFin ? "" : text;
+    const cleanText = (isEpisodeFin||c) ? "" : text;
+    if(isEpisodeFin||c){
+      if(isEpisodeFin)command("next");
+      else if(c)command(c);
+      return;
+    }
     append(
       speaker === "Dominique"
         ? "Dominique"
         : namesRef.current[Math.max(0, indexRef.current)],
       cleanText,
     );
-    if (isEpisodeFin) { command("open"); return; }
-    if (c) command(c);
   }
   function afterUtterance() {
     if (episodeRef.current) return; // Only FIN authorizes the next question.
@@ -400,6 +502,7 @@ export function StudioDashboard({
     setError("");
     silence();
     stopMedia();
+    setRecordingActive(false);
     setCurrent("reflection");
     entriesRef.current = [];
     setEntries([]);
@@ -408,6 +511,7 @@ export function StudioDashboard({
     demoRef.current = demo;
     episodeRef.current = episodeMode;
     setAiSummary("");
+    setRecordingBlob(null);setRecordingError("");
     summaryAbort.current?.abort();
     started.current = now;
     setSeconds(0);
@@ -426,6 +530,16 @@ export function StudioDashboard({
       }
       streamRef.current = s;
       setStream(s);
+      try{
+        const recorder=new PressRecorder(s);
+        recorder.onError=code=>setRecordingError(code);
+        await recorder.start();
+        recorderRef.current=recorder;setRecordingActive(true);
+      }catch{
+        setRecordingError(t("Enregistrement local non disponible : lance un enregistrement OBS séparé.",
+                            "Local recording unavailable: record with OBS separately."));
+        setRecordingActive(false);
+      }
       await listDevices();
       const call = new RealtimeStudio({
         transcript: receive,
@@ -457,6 +571,15 @@ export function StudioDashboard({
       finish();
       mediaError(e);
     }
+  }
+  function downloadRecording(){
+    if(!recordingBlob)return;
+    downloadAudio(recordingBlob,`DOM-SOUCY-PRESSE-E001-${Date.now()}.${recordingBlob.type.includes("mp4")?"m4a":"webm"}`);
+  }
+  function downloadRecovered(){
+    if(!recoveredTake)return;
+    const blob=new Blob(recoveredTake.chunks,{type:recoveredTake.mime||"audio/webm"});
+    downloadAudio(blob,`DOM-SOUCY-AUDIO-RECUPERE-${Date.now()}.${blob.type.includes("mp4")?"m4a":"webm"}`);
   }
   async function testAudio() {
     setError("");
@@ -614,7 +737,7 @@ export function StudioDashboard({
             <span>{t("JOURNALISTE", "JOURNALIST")}: <strong>{index >= 0 ? names[index] : "—"}</strong></span>
             <span>{t("MODE", "MODE")}: <strong>{labels[lang][mode]}</strong></span>
             <span>{t("MICRO", "MIC")}: <strong>{mode === "paused" ? t("COUPÉ", "OFF") : t("ACTIF", "ON")}</strong></span>
-            <span>{t("AUDIO", "AUDIO")}: <strong>{t("OBS NON CONFIRMÉ", "OBS NOT CONFIRMED")}</strong></span>
+            <span>{t("ENREGISTREMENT", "RECORDING")}: <strong>{recordingActive?t("● AUDIO EN COURS","● AUDIO RECORDING"):t("NON CONFIRMÉ","NOT CONFIRMED")}</strong></span>
             <span>{t("IA", "AI")}: <strong>{connection}</strong></span>
           </div>
           <footer className="studio-live-footer">
@@ -696,6 +819,17 @@ export function StudioDashboard({
                 "Aucune transcription n’a été recueillie dans cette séance. Si tu as enregistré avec OBS ou une caméra, ouvre le Studio d’analyse IA pour importer ce fichier.",
                 "No transcript was captured in this session. If you recorded with OBS or a camera, open the AI Analysis Studio to import your file.",
               )}</p>
+          {(recordingBlob||recoveredTake)&&<div className="studio-audio-recovery">
+            <strong>{recordingBlob?t("✓ AUDIO LOCAL FINALISÉ","✓ LOCAL AUDIO FINALIZED"):
+              t("COPIE DE RÉCUPÉRATION AUDIO DÉTECTÉE","RECOVERABLE AUDIO BACKUP FOUND")}</strong>
+            {recordingBlob&&<button type="button" onClick={downloadRecording}>
+              {t("TÉLÉCHARGER À NOUVEAU L’AUDIO","DOWNLOAD AUDIO AGAIN")}
+            </button>}
+            {recoveredTake&&<button type="button" onClick={downloadRecovered}>
+              {t("RÉCUPÉRER LES FRAGMENTS AUDIO PRÉCÉDENTS","RECOVER PREVIOUS AUDIO CHUNKS")}
+            </button>}
+          </div>}
+          {recordingError&&<p className="studio-error" role="alert">{recordingError}</p>}
           <div className="studio-finish-actions">
             <button type="button" onClick={() => saveFile("studio-transcription-complete.txt", exportText(entriesRef.current))}
               disabled={!entries.length}>{t("1 · EXPORTER LA TRANSCRIPTION", "1 · EXPORT TRANSCRIPT")}</button>
@@ -704,11 +838,21 @@ export function StudioDashboard({
             </button>
           </div>
           <p className="studio-finish-warning">{t(
-            "Le Studio Live ne crée pas lui-même de vidéo OBS. ON AIR indique une séance active dans le navigateur, pas un enregistrement. Vérifie ton fichier caméra/OBS séparément. La transcription n’est pas sauvegardée automatiquement.",
-            "Studio Live does not record OBS video. ON AIR means the browser session is active, not that recording is underway. Check your camera/OBS file separately. Your transcript is not autosaved.",
+            "Le Studio tente maintenant un enregistrement audio local distinct du voyant ON AIR. Vérifie le téléchargement du fichier audio en quittant la séance. Il ne commande toujours pas tes caméras ou OBS.",
+            "Studio now attempts a local audio recording, separate from ON AIR. Confirm the downloaded audio file when finishing. OBS and cameras remain independent.",
           )}</p>
         </section>
       )}
+      <div className="studio-recorder-indicator" role="status">
+        {recordingActive?t("● ENREGISTREMENT AUDIO LOCAL EN COURS — MICRO + JOURNALISTES IA",
+          "● LOCAL AUDIO RECORDING ACTIVE — MIC + AI JOURNALISTS"):
+          t("ENREGISTREMENT LOCAL NON ACTIF — ON AIR SEUL NE SAUVEGARDE RIEN",
+            "LOCAL RECORDING INACTIVE — ON AIR ALONE DOES NOT SAVE AUDIO")}
+        {recordingError&&<p>{recordingError}</p>}
+      </div>
+      {recoveredTake&&<button type="button" className="studio-recover-audio" onClick={downloadRecovered}>
+        {t("RÉCUPÉRER UN AUDIO ENREGISTRÉ SUR CE NAVIGATEUR","RECOVER PREVIOUS AUDIO FROM THIS BROWSER")}
+      </button>}
       <p className="studio-on-air-note">
         {t(
           "Voyant de la séance dans le navigateur — ne confirme ni diffusion publique ni enregistrement OBS.",
