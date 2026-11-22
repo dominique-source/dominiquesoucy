@@ -9,8 +9,8 @@ import { CapsuleWorkshop } from "./capsule-workshop";
 import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
 
-const names:Record<SourceKey,string>={audio:"AUDIO PRINCIPAL",main:"CANON · PLAN PRINCIPAL",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
-const allowed:Record<SourceKey,RegExp>={audio:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,main:/\.(mov|mp4|m4v|webm)$/i,vertical:/\.(mov|mp4|m4v|webm)$/i,secondary:/\.(mov|mp4|m4v|webm)$/i};
+const names:Record<SourceKey,string>={audio:"AUDIO ORIGINAL",enhanced:"AUDIO FINAL OPTIMISÉ",main:"CANON · PLAN PRINCIPAL",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
+const allowed:Record<SourceKey,RegExp>={audio:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,enhanced:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,main:/\.(mov|mp4|m4v|webm)$/i,vertical:/\.(mov|mp4|m4v|webm)$/i,secondary:/\.(mov|mp4|m4v|webm)$/i};
 type ProjectRow=EpisodeRow;
 type UploadState={progress:number;busy:boolean;error?:string};
 type PendingUploads=Partial<Record<SourceKey,UploadState>>;
@@ -240,7 +240,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <label className="analysis-source-pick">
         {file?(fr?"REMPLACER":"REPLACE"):(fr?"+ CHOISIR UN FICHIER":"+ CHOOSE FILE")}
         <input aria-label={names[key]} type="file"
-          accept={key==="audio"?"audio/*,.mp3,.m4a,.wav,.ogg,.flac":"video/*,.mov,.mp4,.m4v,.webm"}
+          accept={key==="audio"||key==="enhanced"?"audio/*,.mp3,.m4a,.wav,.ogg,.flac":"video/*,.mov,.mp4,.m4v,.webm"}
           disabled={progress?.busy} onChange={e=>choose(key,e)}/>
       </label>
       {file&&<p>{file.name} · {(file.size/1e6).toFixed(1)} Mo</p>}
@@ -308,8 +308,20 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       </button>
     </>)}
     {step(1,fr?"AUDIO PRINCIPAL":"MAIN AUDIO",project.media.audio?"✓ MÉDIA SAUVEGARDÉ":"M4A / MP3",<>
-      <p>{fr?"Dépose d’abord le son de la conférence. Un MP3 ou M4A compressé facilite la transcription.":"Start with the conference audio; compressed MP3 or M4A works best."}</p>
+      <p>{fr?"Dépose d’abord le son original de ta conférence. Tu peux ensuite ajouter une deuxième piste améliorée pour le montage final.":"Start with your original recording. Add a separate enhanced voice track for final editing."}</p>
       {tile("audio")}
+      <div className="studio-audio-optimized">
+        <h3>{fr?"PISTE AUDIO FINALE — VOIX OPTIMISÉE":"FINAL AUDIO — ENHANCED VOICE"}</h3>
+        <p>{fr
+          ?"Améliore ton audio original avec Adobe Podcast Enhance, puis ajoute ici le fichier optimisé. Le Studio conserve les deux fichiers séparément et utilise l’audio optimisé à la prévisualisation et à l’export si tu le choisis."
+          :"Enhance your original audio with Adobe Podcast, then upload the processed track here. The Studio keeps both and lets you choose the final sound for preview and export."}</p>
+        <a href="https://podcast.adobe.com/enhance-speech" target="_blank" rel="noopener noreferrer"
+          className="analysis-secondary">{fr?"OUVRIR ADOBE PODCAST ENHANCE ↗":"OPEN ADOBE PODCAST ENHANCE ↗"}</a>
+        {tile("enhanced")}
+        <p className="analysis-note">{fr
+          ?"Adobe Enhance n’est pas lancé automatiquement depuis ce bouton : aucun accès API public générique n’est disponible. Télécharge d’abord le résultat d’Adobe, puis importe-le ici."
+          :"Adobe Enhance does not run inside this Studio. Download the processed audio from Adobe first, then import it here."}</p>
+      </div>
       <label className="analysis-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>
         <span>{fr?"J’autorise la transcription et l’analyse privées de ma conférence par l’IA.":"I authorize private AI transcription and analysis."}</span>
       </label>
