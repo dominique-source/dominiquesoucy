@@ -351,8 +351,19 @@ export function StudioDashboard({
   }
   function mediaError(e: unknown) {
     const name = e instanceof Error ? e.name : "";
+    const message = e instanceof Error ? e.message : "";
     setError(
-      name === "NotAllowedError"
+      message.includes("STUDIO_HTTP_401_")
+        ? t("Ta session a expiré. Recharge la page et reconnecte-toi.", "Your session expired. Reload and sign in again.")
+        : message.includes("STUDIO_HTTP_429_")
+          ? t("Limite de connexions atteinte. Réessaie dans 15 minutes.", "Connection limit reached. Try again in 15 minutes.")
+          : message.includes("PROVIDER_NOT_CONFIGURED")
+            ? t("OPENAI_API_KEY n’est pas configurée sur le serveur. Active la démonstration ou configure la clé dans Vercel.", "OPENAI_API_KEY is not configured. Use demo mode or add the key in Vercel.")
+            : message.includes("PROVIDER_UNAVAILABLE") || message.includes("STUDIO_HTTP_502_")
+              ? t("Le fournisseur vocal IA est indisponible. Vérifie la clé et le modèle Realtime configuré.", "The AI voice provider is unavailable. Check the configured API key and Realtime model.")
+              : message.includes("STUDIO_HTTP_503_")
+                ? t("Le Studio est indisponible côté serveur. Vérifie les paramètres Vercel et Redis.", "Studio is unavailable on the server. Check Vercel and Redis settings.")
+                : name === "NotAllowedError"
         ? t(
             "Permission micro refusée. Autorise-la dans les réglages du navigateur, puis réessaie.",
             "Microphone permission denied. Allow it in browser settings, then retry.",
