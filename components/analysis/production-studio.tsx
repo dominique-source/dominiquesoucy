@@ -58,7 +58,16 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       try{
         const available=await list();
         if(cancelled)return;
-        if(available.length){
+        // Preserve the explicit Studio Live handoff when opening this new workflow.
+        let pendingLive="";
+        try{
+          pendingLive=sessionStorage.getItem("ds-studio-pending-analysis")||"";
+        }catch{ /* storage disabled */ }
+        if(pendingLive){
+          const incoming={...freshProject(),transcript:pendingLive.slice(0,26000)};
+          setProject(incoming);setStatus("pending");
+          try{sessionStorage.removeItem("ds-studio-pending-analysis")}catch{}
+        }else if(available.length){
           const p=await load(available[0].id);
           if(cancelled)return;
           setProject(p);persisted.current=JSON.stringify({...p,updatedAt:undefined});setStatus("saved");
@@ -264,6 +273,10 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <p className="analysis-note">{fr
         ?"Sauvegarde automatique de la transcription, de l’analyse et des coupes. Les médias doivent être enregistrés séparément avec « Sauvegarder le média ». Attends « Projet sauvegardé » avant de quitter."
         :"Auto-save for transcript, analysis and edits. Media must be saved separately. Wait for Project Saved before leaving."}</p>
+      <button type="button" className="analysis-secondary"
+        onClick={()=>download("dom-soucy-projet-sauvegarde.json",JSON.stringify(project,null,2))}>
+        {fr?"TÉLÉCHARGER UNE COPIE DU PROJET (.JSON)":"DOWNLOAD PROJECT BACKUP (.JSON)"}
+      </button>
     </>)}
     {step(1,fr?"AUDIO PRINCIPAL":"MAIN AUDIO",project.media.audio?"✓ MÉDIA SAUVEGARDÉ":"M4A / MP3",<>
       <p>{fr?"Dépose d’abord le son de la conférence. Un MP3 ou M4A compressé facilite la transcription.":"Start with the conference audio; compressed MP3 or M4A works best."}</p>
