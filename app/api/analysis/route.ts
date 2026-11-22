@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { session, sameOrigin } from "@/lib/studio/auth";
 import { limit } from "@/lib/studio/store";
 import { analysisInput, analysisResult } from "@/lib/analysis/schema";
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
     // recovered from the caller's transcript; unrecognized IDs are discarded.
     const selectionSchema = analysisResult.omit({ moments: true }).extend({
       moments: analysisResult.shape.moments.element.omit({ excerpt: true }).extend({
-        passage_id: analysisResult.shape.moments.element.shape.model_id,
+        passage_id: z.number().int().positive(),
       }).array().max(8),
     });
     const result = selectionSchema.safeParse(value);
