@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { locale } from "@/lib/i18n";
 import { session } from "@/lib/studio/auth";
 import { StudioGate } from "@/components/studio/gate";
-import { AnalysisStudio } from "@/components/analysis/studio";
+import { ProductionStudio } from "@/components/analysis/production-studio";
 import "./analysis.css";
 
 export const dynamic = "force-dynamic";
@@ -19,5 +19,5 @@ export default async function AnalysisPage({
   let authorized = false;
   try { authorized = !!(await session()); } catch { /* fail closed */ }
   if (!authorized) return <StudioGate lang={lang} />;
-  return <AnalysisStudio lang={lang} />;
+  return <ProductionStudio lang={lang} />;
 }
