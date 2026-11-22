@@ -325,3 +325,15 @@
 .studio-reconstructed-list textarea{min-height:75px;background:#0b110a;border:1px solid #647f3b;border-radius:6px;color:#f4f4ef;padding:11px;width:100%}
 .studio-reconstructed-list small{line-height:1.5;color:#c6d3ba}
 .studio-reconstructed-list button{justify-self:start}
+
+.studio-auto-edit-panel{border:2px solid #759b33;background:linear-gradient(135deg,#1f2d12,#0d160a);border-radius:13px;padding:20px;margin:24px 0;display:grid;gap:13px}
+.studio-auto-edit-panel>strong{font:900 italic clamp(25px,3vw,40px)/1 "Barlow Condensed",Impact,sans-serif;color:#ccff00}
+.studio-auto-edit-panel>p{font-size:13px;line-height:1.55;color:#d6dfcc;margin:0}
+.studio-auto-edit-panel>.studio-auto-edit-cta{width:100%;font:900 italic clamp(20px,2.5vw,30px)/1 "Barlow Condensed",Impact,sans-serif;min-height:58px}
+.studio-auto-edit-proposal{padding:16px;border:1px solid #96bc53;border-radius:9px;display:grid;gap:10px;background:#0a1409}
+.studio-auto-edit-proposal>strong{color:#ccff00;font-weight:900;font-size:13px}
+.studio-auto-edit-shotlist{display:flex;flex-wrap:wrap;gap:8px}
+.studio-auto-edit-shotlist>span{border:1px solid #506b31;border-radius:6px;background:#182313;color:#eaf0e2;padding:8px 12px;font-size:12px}
+.studio-auto-edit-shotlist b{color:#ccff00;margin-right:8px}
+.studio-auto-edit-actions{display:flex;gap:12px;flex-wrap:wrap}
+.studio-auto-edit-actions>*{flex:1;min-width:180px;margin:0}
