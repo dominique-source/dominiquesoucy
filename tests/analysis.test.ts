@@ -36,3 +36,17 @@ test("never show a fabricated, altered or too-short quote as a verified excerpt"
   const short = { ...valid, excerpt: "On doit" };
   assert.deepEqual(verifiedMoments(transcript, [valid, fabricated, short]), [valid]);
 });
+
+test("reconstructed press questions remain clearly labeled as hypothetical and persist", async()=>{
+  const {freshProject,projectSchema}=await import("../lib/analysis/project");
+  const p=freshProject();
+  p.reconstructedQuestions=[{
+    id:crypto.randomUUID(),question:"Pourquoi remets-tu le sport en question?",
+    journalist:0,answerExcerpt:"On doit commencer par l'éducation et la santé.",
+    label:"QUESTION_RECONSTRUITE_NON_ORIGINALE",
+  }];
+  assert.equal(projectSchema.safeParse(p).success,true);
+  assert.equal(projectSchema.safeParse({...p,reconstructedQuestions:[
+    {...p.reconstructedQuestions[0],label:"VRAIE_QUESTION"}
+  ]}).success,false);
+});
