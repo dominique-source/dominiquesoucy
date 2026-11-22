@@ -337,3 +337,27 @@
 .studio-auto-edit-shotlist b{color:#ccff00;margin-right:8px}
 .studio-auto-edit-actions{display:flex;gap:12px;flex-wrap:wrap}
 .studio-auto-edit-actions>*{flex:1;min-width:180px;margin:0}
+
+/* Turquoise chroma-key / DOM SOUCY MEDIA signature wall (local beta). */
+.studio-keying-controls{display:grid;gap:14px;background:linear-gradient(135deg,#1c2a13,#0c100b);border:1px solid #8fb444;border-radius:13px;padding:17px;margin:14px 0}
+.studio-keying-heading{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}
+.studio-keying-heading strong{font:900 italic clamp(21px,2.8vw,32px)/1.08 "Barlow Condensed",Impact,sans-serif;color:#ccff00}
+.studio-keying-heading span{font-size:10px;font-weight:900;letter-spacing:.06em;color:#c1d49a}
+.studio-keying-controls>p{color:#d4dfc5;font-size:12px;line-height:1.55;margin:0}
+.studio-keying-toggle{display:flex!important;align-items:center;gap:12px!important;color:#f4f4ef!important;font-size:13px!important;border:1px solid #91b54b;padding:12px;border-radius:8px}
+.studio-keying-toggle input{width:23px!important;min-width:23px;height:23px;accent-color:#ccff00;min-height:23px!important}
+.studio-keying-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.studio-keying-control-grid label{display:grid;gap:8px}
+.studio-keying-control-grid input[type=range]{accent-color:#ccff00;padding:0;min-height:30px}
+.studio-keying-control-grid input[type=color]{padding:2px;height:48px}
+.studio-keying-control-grid label span{font-size:12px;color:#cde5a5;font-variant-numeric:tabular-nums}
+.studio-capsule-bg-signature{background:radial-gradient(circle at 55% 32%,#26321b,#070907 72%);border-color:#ccff00}
+.studio-decor-preview-panel{border:1px solid #91b64f;background:#141b0f;padding:18px;border-radius:12px;display:grid;gap:12px;margin:20px 0}
+.studio-decor-preview-panel>strong{font:900 italic clamp(22px,2.5vw,34px)/1.05 "Barlow Condensed",Impact,sans-serif;color:#ccff00}
+.studio-decor-preview-panel>p{font-size:12px;color:#e0e8d6;line-height:1.5;margin:0}
+.studio-decor-preview-actions{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+.studio-decor-preview-actions>label{flex:1;display:grid;gap:6px;color:#ccff00;font-size:11px;font-weight:850}
+.studio-decor-preview-actions select{background:#090d09;color:#f4f4ef;border:1px solid #617e3b;padding:12px;border-radius:7px}
+.studio-decor-preview-actions button{min-height:46px}
+.studio-decor-preview-canvas{width:100%;max-width:840px;aspect-ratio:16/9;object-fit:contain;background:#070907;border:1px solid #637e36;border-radius:9px;justify-self:center}
+@media(max-width:650px){.studio-keying-control-grid{grid-template-columns:1fr}.studio-decor-preview-actions>*{width:100%}}
