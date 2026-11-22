@@ -352,7 +352,13 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     <MultiCamEditor key={project.id} sources={files} remoteUrls={remoteUrls} mediaMetadata={project.media}
       name={project.name} lang={lang} highlight={project.analysis?.moments[project.selectedMoment]?.excerpt}
       savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}
-      format={project.format} onFormatChange={format=>modify({format})}/>
+      format={project.format} onFormatChange={format=>modify({format})}
+      capsule={project.capsules.find(c=>c.id===project.selectedCapsuleId)}
+      onExportOutcome={(ok,details)=>{
+        record(ok?"export":"error",details,ok?"success":"failure");
+        const id=project.selectedCapsuleId;
+        if(id)modify({capsules:project.capsules.map(c=>c.id===id?{...c,status:ok?"rendered":"failed"}:c)});
+      }}/>
     <CapsuleWorkshop lang={lang} project={project}
       onChange={patch=>modify(patch)} onEvent={record}/>
     {step(8,fr?"EXPORT VIDÉO":"VIDEO EXPORT","MP4 BÊTA",<>
