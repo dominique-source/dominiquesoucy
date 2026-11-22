@@ -644,3 +644,7 @@
 .studio-recording-panel strong { color: #ccff00; font-size: 12px; letter-spacing: .05em; }
 .studio-recording-panel p { margin: 0; color: #d7dace; font-size: 12px; line-height: 1.6; }
 .studio-recording-panel button { justify-self: start; }
+
+.studio-start-error { margin: 14px 0; padding: 18px 20px; border: 2px solid #ccff00; background: #192109; color: #f4f4ef; }
+.studio-start-error strong { color: #ccff00; font-size: 13px; letter-spacing: .06em; }
+.studio-start-error p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
