@@ -732,3 +732,66 @@
   .studio-live-command span { font-size: 12px; }
   .studio-live-footer { flex-direction: column; align-items: stretch; }
 }
+
+/* Always-visible, high-contrast radio sign inside the fullscreen command room. */
+.studio-live-on.is-broadcasting {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(145deg, #50050a, #210608);
+  border: 2px solid #ff4141;
+  border-radius: 12px;
+  padding: 16px clamp(16px, 2vw, 36px);
+  color: #ff4545;
+  font: 900 italic clamp(32px, 5.5vw, 78px)/1 var(--font-display), sans-serif;
+  letter-spacing: .05em;
+  box-shadow: 0 0 35px #e200003f, inset 0 0 28px #ff000025;
+  text-shadow: 0 0 18px #ff161699;
+}
+.studio-live-on.is-broadcasting > span {
+  width: clamp(14px, 2vw, 26px);
+  height: clamp(14px, 2vw, 26px);
+  flex: 0 0 auto;
+  background: #ff2929;
+  box-shadow: 0 0 20px #ff2929;
+}
+.studio-live-on small { font: 700 normal clamp(15px, 1.5vw, 24px)/1 var(--font-sans), sans-serif; color: #fff; letter-spacing: 0; }
+.studio-live-on.is-paused { padding: 10px 16px; color: #ffbc52; border: 2px solid #b2782b; border-radius: 10px; }
+.studio-live-on.is-paused > span { background: #ffbc52; box-shadow: 0 0 20px #ffbc52; }
+.studio-finish-panel {
+  border: 2px solid #ccff00;
+  border-radius: 16px;
+  padding: clamp(22px, 3vw, 40px);
+  margin: 24px 0 30px;
+  background: radial-gradient(ellipse at 100% 0%, #243007 0%, #14160e 55%, #0b0c0a 100%);
+  box-shadow: 0 0 40px #ccff0014;
+}
+.studio-finish-kicker { color: #ccff00; font-size: 12px; font-weight: 800; letter-spacing: .2em; }
+.studio-finish-panel h2 { font: 900 italic clamp(29px, 3.2vw, 48px)/1.08 var(--font-display), sans-serif; margin: 14px 0; }
+.studio-finish-panel p { max-width: 780px; color: #d2d4cc; font-size: 14px; line-height: 1.7; }
+.studio-finish-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 25px 0; }
+.studio-dashboard .studio-finish-actions button { font: 800 15px/1.4 var(--font-sans), sans-serif; padding: 16px 22px; border-radius: 9px; }
+.studio-dashboard .studio-finish-actions button.studio-finish-next { color: #101010; border-color: #ccff00; background: #ccff00; }
+.studio-finish-warning { font-size: 12px !important; color: #abb29d !important; }
+@media (max-width: 850px) {
+  .studio-live-header { flex-wrap: wrap; }
+  .studio-live-on.is-broadcasting { font-size: clamp(30px, 8vw, 65px); }
+}
+@media (max-width: 530px) {
+  .studio-live-on.is-broadcasting { padding: 10px 14px; font-size: 35px; }
+  .studio-live-on small { font-size: 12px; }
+  .studio-finish-actions { flex-direction: column; }
+  .studio-finish-actions button { width: 100%; }
+}
+
+/* DOM SOUCY MEDIA episode 001: production-ready preset visible before ON AIR. */
+.studio-episode-setup {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+  border: 1px solid #728c2e; border-radius: 12px; background: #1b2210;
+  padding: clamp(18px, 2vw, 26px); margin: 18px 0 24px;
+}
+.studio-episode-setup > span { font: 800 11px var(--font-sans),sans-serif; letter-spacing: .16em; color: #ccff00; }
+.studio-episode-setup > strong { color: #fff; font: 900 italic clamp(25px, 2.7vw, 38px)/1.1 var(--font-display),sans-serif; }
+.studio-episode-setup > p { margin: 0; max-width: 760px; font-size: 13px; line-height: 1.7; color: #d6dacd; }
+.studio-dashboard button.studio-episode-prepare { background: #ccff00; color: #080808; border-color: #ccff00; font-size: 13px; font-weight: 900; padding: 15px 24px; }
+.studio-episode-setup > .studio-episode-caveat { color: #c9c8a8; font-size: 11px; }
+.studio-episode-banner { border: 1px solid #ccff00; background: #192109; color: #ccff00; text-align: center; padding: 11px; font-weight: 800; font-size: clamp(10px, 1.2vw, 15px); letter-spacing: .08em; }

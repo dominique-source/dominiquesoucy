@@ -14,6 +14,7 @@ import {
 import { microphone, RealtimeStudio } from "@/lib/studio/realtime";
 import { AudioMeter } from "./meter";
 import { StudioGuide } from "./guide";
+import { episode001, completedEpisodeTurn } from "@/lib/studio/episode001";
 const labels = {
   fr: {
     reflection: "Réflexion en cours",
@@ -57,6 +58,8 @@ export function StudioDashboard({
   const [mode, setMode] = useState<Mode>("reflection");
   const modeRef = useRef<Mode>("reflection");
   const [active, setActive] = useState(false);
+  const [episodeMode, setEpisodeMode] = useState(false);
+  const episodeRef = useRef(false);
   const [liveView, setLiveView] = useState(false);
   const activeRef = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -190,6 +193,20 @@ export function StudioDashboard({
     streamRef.current = null;
     setStream(null);
   }
+  function prepareEpisode001() {
+    if (activeRef.current) return;
+    setEpisodeMode(true);
+    episodeRef.current = true;
+    setNames((old) => [...episode001.names, ...old.slice(3)]);
+    setStyles((old) => [...episode001.styles, ...old.slice(3)]);
+    setMemory(episode001.editorialContext);
+    memoryRef.current = episode001.editorialContext;
+    setDelay(10000);
+    delayRef.current = 10000;
+    setDemo(false);
+    demoRef.current = false;
+    setError("");
+  }
   function finish() {
     silence();
     activeRef.current = false;
@@ -218,7 +235,7 @@ export function StudioDashboard({
     clearTimers();
     const next = repeat
       ? Math.max(0, indexRef.current)
-      : (indexRef.current + 1) % 5;
+      : (indexRef.current + 1) % (episodeRef.current ? 3 : 5);
     indexRef.current = next;
     setIndex(next);
     busyRef.current = true;
@@ -293,6 +310,12 @@ export function StudioDashboard({
       return;
     }
     if (!activeRef.current) return;
+    if (episodeRef.current && c === "open" && activeRef.current) {
+      silence();
+      setCurrent("questions");
+      ask();
+      return;
+    }
     if (c === "next" || c === "repeat") {
       if (modeRef.current !== "questions" && modeRef.current !== "speaking")
         return;
@@ -311,16 +334,21 @@ export function StudioDashboard({
   }
   function receive(speaker: "Dominique" | "journalist", text: string) {
     if (!activeRef.current || modeRef.current === "paused") return;
+    const isEpisodeFin = speaker === "Dominique" && episodeRef.current && completedEpisodeTurn(text);
     const c = speaker === "Dominique" ? voiceCommand(text) : undefined;
+    // FIN is a control cue, not part of the published interview.
+    const cleanText = isEpisodeFin ? "" : text;
     append(
       speaker === "Dominique"
         ? "Dominique"
         : namesRef.current[Math.max(0, indexRef.current)],
-      text,
+      cleanText,
     );
+    if (isEpisodeFin) { command("open"); return; }
     if (c) command(c);
   }
   function afterUtterance() {
+    if (episodeRef.current) return; // Only FIN authorizes the next question.
     if (!activeRef.current || !canAsk(modeRef.current, busyRef.current)) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => ask(), delayRef.current);
@@ -378,6 +406,7 @@ export function StudioDashboard({
     indexRef.current = -1;
     setIndex(-1);
     demoRef.current = demo;
+    episodeRef.current = episodeMode;
     setAiSummary("");
     summaryAbort.current?.abort();
     started.current = now;
@@ -509,6 +538,26 @@ export function StudioDashboard({
     );
     setEntries(entriesRef.current);
   }
+  function goToAnalysis() {
+    const fullTranscript = exportText(entriesRef.current);
+    if (!fullTranscript.trim()) {
+      router.push(`/${lang}/studio-analyse`);
+      return;
+    }
+    // Only an explicit user click transfers this private text. No cloud persistence.
+    // Save the complete original locally first: the analysis editor has a 26k limit.
+    saveFile("studio-transcription-complete.txt", fullTranscript);
+    try {
+      sessionStorage.setItem("ds-studio-pending-analysis", fullTranscript.slice(0, 26000));
+    } catch {
+      setError(t(
+        "Le transfert local est indisponible. Télécharge la transcription, puis importe-la dans le Studio d’analyse.",
+        "Local transfer is unavailable. Download the transcript, then import it in the Analysis Studio.",
+      ));
+      return;
+    }
+    router.push(`/${lang}/studio-analyse`);
+  }
   function summary() {
     return `${t("BILAN LOCAL — extraits non interprétés, pas une synthèse IA", "LOCAL REVIEW — uninterpreted excerpts, not an AI summary")}\n${Math.floor(seconds / 60)} min ${seconds % 60}s · ${entriesRef.current.filter((e) => e.speaker !== "Dominique").length} ${t("questions/interventions", "questions/interventions")}\n\n${exportText(entriesRef.current)}\n\n${t("Notes éditoriales privées", "Private editorial notes")}: ${note}`;
   }
@@ -518,13 +567,26 @@ export function StudioDashboard({
         <div className="studio-live-panel" role="region" aria-label={t("Commandes vocales en direct", "Live voice commands")}>
           <header className="studio-live-header">
             <div className="studio-live-brand">DOMINIQUE SOUCY <span>/ STUDIO LIVE</span></div>
-            <div className="studio-live-on"><span aria-hidden="true" />ON AIR · {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</div>
+            <div
+              className={`studio-live-on${mode === "paused" || (!demo && connection !== "connected") ? " is-paused" : " is-broadcasting"}`}
+              role="status"
+              aria-label={mode === "paused" || (!demo && connection !== "connected") ? t("Séance suspendue", "Session suspended") : t("Séance active dans le navigateur", "Browser session active")}
+            >
+              <span aria-hidden="true" />
+              {mode === "paused" || (!demo && connection !== "connected") ? "PAUSED" : "ON AIR"}
+              <small> · {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</small>
+            </div>
           </header>
           <div className="studio-live-heading">
             <p>{t("CONTRÔLE VOCAL", "VOICE CONTROL")}</p>
             <h2>{t("MODE LIVE", "LIVE MODE")}</h2>
-            <span>{t("DIS LA COMMANDE À VOIX HAUTE", "SAY THE COMMAND OUT LOUD")}</span>
+            <span>{episodeMode
+              ? t("ÉPISODE 001 · DIS « FIN » SEUL POUR LA PROCHAINE QUESTION", "EPISODE 001 · SAY 'FIN' FOR THE NEXT QUESTION")
+              : t("DIS LA COMMANDE À VOIX HAUTE", "SAY THE COMMAND OUT LOUD")}</span>
           </div>
+          {episodeMode && <div className="studio-episode-banner">
+            {t("À QUOI SERT VRAIMENT LE SPORT ? · 3 JOURNALISTES · 1 QUESTION À LA FOIS", "WHAT IS SPORT REALLY FOR? · 3 JOURNALISTS · ONE QUESTION AT A TIME")}
+          </div>}
           <div className="studio-live-commands">
             {([
               { cmd: "open" as Command, title: t("OUVRIR LES QUESTIONS", "OPEN QUESTIONS"), cue: t("Maintenant, on passe aux questions", "Let's open the questions"), enabled: mode !== "questions" && mode !== "speaking" && (demo || connection === "connected") },
@@ -621,6 +683,32 @@ export function StudioDashboard({
         </span>
         <span className="studio-on-air-bulb" aria-hidden="true" />
       </div>
+      {mode === "ended" && !active && (
+        <section className="studio-finish-panel" aria-labelledby="studio-finish-title" role="region">
+          <span className="studio-finish-kicker">{t("SÉANCE TERMINÉE · PROCHAINE ÉTAPE", "SESSION ENDED · NEXT STEP")}</span>
+          <h2 id="studio-finish-title">{t("TON ENREGISTREMENT EST TERMINÉ. ET MAINTENANT?", "SESSION COMPLETE. WHAT'S NEXT?")}</h2>
+          <p>{entries.length
+            ? t(
+                `${entries.length} interventions textuelles disponibles dans cette page. Exporte-les avant de fermer l’onglet, ou transfère-les volontairement au Studio d’analyse IA.`,
+                `${entries.length} text entries available on this page. Export them before closing this tab, or explicitly transfer them to the AI Analysis Studio.`,
+              )
+            : t(
+                "Aucune transcription n’a été recueillie dans cette séance. Si tu as enregistré avec OBS ou une caméra, ouvre le Studio d’analyse IA pour importer ce fichier.",
+                "No transcript was captured in this session. If you recorded with OBS or a camera, open the AI Analysis Studio to import your file.",
+              )}</p>
+          <div className="studio-finish-actions">
+            <button type="button" onClick={() => saveFile("studio-transcription-complete.txt", exportText(entriesRef.current))}
+              disabled={!entries.length}>{t("1 · EXPORTER LA TRANSCRIPTION", "1 · EXPORT TRANSCRIPT")}</button>
+            <button type="button" className="studio-finish-next" onClick={goToAnalysis}>
+              {t("2 · PASSER À L’ANALYSE IA", "2 · OPEN AI ANALYSIS")}
+            </button>
+          </div>
+          <p className="studio-finish-warning">{t(
+            "Le Studio Live ne crée pas lui-même de vidéo OBS. ON AIR indique une séance active dans le navigateur, pas un enregistrement. Vérifie ton fichier caméra/OBS séparément. La transcription n’est pas sauvegardée automatiquement.",
+            "Studio Live does not record OBS video. ON AIR means the browser session is active, not that recording is underway. Check your camera/OBS file separately. Your transcript is not autosaved.",
+          )}</p>
+        </section>
+      )}
       <p className="studio-on-air-note">
         {t(
           "Voyant de la séance dans le navigateur — ne confirme ni diffusion publique ni enregistrement OBS.",
@@ -792,7 +880,7 @@ export function StudioDashboard({
           <p className="studio-kicker">
             {t("LES JOURNALISTES", "THE JOURNALISTS")} / 05
           </p>
-          {journalists.map((j, i) => (
+          {(episodeMode ? journalists.slice(0, 3) : journalists).map((j, i) => (
             <div
               key={j.name}
               className={`studio-journalist ${index === i && mode === "speaking" ? "is-speaking" : ""}`}
@@ -800,7 +888,7 @@ export function StudioDashboard({
               <span className="studio-journalist-number">0{i + 1}</span>
               <div>
                 <h3>{names[i]}</h3>
-                <p>{j.role[fr ? 0 : 1]}</p>
+                <p>{episodeMode ? episode001.roles[i] : j.role[fr ? 0 : 1]}</p>
               </div>
               <span className="studio-mic-state">
                 {index === i && busy ? "◉" : t("MUET", "MUTED")}
@@ -818,6 +906,21 @@ export function StudioDashboard({
       <div className="studio-lower">
         <section className="studio-settings">
           <h2>{t("Avant de prendre l’antenne.", "Before going on air.")}</h2>
+          <div className="studio-episode-setup">
+            <span>{t("PREMIER TOURNAGE / DOM SOUCY MEDIA", "FIRST SHOOT / DOM SOUCY MEDIA")}</span>
+            <strong>001 — À quoi sert vraiment le sport ?</strong>
+            <p>{t(
+              "Prépare 3 journalistes, l'ouverture, le questionnement et la règle « FIN ». Une fois la séance ON AIR, ouvre les questions. Il n'y aura aucune relance automatique : dis « fin » seul après chaque réponse.",
+              "Configure 3 journalists, the opening question and FIN gating. Once ON AIR, open the questions. No automatic follow-ups: say 'fin' after each answer."
+            )}</p>
+            <button type="button" disabled={active} onClick={prepareEpisode001} className="studio-episode-prepare">
+              {episodeMode ? t("✓ ÉPISODE 001 PRÉPARÉ", "✓ EPISODE 001 PREPARED") : t("PRÉPARER L’ÉPISODE 001", "PREPARE EPISODE 001")}
+            </button>
+            {episodeMode && <p className="studio-episode-caveat">{t(
+              "Trois rôles journalistiques distincts, mais une seule voix synthétique dans cette version. Le site ne déclenche pas ni n'enregistre OBS ou tes trois caméras.",
+              "Three distinct editorial roles, but one synthetic voice in this version. This site does not control or record OBS or your three cameras."
+            )}</p>}
+          </div>
           <label className="studio-check">
             <input
               type="checkbox"
@@ -954,7 +1057,7 @@ export function StudioDashboard({
             <summary>
               {t("PERSONNALISER LES JOURNALISTES", "CUSTOMIZE JOURNALISTS")}
             </summary>
-            {journalists.map((j, i) => (
+            {(episodeMode ? journalists.slice(0, 3) : journalists).map((j, i) => (
               <fieldset key={j.name}>
                 <legend>{j.role[fr ? 0 : 1]}</legend>
                 <label>
