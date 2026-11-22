@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { activeCamera, cameraKeys, edl, offsetFromClap, safeCutTime, sourceTime, timeCode, type Cut } from "../lib/analysis/multicam";
+import { activeCamera, cameraKeys, edl, proposeMulticamCuts, offsetFromClap, safeCutTime, sourceTime, timeCode, type Cut } from "../lib/analysis/multicam";
 
 test("clap calibration maps video clock to common audio timeline",()=>{
   const referenceClap=4.5;
@@ -38,4 +38,23 @@ test("export is an honest edit decision list, not an MP4",()=>{
   assert.equal(result.status,"PREVIEW_ONLY_NOT_RENDERED");
   assert.deepEqual(result.cuts.map(x=>x.atSeconds),[5,45]);
   assert.equal(result.sources.main,"Canon.MOV");
+});
+
+test("automatic starter edit uses all three cameras and preserves main shot",()=>{
+ const cuts=proposeMulticamCuts({start:15,end:75,available:["main","vertical","secondary"]});
+ assert.ok(cuts.length>=5);
+ assert.equal(cuts[0].at,15);
+ assert.equal(cuts[0].camera,"main");
+ assert.ok(cuts.some(c=>c.camera==="vertical"));
+ assert.ok(cuts.some(c=>c.camera==="secondary"));
+ assert.ok(cuts.every(c=>c.at>=15&&c.at<75));
+ assert.equal(activeCamera(cuts,16,"secondary"),"main");
+});
+test("starter edit supports one camera and short clips",()=>{
+ const single=proposeMulticamCuts({start:10,end:35,available:["vertical"]});
+ assert.equal(single.length,1);
+ assert.equal(single[0].camera,"vertical");
+ const short=proposeMulticamCuts({start:0,end:8,available:["main","vertical"]});
+ assert.equal(short.length,1);
+ assert.equal(proposeMulticamCuts({start:20,end:20,available:["main"]}).length,0);
 });
