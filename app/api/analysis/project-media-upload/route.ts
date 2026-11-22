@@ -41,5 +41,16 @@ export async function POST(request:Request){
       onUploadCompleted:async()=>{},
     });
     return json(result);
-  }catch{return json({error:"UPLOAD_FAILED"},400)}
+  }catch(e){
+    const message=e instanceof Error?e.message:"UNKNOWN";
+    // Never expose upload credentials or private URLs in API responses.
+    const code=/UNAUTHORIZED|ORIGIN_DENIED/.test(message)?"UNAUTHORIZED":
+      /INVALID_PATH/.test(message)?"INVALID_MEDIA_PATH":
+      /UPLOAD_LIMIT/.test(message)?"UPLOAD_RATE_LIMIT":
+      /size|large/i.test(message)?"MEDIA_TOO_LARGE":
+      /content.type|mime/i.test(message)?"INVALID_MEDIA_TYPE":
+      "BLOB_UPLOAD_REJECTED";
+    console.error("[studio-media-upload] request rejected",code);
+    return json({error:code},code==="UNAUTHORIZED"?401:code==="UPLOAD_RATE_LIMIT"?429:400);
+  }
 }
