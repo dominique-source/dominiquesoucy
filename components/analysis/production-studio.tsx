@@ -9,7 +9,7 @@ import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
 import { StudioBackdropPicker } from "./studio-backdrop-picker";
 import { CapsuleWorkshop } from "./capsule-workshop";
-import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
+import { freshProject, projectSchema, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
 
 const names:Record<SourceKey,string>={audio:"AUDIO ORIGINAL",enhanced:"AUDIO FINAL OPTIMISÉ",main:"CANON · PLAN PRINCIPAL",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
