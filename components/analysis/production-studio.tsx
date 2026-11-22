@@ -6,6 +6,7 @@ import { capsuleById } from "@/lib/analysis/catalog";
 import { MultiCamEditor } from "./multicam-editor";
 import { EpisodeDashboard, type EpisodeRow } from "./episode-dashboard";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
+import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
 import { CapsuleWorkshop } from "./capsule-workshop";
 import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
@@ -500,6 +501,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}
       format={project.format} onFormatChange={format=>modify({format})}
       capsule={project.capsules.find(c=>c.id===project.selectedCapsuleId)}
+      selectedBackgroundUrl={resolveBackdrop(project.studioBackdrop,project.id,[project.name,project.transcript,project.capsules.find(c=>c.id===project.selectedCapsuleId)?.title||""].join(" ")).file}
       onProceedToCapsules={()=>{
         if(!project.capsules.length){
           const id=crypto.randomUUID();
