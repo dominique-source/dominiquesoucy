@@ -5,6 +5,7 @@ export type Callbacks = {
   connection: (status: string) => void;
   utterance: () => void;
   userSpeaking?: () => void;
+  remoteAudio?: (stream: MediaStream) => void;
 };
 export class RealtimeStudio {
   private pc?: RTCPeerConnection;
@@ -28,6 +29,7 @@ export class RealtimeStudio {
       audio.muted = true;
       if (sink && "setSinkId" in audio) await audio.setSinkId(sink);
       pc.ontrack = (e) => {
+        this.callbacks.remoteAudio?.(e.streams[0]);
         audio.srcObject = e.streams[0];
         audio.play().catch(() => this.callbacks.connection("audio-blocked"));
       };
