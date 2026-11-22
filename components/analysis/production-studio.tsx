@@ -5,6 +5,7 @@ import Link from "next/link";
 import { capsuleById } from "@/lib/analysis/catalog";
 import { MultiCamEditor } from "./multicam-editor";
 import { EpisodeDashboard, type EpisodeRow } from "./episode-dashboard";
+import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { CapsuleWorkshop } from "./capsule-workshop";
 import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
@@ -471,7 +472,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
               modify({capsules:[...project.capsules,{
                 id,title:`Question ${i+1}`,start:0,end:0,format:project.format,
                 style:"conversation" as const,caption:q.answerExcerpt.slice(0,500),bubble:q.question,
-                background:"dark" as const,textPosition:"bottom" as const,status:"draft" as const,
+                background:"dark" as const,keying:{...defaultChroma},textPosition:"bottom" as const,status:"draft" as const,
               }].slice(0,40),selectedCapsuleId:id,stage:"editing"});
               document.getElementById("studio-capsule-workshop")?.scrollIntoView({behavior:"smooth",block:"start"});
             }}>{fr?"UTILISER CETTE BULLE DANS UNE CAPSULE":"USE THIS BUBBLE IN A CAPSULE"}</button>
@@ -508,7 +509,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
             format:project.format,style:"conversation",
             caption:project.analysis?.moments?.[0]?.excerpt?.slice(0,500)||"",
             bubble:project.analysis?.moments?.[0]?.title?.slice(0,160)||"",
-            background:"dark",textPosition:"bottom",status:"draft",
+            background:"dark",keying:{...defaultChroma},textPosition:"bottom",status:"draft",
           }]});
         }else modify({stage:"editing"});
       }}

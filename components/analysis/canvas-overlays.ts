@@ -1,6 +1,8 @@
 import type { StudioProject } from "@/lib/analysis/project";
+import { keyPixels } from "@/lib/analysis/chroma-key";
 type Capsule=StudioProject["capsules"][number];
-export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition">;
+export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">;
+const matteCache=new WeakMap<CanvasRenderingContext2D,HTMLCanvasElement>();
 function lines(ctx:CanvasRenderingContext2D,text:string,maxWidth:number,limit=4){
  const words=text.replace(/\s+/g," ").trim().split(" ").filter(Boolean),out:string[]=[];
  let line="";
@@ -15,6 +17,53 @@ function lines(ctx:CanvasRenderingContext2D,text:string,maxWidth:number,limit=4)
 }
 function rounded(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,r:number){
  ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.closePath();
+}
+function drawSignatureWall(ctx:CanvasRenderingContext2D,w:number,h:number){
+  ctx.fillStyle="#070907";ctx.fillRect(0,0,w,h);
+  const glow=ctx.createRadialGradient(w*.55,h*.28,w*.02,w*.55,h*.28,w*.84);
+  glow.addColorStop(0,"#26321b");glow.addColorStop(1,"#070907");
+  ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
+  ctx.save();
+  ctx.globalAlpha=.28;
+  ctx.font=`900 ${Math.round(w*.034)}px Impact,Arial,sans-serif`;
+  ctx.textAlign="center";
+  for(let row=0;row<5;row++){
+    for(let col=0;col<4;col++){
+      const x=(col+.5)*w/4+(row%2?w/16:0);
+      const y=(row+.5)*h/5;
+      ctx.fillStyle=(row+col)%3===0?"#ccff00":"#b5bbaf";
+      ctx.fillText("DS / MEDIA",x,y);
+      ctx.fillStyle="#5f7050";ctx.fillRect(x-w*.045,y+8,w*.09,2);
+    }
+  }
+  ctx.restore();
+  ctx.fillStyle="#ccff00";ctx.fillRect(0,0,w*.012,h);
+  ctx.save();ctx.globalAlpha=.52;
+  ctx.strokeStyle="#a6cc33";ctx.lineWidth=Math.max(1,w*.001);
+  ctx.strokeRect(w*.025,h*.045,w*.95,h*.91);
+  ctx.restore();
+}
+function drawKeyedVideo(
+ ctx:CanvasRenderingContext2D,video:HTMLVideoElement,
+ x:number,y:number,areaW:number,areaH:number,zoom:number,
+ settings:NonNullable<CanvasVisual["keying"]>,
+){
+  const pixelWidth=Math.max(1,Math.min(640,Math.round(areaW)));
+  const pixelHeight=Math.max(1,Math.round(pixelWidth*areaH/areaW));
+  let source=matteCache.get(ctx);
+  if(!source){source=document.createElement("canvas");matteCache.set(ctx,source)}
+  if(source.width!==pixelWidth)source.width=pixelWidth;
+  if(source.height!==pixelHeight)source.height=pixelHeight;
+  const painter=source.getContext("2d",{willReadFrequently:true});
+  if(!painter)throw Error("CHROMA_CANVAS_UNAVAILABLE");
+  painter.clearRect(0,0,pixelWidth,pixelHeight);
+  const scale=Math.max(pixelWidth/video.videoWidth,pixelHeight/video.videoHeight)*zoom;
+  const w=video.videoWidth*scale,h=video.videoHeight*scale;
+  painter.drawImage(video,(pixelWidth-w)/2,(pixelHeight-h)/2,w,h);
+  const frame=painter.getImageData(0,0,pixelWidth,pixelHeight);
+  keyPixels(frame.data,settings);
+  painter.putImageData(frame,0,0);
+  ctx.drawImage(source,x,y,areaW,areaH);
 }
 export function drawStudioFrame(
  ctx:CanvasRenderingContext2D,video:HTMLVideoElement|undefined,
@@ -32,7 +81,11 @@ export function drawStudioFrame(
   const scale=Math.max(areaW/video.videoWidth,areaH/video.videoHeight)*zoom;
   const w=video.videoWidth*scale,h=video.videoHeight*scale;
   ctx.save();ctx.beginPath();ctx.rect(inset,inset,areaW,areaH);ctx.clip();
-  ctx.drawImage(video,inset+(areaW-w)/2,inset+(areaH-h)/2,w,h);
+  if(visual?.keying?.enabled){
+    drawKeyedVideo(ctx,video,inset,inset,areaW,areaH,zoom,visual.keying);
+  }else{
+    ctx.drawImage(video,inset+(areaW-w)/2,inset+(areaH-h)/2,w,h);
+  }
   ctx.restore();
  }
  if(!visual)return;

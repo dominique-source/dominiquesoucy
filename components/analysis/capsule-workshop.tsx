@@ -1,5 +1,6 @@
 "use client";
 import { episodeCode, type StudioProject } from "@/lib/analysis/project";
+import { defaultChroma } from "@/lib/analysis/chroma-key";
 type Capsule=StudioProject["capsules"][number];
 type EventKind=StudioProject["events"][number]["type"];
 type EventStatus=StudioProject["events"][number]["status"];
@@ -10,7 +11,7 @@ const variants:Record<Capsule["style"],string>={
 };
 const backdrops:Record<Capsule["background"],string>={
  original:"VIDÉO PLEIN ÉCRAN",dark:"STUDIO NOIR",lime:"FOND LIME",
- gradient:"DÉGRADÉ NOIR / LIME",
+ gradient:"DÉGRADÉ NOIR / LIME",signature:"MUR SIGNATURE DOM SOUCY",
 };
 export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
  lang:"fr"|"en";project:StudioProject;
@@ -31,7 +32,7 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
    id,title:`Capsule ${String(capsules.length+1).padStart(2,"0")}`,
    start:project.timeline.clipStart,end:project.timeline.clipEnd,
    format:project.format,style:"classic",caption:"",bubble:"",
-   background:"original",textPosition:"bottom",status:"draft",
+   background:"original",keying:{...defaultChroma},textPosition:"bottom",status:"draft",
   };
   onChange({capsules:[...capsules,draft],selectedCapsuleId:id,stage:"editing"});
  }
@@ -47,7 +48,7 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
    style:m.model_id===11?"editorial":m.model_id===4?"quote":"conversation",
    caption:m.excerpt.slice(0,500),
    bubble:m.model_id===1?"QUESTION DU JOURNALISTE":m.title.slice(0,80),
-   background:"dark",textPosition:"bottom",status:"draft",
+   background:"dark",keying:{...defaultChroma},textPosition:"bottom",status:"draft",
   }));
   onChange({capsules:[...capsules,...newDrafts],
     selectedCapsuleId:newDrafts[0].id,stage:"editing"});
@@ -106,6 +107,50 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
      <label>{fr?"POSITION DES TEXTES":"TEXT POSITION"}<select value={chosen.textPosition} onChange={e=>change(chosen.id,{textPosition:e.target.value as Capsule["textPosition"]})}>
        <option value="bottom">{fr?"EN BAS":"BOTTOM"}</option><option value="center">{fr?"AU CENTRE":"CENTER"}</option><option value="top">{fr?"EN HAUT":"TOP"}</option></select></label>
     </div>
+    <div className="studio-keying-controls">
+      <div className="studio-keying-heading">
+        <strong>{fr?"08 · DÉTOURAGE ET DÉCOR":"08 · BACKGROUND REMOVAL & SET"}</strong>
+        <span>{fr?"CHROMA KEY · BÊTA":"CHROMA KEY · BETA"}</span>
+      </div>
+      <p>{fr
+        ?"Supprime la couleur turquoise du mur, conserve le sujet à l’avant-plan et affiche le mur signature DOM SOUCY MEDIA derrière toi. Ce traitement s’applique à chaque caméra pendant l’export."
+        :"Remove the turquoise wall while keeping the presenter and show the DOM SOUCY MEDIA branded wall behind every camera shot during export."}</p>
+      <label className="studio-keying-toggle">
+        <input type="checkbox" checked={chosen.keying.enabled} onChange={e=>{
+          change(chosen.id,{keying:{...chosen.keying,enabled:e.target.checked},
+            background:e.target.checked?"signature":chosen.background});
+        }}/>
+        {fr?"DÉTOURER LE MUR TURQUOISE":"REMOVE TURQUOISE BACKGROUND"}
+      </label>
+      {chosen.keying.enabled&&<>
+        <div className="studio-keying-control-grid">
+          <label>{fr?"COULEUR À SUPPRIMER":"KEY COLOR"}
+            <input type="color" value={chosen.keying.color} onChange={e=>change(chosen.id,{keying:{...chosen.keying,color:e.target.value}})}/>
+          </label>
+          <label>{fr?"TOLÉRANCE DE COULEUR":"COLOR TOLERANCE"}
+            <input type="range" min={0.03} max={0.45} step={0.01} value={chosen.keying.tolerance}
+              onChange={e=>change(chosen.id,{keying:{...chosen.keying,tolerance:Number(e.target.value)}})}/>
+            <span>{Math.round(chosen.keying.tolerance*100)}%</span>
+          </label>
+          <label>{fr?"DOUCEUR DES CONTOURS":"EDGE SOFTNESS"}
+            <input type="range" min={0.01} max={0.35} step={0.01} value={chosen.keying.softness}
+              onChange={e=>change(chosen.id,{keying:{...chosen.keying,softness:Number(e.target.value)}})}/>
+            <span>{Math.round(chosen.keying.softness*100)}%</span>
+          </label>
+          <label>{fr?"REFLETS TURQUOISE":"COLOR SPILL"}
+            <input type="range" min={0} max={1} step={0.05} value={chosen.keying.spill}
+              onChange={e=>change(chosen.id,{keying:{...chosen.keying,spill:Number(e.target.value)}})}/>
+            <span>{Math.round(chosen.keying.spill*100)}%</span>
+          </label>
+        </div>
+        <button type="button" className="analysis-secondary" onClick={()=>change(chosen.id,{
+          keying:{...defaultChroma,enabled:true},background:"signature",
+        })}>{fr?"RÉINITIALISER LE DÉTOURAGE":"RESET CHROMA SETTINGS"}</button>
+      </>}
+      <p className="analysis-note">{fr
+        ?"Prévisualise le résultat avec une vraie image vidéo dans la section export plus bas. Si la peau, les vêtements ou les cheveux disparaissent, diminue la tolérance; ce procédé par couleur n’est pas une segmentation IA. Sur une lumière inégale, le rendu peut nécessiter un traitement professionnel."
+        :"Preview your actual camera frame in the export panel below. Lower tolerance if clothing or skin disappears. Color keying is not AI person segmentation and uneven lighting may require professional processing."}</p>
+    </div>
     <label>{fr?"TEXTE ANIMÉ / CITATION":"ANIMATED TEXT / QUOTE"}<textarea rows={3} maxLength={500}
       value={chosen.caption} onChange={e=>change(chosen.id,{caption:e.target.value})}/></label>
     <label>{fr?"BULLE DE CONVERSATION":"CONVERSATION BUBBLE"}<textarea rows={2} maxLength={500}
@@ -117,8 +162,8 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
      <span>● {fr?"APERÇU GRAPHIQUE — SANS VIDÉO":"GRAPHIC PREVIEW — NO VIDEO"}</span>
     </div>
     <p className="analysis-note">{fr
-      ?"Les textes bougent visuellement pendant l’export, mais ne sont pas encore synchronisés mot à mot avec les paroles. Le détourage de personne et le remplacement du décor filmé nécessitent encore un moteur de segmentation."
-      :"Text animates visually during export but is not word-synced. Human segmentation and replacing the filmed background still require a segmentation engine."}</p>
+      ?"Les textes bougent visuellement pendant l’export, mais ne sont pas encore synchronisés mot à mot avec les paroles. Le détourage par couleur est disponible en bêta pour un mur turquoise uniforme; une segmentation IA restera nécessaire pour les décors difficiles."
+      :"Text animates visually during export but is not word-synced. Turquoise color keying is available in beta for a uniform wall; challenging scenes still require AI segmentation."}</p>
     <button type="button" className="analysis-secondary" onClick={()=>remove(chosen.id)}>
       {fr?"RETIRER CETTE CAPSULE":"REMOVE CAPSULE"}</button>
    </div>}

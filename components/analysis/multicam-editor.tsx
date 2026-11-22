@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderLocalMp4 } from "./local-mp4";
+import { drawStudioFrame } from "./canvas-overlays";
 import type { StudioProject } from "@/lib/analysis/project";
 import { alignCameraAudio, type CameraSyncResult } from "@/lib/analysis/browser-audio-fingerprint";
 import {
@@ -43,6 +44,9 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [playing,setPlaying] = useState(false);
   const [cuts,setCuts] = useState<Cut[]>(savedTimeline?.cuts || []);
   const [suggestedCuts,setSuggestedCuts]=useState<Cut[]|null>(null);
+  const [decorPreview,setDecorPreview]=useState(false);
+  const [decorCamera,setDecorCamera]=useState<CameraKey>("main");
+  const decorCanvas=useRef<HTMLCanvasElement|null>(null);
   const [error,setError] = useState("");
   const [success,setSuccess] = useState("");
   const [rendering,setRendering]=useState(false);
@@ -210,6 +214,32 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       ? "Alignement manuel appliqué à partir des repères de clap. Vérifie les lèvres et le son à plusieurs endroits de la conférence."
       : "Manual alignment applied from clap markers. Verify lips and sound at several points.");
   }
+  useEffect(()=>{
+    if(!decorPreview||!capsule)return;
+    let raf=0;let last=0;
+    const paint=(now:number)=>{
+      if(now-last>=95){
+        last=now;
+        const canvas=decorCanvas.current;
+        const ctx=canvas?.getContext("2d",{alpha:false});
+        const camera=videos.includes(decorCamera)?decorCamera:videos[0];
+        const el=elements.current[camera] as HTMLVideoElement|undefined;
+        if(ctx&&canvas){
+          try{
+            drawStudioFrame(ctx,el,canvas.width,canvas.height,0,0,{
+              style:capsule.style,background:capsule.background,caption:"",
+              bubble:"",textPosition:capsule.textPosition,keying:capsule.keying,
+            });
+          }catch{setDecorPreview(false);setError(fr?
+            "Prévisualisation indisponible : la vidéo ne permet pas la lecture de pixels locale.":
+            "Preview unavailable: this video cannot be read into a local canvas.");return}
+        }
+      }
+      raf=requestAnimationFrame(paint);
+    };
+    raf=requestAnimationFrame(paint);
+    return ()=>cancelAnimationFrame(raf);
+  },[decorPreview,decorCamera,capsule,fr,videos.join("|")]);
   function proposeEdit(){
     pauseAll();
     const from=capsule?capsule.start:clipStart;
@@ -259,7 +289,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       const blob=await renderLocalMp4({
         nodes:elements.current,offsets,audioSource:realAudioSource,finalAudioSource:realFinalAudioSource,
         cuts,fallback:realCamera,duration,start:renderStart,end:renderEnd,format:capsule?.format||format||"16:9",
-        visual:capsule?{style:capsule.style,background:capsule.background,caption:capsule.caption,bubble:capsule.bubble,textPosition:capsule.textPosition}:undefined,
+        visual:capsule?{style:capsule.style,background:capsule.background,caption:capsule.caption,bubble:capsule.bubble,textPosition:capsule.textPosition,keying:capsule.keying}:undefined,
         onProgress:setRenderPercent,
       });
       const url=URL.createObjectURL(blob);
@@ -553,6 +583,27 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       </div>
       {capsule&&<p className="analysis-multi-highlight"><strong>{fr?"CAPSULE SÉLECTIONNÉE":"SELECTED CAPSULE"} : {capsule.title}</strong>
         <br/>{fr?"L’export utilise les timecodes, les textes, les bulles et le format propres à cette capsule.":"Export uses this capsule’s times, graphics, bubbles and format."}</p>}
+      {capsule&&<div className="studio-decor-preview-panel">
+        <strong>{fr?"DÉTOURAGE ET DÉCOR · PRÉVISUALISATION":"KEYING & BACKDROP · LIVE PREVIEW"}</strong>
+        <p>{fr
+          ?"Les réglages de l’atelier des capsules sont appliqués à cet aperçu réel et au MP4. Teste séparément chaque caméra avant le rendu final."
+          :"Capsule settings are applied to this actual footage preview and to the MP4. Check each camera before final export."}</p>
+        <div className="studio-decor-preview-actions">
+          <label>{fr?"CAMÉRA À VÉRIFIER":"CAMERA TO PREVIEW"}
+            <select value={videos.includes(decorCamera)?decorCamera:videos[0]} onChange={e=>setDecorCamera(e.target.value as CameraKey)}>
+              {videos.map(k=><option key={k} value={k}>{labels[k]}</option>)}
+            </select>
+          </label>
+          <button type="button" className="analysis-secondary" onClick={()=>setDecorPreview(v=>!v)}>
+            {decorPreview?(fr?"FERMER L’APERÇU":"CLOSE PREVIEW"):(fr?"▶ PRÉVISUALISER LE DÉTOURAGE":"▶ PREVIEW BACKGROUND REMOVAL")}
+          </button>
+        </div>
+        {decorPreview&&<canvas ref={decorCanvas} width={640} height={360} className="studio-decor-preview-canvas"
+          aria-label={fr?"Aperçu du détourage sur la vidéo réelle":"Live camera chroma-key preview"}/>}
+        {capsule.keying.enabled&&<p className="analysis-note">{fr
+          ?"Ce détourage par couleur peut supprimer des objets turquoises, y compris des vêtements. Vérifie les cheveux et les mains sur les trois angles; le rendu expérimental s’effectue localement dans ton navigateur."
+          :"Color keying may remove turquoise clothing as well. Check hair and hands on all camera angles; beta rendering happens in your browser."}</p>}
+      </div>}
       <div className="analysis-multi-actions">
         <label className="analysis-multi-render-format">{fr?"FORMAT DU CLIP":"CLIP FORMAT"}
           <select value={format||"16:9"} onChange={e=>onFormatChange?.(e.target.value as "16:9"|"9:16"|"1:1")}>
