@@ -126,8 +126,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(project),
         });
         if(!r.ok){
-          const data=await r.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string};
-          throw Error(`${r.status}:${data.error||"SAVE_FAILED"}`);
+          const data=await r.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string;fields?:string[]};
+          throw Error(`${r.status}:${data.error||"SAVE_FAILED"}${data.fields?.length?" ["+data.fields.join(", ")+"]":""}`);
         }
         const result=await r.json() as {updatedAt:number};
         if(ticket!==revision.current)return;
