@@ -34,6 +34,7 @@ export const pilotThumbnails: readonly PilotThumbnail[] = [
     },
     videoUrl: pilotVideo.videoUrl,
     episodeLabel,
+    subtitle: { fr: "Remettre en doute nos certitudes sur le sport.", en: "Questioning what we think we know about sport." },
   },
   {
     id: "pilot-manifesto",
@@ -48,6 +49,7 @@ export const pilotThumbnails: readonly PilotThumbnail[] = [
     },
     videoUrl: pilotVideo.videoUrl,
     episodeLabel,
+    subtitle: { fr: "Ce que le sport révèle vraiment de nous.", en: "What sport really reveals about us." },
   },
   {
     id: "pilot-confrontation",
@@ -60,6 +62,7 @@ export const pilotThumbnails: readonly PilotThumbnail[] = [
     },
     videoUrl: pilotVideo.videoUrl,
     episodeLabel,
+    subtitle: { fr: "Confronter les idées, les mythes et la réalité du sport.", en: "Confronting ideas, myths, and the reality of sport." },
   },
 ];
 
