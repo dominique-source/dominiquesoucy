@@ -373,7 +373,13 @@ export function StudioDashboard({
     const name = e instanceof Error ? e.name : "";
     const message = e instanceof Error ? e.message : "";
     setError(
-      message === "RECORDING_UNAVAILABLE"
+      message.includes("PROVIDER_INVALID_KEY")
+        ? t("OpenAI refuse la clé API (401/403). Vérifie qu’elle appartient au bon projet et qu’elle autorise Realtime.", "OpenAI rejected the API key (401/403). Check the project and Realtime access.")
+        : message.includes("PROVIDER_QUOTA")
+          ? t("OpenAI refuse la connexion : limite de facturation ou de requêtes. Vérifie Billing, les crédits et les limites API.", "OpenAI connection refused: billing or rate limit. Check Billing, credits and API limits.")
+        : message.includes("PROVIDER_BAD_REQUEST")
+          ? t("OpenAI refuse les paramètres Realtime. Le Studio doit ajuster sa configuration vocale.", "OpenAI rejected the Realtime session configuration.")
+        : message === "RECORDING_UNAVAILABLE"
         ? t("Impossible de lancer l’enregistrement audio. Vérifie les permissions et essaie Chrome ou Safari récent.", "Unable to start audio recording. Check permissions and try a recent version of Chrome or Safari.")
         : message.includes("STUDIO_HTTP_401_")
         ? t("Ta session a expiré. Recharge la page et reconnecte-toi.", "Your session expired. Reload and sign in again.")
@@ -721,6 +727,12 @@ export function StudioDashboard({
               {t("TERMINER", "END SESSION")}
             </button>
           </div>
+          {error && (
+            <div className="studio-start-error" role="alert">
+              <strong>{t("LA SÉANCE N’A PAS DÉMARRÉ", "SESSION DID NOT START")}</strong>
+              <p>{error}</p>
+            </div>
+          )}
           <div className="studio-recording-panel">
             <strong>{recording ? t("● ENREGISTREMENT AUDIO EN COURS", "● AUDIO RECORDING IN PROGRESS") : recordedFile ? t("Enregistrement prêt à télécharger", "Recording ready to download") : t("Enregistrement audio local", "Local audio recording")}</strong>
             <p>{t("Ta voix et celle des journalistes IA seront enregistrées ensemble, dans le navigateur. Aucun fichier n’est envoyé au serveur. Télécharge-le avant de fermer cette page.", "Your voice and AI journalists are recorded together in the browser. No file is uploaded. Download it before closing this page.")}</p>
@@ -728,9 +740,6 @@ export function StudioDashboard({
               {t("TÉLÉCHARGER L’AUDIO", "DOWNLOAD AUDIO")} {recordedFile ? `(${(recordedFile.blob.size / 1048576).toFixed(1)} Mo)` : ""}
             </button>
           </div>
-          <p className="studio-error" role="alert">
-            {error}
-          </p>
           <div className="studio-status">
             <span>
               {t("Connexion IA", "AI connection")} <strong>{connection}</strong>
