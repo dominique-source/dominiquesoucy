@@ -795,3 +795,10 @@
 .studio-dashboard button.studio-episode-prepare { background: #ccff00; color: #080808; border-color: #ccff00; font-size: 13px; font-weight: 900; padding: 15px 24px; }
 .studio-episode-setup > .studio-episode-caveat { color: #c9c8a8; font-size: 11px; }
 .studio-episode-banner { border: 1px solid #ccff00; background: #192109; color: #ccff00; text-align: center; padding: 11px; font-weight: 800; font-size: clamp(10px, 1.2vw, 15px); letter-spacing: .08em; }
+
+.studio-recorder-indicator{border:1px solid #617a39;background:#121b10;padding:12px 17px;border-radius:8px;margin:15px 0;color:#ccff00;font-weight:850;font-size:13px;letter-spacing:.04em}
+.studio-recorder-indicator p{color:#ffa69c;font-size:12px}
+.studio-recover-audio{display:block;width:100%;border:1px solid #ccff00;color:#ccff00;padding:15px;background:#121b10;border-radius:8px;font-weight:900;margin:10px 0}
+.studio-audio-recovery{border:1px solid #80a246;border-radius:10px;padding:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#18240f;margin:18px 0}
+.studio-audio-recovery>strong{color:#ccff00;flex-basis:100%}
+.studio-audio-recovery button{border:1px solid #ccff00;background:#ccff00;color:#0a0a0a;padding:11px;border-radius:7px;font-weight:900}

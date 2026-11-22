@@ -59,7 +59,15 @@ export const timedWordSchema=z.object({
  start:z.number().finite().min(0).max(7200),
  end:z.number().finite().min(0).max(7200),
 }).strict();
+export const reconstructedQuestionSchema=z.object({
+  id:z.string().uuid(),
+  question:z.string().min(1).max(300),
+  journalist:z.number().int().min(0).max(2),
+  answerExcerpt:z.string().min(1).max(330),
+  label:z.literal("QUESTION_RECONSTRUITE_NON_ORIGINALE"),
+}).strict();
 export const projectSchema = z.object({
+  reconstructedQuestions:z.array(reconstructedQuestionSchema).max(12).default([]),
   timedWords:z.array(timedWordSchema).max(6000).default([]),
   season:z.number().int().min(1).max(999).default(1),
   episode:z.number().int().min(1).max(999).default(1),
@@ -94,7 +102,7 @@ export function validProjectMedia(project:StudioProject) {
   return true;
 }
 export function freshProject():StudioProject {
-  return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",events:[],capsules:[],selectedCapsuleId:"",timedWords:[],transcript:"",
+  return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",events:[],capsules:[],selectedCapsuleId:"",reconstructedQuestions:[],timedWords:[],transcript:"",
     analysis:null,selectedMoment:0,format:"9:16",media:{},
     timeline:{duration:300,clipStart:0,clipEnd:60,audioSource:"audio",finalAudioSource:"audio",visualClaps:{main:null,vertical:null,secondary:null},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},
       claps:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},cuts:[]}};

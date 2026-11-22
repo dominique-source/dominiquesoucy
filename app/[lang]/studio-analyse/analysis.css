@@ -283,3 +283,15 @@
 .studio-recovery-available>strong{color:#f2d58b;font-size:12px}
 .studio-recovery-available>p{color:#f4f4ef}
 @media(max-width:640px){.studio-recovery-actions>*{width:100%!important}}
+
+.studio-reconstructed{display:grid;gap:14px;background:#162013;border:1px solid #637e3f;border-radius:13px;padding:19px;margin:25px 0}
+.studio-reconstructed>h3{color:#ccff00;font:900 italic clamp(22px,3vw,35px)/1 "Barlow Condensed",Impact,sans-serif;margin:0}
+.studio-reconstructed>p{color:#dae0d2;font-size:13px;line-height:1.55;margin:0}
+.studio-reconstructed>button{justify-self:start}
+.studio-reconstructed-list{display:grid;gap:12px}
+.studio-reconstructed-list>div{display:grid;gap:11px;border:1px solid #4d6432;border-radius:8px;padding:15px;background:#10180d}
+.studio-reconstructed-list strong{font-size:12px;color:#ccff00}
+.studio-reconstructed-list label{display:grid;gap:8px;color:#f4f4ef;font-size:12px}
+.studio-reconstructed-list textarea{min-height:75px;background:#0b110a;border:1px solid #647f3b;border-radius:6px;color:#f4f4ef;padding:11px;width:100%}
+.studio-reconstructed-list small{line-height:1.5;color:#c6d3ba}
+.studio-reconstructed-list button{justify-self:start}
