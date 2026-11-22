@@ -5,7 +5,7 @@ import type { StudioProject } from "@/lib/analysis/project";
 import { alignCameraAudio, type CameraSyncResult } from "@/lib/analysis/browser-audio-fingerprint";
 import {
   activeCamera, cameraKeys, edl, labels, offsetFromClap,
-  safeCutTime, sourceTime, timeCode,
+  safeCutTime, sourceTime, timeCode, proposeMulticamCuts,
   type CameraKey, type Cut, type SourceFiles, type SourceKey
 } from "@/lib/analysis/multicam";
 
@@ -42,6 +42,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [playhead,setPlayhead] = useState(0);
   const [playing,setPlaying] = useState(false);
   const [cuts,setCuts] = useState<Cut[]>(savedTimeline?.cuts || []);
+  const [suggestedCuts,setSuggestedCuts]=useState<Cut[]|null>(null);
   const [error,setError] = useState("");
   const [success,setSuccess] = useState("");
   const [rendering,setRendering]=useState(false);
@@ -208,6 +209,34 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     setSuccess(fr
       ? "Alignement manuel appliqué à partir des repères de clap. Vérifie les lèvres et le son à plusieurs endroits de la conférence."
       : "Manual alignment applied from clap markers. Verify lips and sound at several points.");
+  }
+  function proposeEdit(){
+    pauseAll();
+    const from=capsule?capsule.start:clipStart;
+    const to=capsule?capsule.end:clipEnd;
+    if(!Number.isFinite(from)||!Number.isFinite(to)||to-from<1||to>duration){
+      setError(fr?"Définis le début et la fin de la capsule avant de générer les angles.":
+        "Set valid capsule start and end times before generating an edit.");
+      return;
+    }
+    const plan=proposeMulticamCuts({start:from,end:to,available:videos,primary:videos.includes("main")?"main":realCamera});
+    setSuggestedCuts(plan);setError("");
+    setSuccess(fr?
+      `Proposition prête : ${plan.length} changements d’angle à valider. Le MP4 n'est pas encore modifié.`:
+      `Draft ready: ${plan.length} camera decisions to review. Your MP4 is not changed yet.`);
+  }
+  function applySuggestedEdit(){
+    if(!suggestedCuts?.length)return;
+    const from=capsule?capsule.start:clipStart;
+    const to=capsule?capsule.end:clipEnd;
+    const retained=cuts.filter(c=>c.at<from||c.at>=to);
+    const next=[...retained,...suggestedCuts].sort((a,b)=>a.at-b.at);
+    setCuts(next);
+    setSuggestedCuts(null);
+    pauseAll();seekAll(from);
+    setSuccess(fr?
+      "Montage multicaméra enregistré dans le projet. Prévisualise les angles, puis exporte le MP4.":
+      "Multicam edit saved to project. Preview angles, then export MP4.");
   }
   function markCut(){
     if(!realCamera)return;
@@ -477,6 +506,33 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     <div className="analysis-multi-edit">
       <strong>{fr?"07 · PREMIER CLIP DE MONTAGE":"07 · FIRST VIDEO CLIP EDIT"}</strong>
       <p>{fr?"Clique « Couper ici » sur une caméra pour la choisir à la position courante. Le plan est mémorisé dans cet onglet et téléchargeable en JSON, sans fabriquer de vidéo.":"Click Cut Here on a camera to select it at the current position. This edit plan is kept in this tab and can be exported as JSON, not yet a video."}</p>
+      <div className="studio-auto-edit-panel">
+        <strong>{fr?"MONTER LES 3 CAMÉRAS":"EDIT ALL 3 CAMERAS"}</strong>
+        <p>{fr?
+          "Crée une première proposition de changements d’angle avec les vidéos disponibles. La Canon reste majoritaire, et les autres angles ajoutent du rythme. Le résultat n’analyse pas encore automatiquement les expressions ou les gestes.":
+          "Generate a first camera-switching edit from available sources. The main camera remains dominant while alternatives add pacing. This is not yet AI-driven gesture or emotion analysis."}</p>
+        <button type="button" className="analysis-primary studio-auto-edit-cta" disabled={videos.length===0||rendering} onClick={proposeEdit}>
+          {fr?"✦ PROPOSER UN MONTAGE AVEC LES 3 CAMÉRAS":"✦ SUGGEST A MULTICAMERA EDIT"}
+        </button>
+        {suggestedCuts&&<div className="studio-auto-edit-proposal">
+          <strong>{fr?"PROPOSITION À VALIDER":"EDIT SUGGESTION — REVIEW FIRST"}</strong>
+          <p>{suggestedCuts.length} {fr?"changements d’angle proposés pour cette capsule":"suggested camera decisions for this clip"}</p>
+          <div className="studio-auto-edit-shotlist">
+            {suggestedCuts.map(c=><span key={c.id}><b>{timeCode(c.at)}</b> {labels[c.camera]}</span>)}
+          </div>
+          <div className="studio-auto-edit-actions">
+            <button type="button" className="analysis-primary" onClick={applySuggestedEdit}>
+              {fr?"✓ APPLIQUER LES ANGLES AU MONTAGE":"✓ APPLY CAMERA CUTS"}
+            </button>
+            <button type="button" className="analysis-secondary" onClick={()=>setSuggestedCuts(null)}>
+              {fr?"ANNULER":"CANCEL"}
+            </button>
+          </div>
+        </div>}
+        {cuts.length===0&&<p className="analysis-note">{fr?
+          "Aucun changement d’angle pour l’instant : sans plan de montage, le MP4 restera sur un seul angle.":
+          "No camera switches yet: without an edit plan, the MP4 stays on one camera."}</p>}
+      </div>
       <div className="analysis-multi-cuts">
         {cuts.length? cuts.map(c=><div key={c.id}><strong>{timeCode(c.at)}</strong><span>{labels[c.camera]}</span>
           <button type="button" onClick={()=>setCuts(prev=>prev.filter(x=>x.id!==c.id))}>{fr?"RETIRER":"REMOVE"}</button>
