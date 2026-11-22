@@ -361,3 +361,24 @@
 .studio-decor-preview-actions button{min-height:46px}
 .studio-decor-preview-canvas{width:100%;max-width:840px;aspect-ratio:16/9;object-fit:contain;background:#070907;border:1px solid #637e36;border-radius:9px;justify-self:center}
 @media(max-width:650px){.studio-keying-control-grid{grid-template-columns:1fr}.studio-decor-preview-actions>*{width:100%}}
+
+/* DOM SOUCY MEDIA original sport walls — selection and stable episode modes. */
+.studio-sport-wall-picker{display:grid;gap:16px;margin:16px 0 28px;padding:20px;border-radius:13px;border:2px solid #698e34;background:#121a0e}
+.studio-sport-wall-heading{display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap}
+.studio-sport-wall-heading strong{font:900 italic clamp(24px,3vw,38px)/1 "Barlow Condensed",Impact,sans-serif;color:#ccff00}
+.studio-sport-wall-heading p{color:#d0d9c5;font-size:13px;line-height:1.5;max-width:660px;margin:8px 0 0}
+.studio-sport-wall-heading>span{font-size:10px;font-weight:850;letter-spacing:.06em;color:#c2d3ab}
+.studio-sport-wall-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.studio-sport-wall-modes button{padding:13px 9px;border-radius:7px;background:#090c08;color:#d7e1cc;border:1px solid #688742;font-size:12px;font-weight:900}
+.studio-sport-wall-modes button.is-selected{background:#ccff00;color:#070907;border-color:#ccff00}
+.studio-sport-wall-current{margin:0;color:#d6e2c6;font-size:13px}
+.studio-sport-wall-current strong{color:#ccff00}
+.studio-sport-wall-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.studio-sport-wall-tile{display:grid;gap:9px;text-align:left;background:#090d08;color:#f4f4ef;border:2px solid #526b32;border-radius:10px;padding:7px;cursor:pointer;overflow:hidden}
+.studio-sport-wall-tile:hover,.studio-sport-wall-tile.is-current{border-color:#ccff00;background:#192311}
+.studio-sport-wall-image{width:100%;aspect-ratio:16/9;background:#20231d;overflow:hidden}
+.studio-sport-wall-image img{display:block;width:100%;height:100%;object-fit:cover}
+.studio-sport-wall-tile span{font-weight:900;font-size:13px;padding:3px 7px 7px}
+.studio-sport-wall-apply{justify-self:start;margin:2px 0}
+@media(max-width:780px){.studio-sport-wall-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.studio-sport-wall-picker{padding:12px}.studio-sport-wall-gallery{gap:7px}.studio-sport-wall-tile span{font-size:11px}.studio-sport-wall-modes button{font-size:10px;padding:11px 3px}}
