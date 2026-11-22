@@ -12,7 +12,7 @@ import {
 const initialOffsets: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, vertical:0, secondary:0 };
 const initialClaps: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, vertical:0, secondary:0 };
 
-type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; finalAudioSource:SourceKey; visualClaps:Record<CameraKey,number|null>; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
+type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; finalAudioSource:SourceKey; alignmentApproved?:boolean; visualClaps:Record<CameraKey,number|null>; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
 export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
@@ -30,7 +30,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [finalAudioSource,setFinalAudioSource]=useState<SourceKey>(savedTimeline?.finalAudioSource || "audio");
   const [visualClaps,setVisualClaps]=useState<Record<CameraKey,number|null>>(savedTimeline?.visualClaps || {main:null,vertical:null,secondary:null});
   const [visualAligned,setVisualAligned]=useState<{anchor:CameraKey;projectClap:number;offsets:Record<SourceKey,number>;count:number}|null>(null);
-  const [alignmentReviewed,setAlignmentReviewed]=useState(false);
+  const [alignmentReviewed,setAlignmentReviewed]=useState(savedTimeline?.alignmentApproved||false);
   const [expandedReview,setExpandedReview]=useState(true);
 
   const [selectedCamera, setSelectedCamera] = useState<CameraKey>("main");
@@ -63,7 +63,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   },[sources]);
   useEffect(()=>()=>Object.values(urls).forEach(url=>URL.revokeObjectURL(url)),[urls]);
   const playbackUrls={...remoteUrls,...urls};
-  const timeline={duration,clipStart,clipEnd,audioSource,finalAudioSource,visualClaps,offsets,claps,cuts};
+  const timeline={duration,clipStart,clipEnd,audioSource,finalAudioSource,alignmentApproved:alignmentReviewed,visualClaps,offsets,claps,cuts};
   const lastPersisted=useRef(JSON.stringify(savedTimeline||timeline));
   useEffect(()=>{
     if(!onTimelineChange)return;
@@ -71,7 +71,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     if(next===lastPersisted.current)return;
     lastPersisted.current=next;
     onTimelineChange(timeline);
-  },[duration,clipStart,clipEnd,audioSource,finalAudioSource,visualClaps,offsets,claps,cuts,onTimelineChange]);
+  },[duration,clipStart,clipEnd,audioSource,finalAudioSource,alignmentReviewed,visualClaps,offsets,claps,cuts,onTimelineChange]);
 
   const realAudioSource = availableAudio.includes(audioSource) ? audioSource : availableAudio[0];
   const realFinalAudioSource=availableAudio.includes(finalAudioSource)?finalAudioSource:(availableAudio.includes("enhanced")?"enhanced":realAudioSource);
