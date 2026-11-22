@@ -3,14 +3,13 @@ import type { CSSProperties } from "react";
 import { heroAtmosphere } from "@/lib/homepage-media";
 import Link from "next/link";
 import { dict, type Locale } from "@/lib/i18n";
-import { photograph, archiveLabel } from "@/lib/photography";
+import { photograph } from "@/lib/photography";
 import { CinematicCollage } from "@/components/cinematic-collage";
 
 /** The approved reference is composition only. All website photographs are originals. */
 export function CinematicHero({ lang }: { lang: Locale }) {
   const d = dict(lang);
   const portrait = photograph("02_portrait_chemise_bleue", lang);
-  const community = photograph("04_equipe_purathlete", lang);
   const archive = photograph("07_archive_rouge_et_or", lang);
   return (
     <section className="reference-home" aria-labelledby="reference-title">
@@ -61,18 +60,6 @@ export function CinematicHero({ lang }: { lang: Locale }) {
           <CinematicCollage lang={lang} />
           <span className="reference-stitches" aria-hidden="true" />
         </div>
-        <figure className="reference-sport-band">
-          <Image
-            src={community.src}
-            width={community.width}
-            height={community.height}
-            alt={community.alt}
-            preload
-            sizes="(max-width: 900px) 100vw, 75vw"
-          />
-          <div className="reference-lime-plane" aria-hidden="true" />
-          <figcaption>{archiveLabel(lang)}</figcaption>
-        </figure>
       </div>
       <aside
         className="reference-profile"
