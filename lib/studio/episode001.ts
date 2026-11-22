@@ -25,7 +25,7 @@ export const episode001 = {
 } as const;
 
 export function completedEpisodeTurn(text: string) {
-  // FIN can be spoken alone or as the final token at the end of a response.
+  // FIN must be a standalone command. Natural mentions of 'la fin' must not hand over.
   // No triggering on 'enfin', 'finalement', or mid-sentence references to FIN.
   return /(?:^|[\s.,!?;:])fin[.!?…\s]*$/i.test(text.trim());
 }
