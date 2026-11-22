@@ -35,19 +35,22 @@ export async function POST(request: Request) {
     return json({ error: "MEDIA_NOT_OWNED" }, 403);
   if (!(await limit(`transcribe:${user.key}`, 6, 3600).catch(() => false)))
     return json({ error: "RATE_LIMITED" }, 429);
+  let stage = "READ_PRIVATE_MEDIA";
   try {
     const blob = await getBlob(pathname, { access: "private", useCache: false });
     if (!blob || blob.statusCode !== 200 || !blob.stream)
       return json({ error: "MEDIA_NOT_FOUND" }, 404);
-    if (blob.blob.size <= 0 || blob.blob.size > MAX_MEDIA_BYTES)
+    if (blob.blob.size === null || blob.blob.size <= 0 || blob.blob.size > MAX_MEDIA_BYTES)
       return json({ error: "MEDIA_TOO_LARGE" }, 413);
     const file = new File([await new Response(blob.stream).arrayBuffer()],
       pathname.split("/").pop() || "session.mp4", { type: blob.blob.contentType || "application/octet-stream" });
+    // First pass: reliable, low-latency transcription. Diarization is a
+    // separate editorial enhancement, not required for the initial transcript.
+    stage = "OPENAI_TRANSCRIBE";
     const form = new FormData();
     form.set("file", file);
-    form.set("model", "gpt-4o-transcribe-diarize");
-    form.set("response_format", "diarized_json");
-    form.set("chunking_strategy", "auto");
+    form.set("model", "gpt-4o-mini-transcribe");
+    form.set("response_format", "json");
     form.set("language", lang);
     const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
@@ -55,7 +58,15 @@ export async function POST(request: Request) {
       body: form,
       signal: AbortSignal.timeout(105000),
     });
-    if (!response.ok) return json({ error: "TRANSCRIPTION_PROVIDER_FAILED" }, 502);
+    if (!response.ok) {
+      // Do not log provider response bodies: they may contain private content.
+      console.error("studio_transcription_provider_failure", { status: response.status });
+      return json({ error: response.status === 429 ? "AI_RATE_LIMITED" :
+        response.status === 401 || response.status === 403 ? "AI_AUTH_FAILED" :
+        response.status === 400 || response.status === 415 || response.status === 422 ?
+          "AUDIO_REJECTED" : "TRANSCRIPTION_PROVIDER_FAILED" }, response.status === 429 ? 429 : 502);
+    }
+    stage = "READ_TRANSCRIPT_RESPONSE";
     const data = await response.json();
     if (typeof data.text !== "string" || !data.text.trim())
       return json({ error: "TRANSCRIPTION_EMPTY" }, 502);
@@ -65,8 +76,12 @@ export async function POST(request: Request) {
     const transcript = data.text.slice(0, 26000);
     return json({ transcript, segments, truncated: data.text.length > 26000,
       notice: "PRIVATE_REVIEW_REQUIRED" });
-  } catch {
-    return json({ error: "TRANSCRIPTION_UNAVAILABLE" }, 503);
+  } catch (error) {
+    const kind = error instanceof Error ? error.name : "Unknown";
+    // Stage and exception class only. Never log audio, paths, or transcripts.
+    console.error("studio_transcription_unavailable", { stage, kind });
+    return json({ error: kind === "TimeoutError" || kind === "AbortError" ? "TRANSCRIPTION_TIMEOUT" :
+      stage === "READ_PRIVATE_MEDIA" ? "MEDIA_READ_FAILED" : "TRANSCRIPTION_UNAVAILABLE" }, 503);
   } finally {
     // Don't retain the media file server-side once processed.
     await delBlob(pathname).catch(() => {});
