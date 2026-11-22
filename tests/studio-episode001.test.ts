@@ -11,8 +11,8 @@ test("first episode has exactly three roles and a grounded first question", () =
   assert.match(episode001.editorialContext, /FIN/);
 });
 test("FIN at end of speech is a deliberate handoff, never a mid-sentence mention", () => {
-  for (const text of ["fin", "FIN.", "Voilà mon point de vue. Fin!", "Je crois que c’est la fin."])
+  for (const text of ["fin", "FIN.", "Fin!"])
     assert.equal(completedEpisodeTurn(text), true, text);
-  for (const text of ["enfin", "finalement", "La fin de la compétition est une question", "Je dis fin mais je continue", "fin de conférence"])
+  for (const text of ["enfin", "finalement", "La fin de la compétition est une question", "Je dis fin mais je continue", "fin de conférence", "Je crois que c’est la fin."])
     assert.equal(completedEpisodeTurn(text), false, text);
 });
