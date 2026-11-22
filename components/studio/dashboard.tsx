@@ -542,6 +542,41 @@ export function StudioDashboard({
           {String(seconds % 60).padStart(2, "0")}
         </span>
       </header>
+      <div
+        className={`studio-on-air-sign ${!active ? "is-off" : mode === "paused" || (!demo && connection !== "connected") ? "is-paused" : "is-on"}`}
+        role="status"
+        aria-live="polite"
+        aria-label={
+          !active
+            ? t("Hors antenne", "Off air")
+            : mode === "paused" || (!demo && connection !== "connected")
+              ? t("Séance en pause ou connexion en attente", "Session paused or waiting for connection")
+              : t("Séance en cours", "Session in progress")
+        }
+      >
+        <span className="studio-on-air-bulb" aria-hidden="true" />
+        <span className="studio-on-air-copy">
+          <strong>
+            {!active ? "OFF AIR" : mode === "paused" || (!demo && connection !== "connected") ? "PAUSED" : "ON AIR"}
+          </strong>
+          <small>
+            {!active
+              ? t("PRÊT À COMMENCER", "READY TO START")
+              : mode === "paused" || (!demo && connection !== "connected")
+                ? t("ANTENNE SUSPENDUE", "SESSION SUSPENDED")
+                : demo
+                  ? t("SÉANCE DE DÉMONSTRATION", "DEMO SESSION")
+                  : t("SÉANCE AUDIO ACTIVE", "AUDIO SESSION ACTIVE")}
+          </small>
+        </span>
+        <span className="studio-on-air-bulb" aria-hidden="true" />
+      </div>
+      <p className="studio-on-air-note">
+        {t(
+          "Voyant de la séance dans le navigateur — ne confirme ni diffusion publique ni enregistrement OBS.",
+          "Browser session indicator — does not confirm public broadcasting or OBS recording.",
+        )}
+      </p>
       <p className="studio-disclosure">
         {t(
           "Cinq journalistes virtuels générés par IA — aucune personne réelle. Une voix synthétique commune dans cette version.",

@@ -631,3 +631,52 @@
     animation: none !important;
   }
 }
+
+/* Radio-studio session light: the sign reflects actual browser session state,
+   not an OBS recording or a public broadcast. */
+.studio-on-air-sign {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(14px, 3vw, 36px);
+  min-height: 150px;
+  padding: 20px clamp(22px, 4vw, 56px);
+  margin-top: 24px;
+  border: 2px solid #5d191a;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #39090c, #160607);
+  box-shadow: inset 0 0 0 6px #090909, 0 12px 45px #0009;
+  text-align: center;
+  transition: border-color 180ms, background 180ms, box-shadow 180ms;
+}
+.studio-on-air-copy { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.studio-on-air-copy strong {
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(64px, 10vw, 148px);
+  line-height: .9;
+  font-weight: 900;
+  letter-spacing: .06em;
+  color: #ff353b;
+  text-shadow: 0 0 12px #ff2424aa, 0 0 42px #ff242477;
+}
+.studio-on-air-copy small { color: #ffb7b7; font-size: 11px; font-weight: 700; letter-spacing: .24em; }
+.studio-on-air-bulb { flex: 0 0 clamp(12px, 2.2vw, 25px); height: clamp(12px, 2.2vw, 25px); border-radius: 50%; background: #ff4848; box-shadow: 0 0 18px #ff4040; }
+.studio-on-air-sign.is-on { border-color: #ff4848; box-shadow: inset 0 0 0 6px #090909, 0 0 50px #c9000040, 0 12px 45px #0009; }
+.studio-on-air-sign.is-off { border-color: #3c3c3c; background: #111; box-shadow: inset 0 0 0 6px #090909; }
+.studio-on-air-sign.is-off .studio-on-air-copy strong { color: #555; text-shadow: none; }
+.studio-on-air-sign.is-off .studio-on-air-copy small { color: #777; }
+.studio-on-air-sign.is-off .studio-on-air-bulb { background: #333; box-shadow: none; }
+.studio-on-air-sign.is-paused { border-color: #bb7a20; background: #211709; }
+.studio-on-air-sign.is-paused .studio-on-air-copy strong { color: #ffad31; text-shadow: 0 0 20px #d98b3255; font-size: clamp(55px, 9vw, 125px); }
+.studio-on-air-sign.is-paused .studio-on-air-copy small { color: #ffc77c; }
+.studio-on-air-sign.is-paused .studio-on-air-bulb { background: #ffa72f; box-shadow: 0 0 14px #ffa72f77; }
+.studio-on-air-note { margin: 9px 0 22px; font-size: 10px; color: #999; line-height: 1.6; }
+@media (max-width: 500px) {
+  .studio-on-air-sign { min-height: 115px; padding: 16px; gap: 8px; }
+  .studio-on-air-copy strong { font-size: clamp(46px, 13vw, 72px); }
+  .studio-on-air-sign.is-paused .studio-on-air-copy strong { font-size: clamp(40px, 11vw, 65px); }
+  .studio-on-air-copy small { font-size: 8px; letter-spacing: .12em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-on-air-sign, .studio-on-air-sign * { transition: none; }
+}
