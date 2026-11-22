@@ -5,6 +5,7 @@ type RenderOptions={
   nodes:Partial<Record<SourceKey,HTMLMediaElement|null>>;
   offsets:Record<SourceKey,number>;
   audioSource:SourceKey;
+  finalAudioSource?:SourceKey;
   cuts:Cut[];
   fallback:CameraKey;
   duration:number;
@@ -23,7 +24,8 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
   const mime=formats.find(m=>MediaRecorder.isTypeSupported(m));
   if(!mime)throw new Error("MP4_NOT_SUPPORTED");
   const master=opts.nodes[opts.audioSource];
-  if(!master)throw new Error("AUDIO_NOT_READY");
+  const finalTrack=opts.nodes[opts.finalAudioSource||opts.audioSource];
+  if(!master||!finalTrack)throw new Error("AUDIO_NOT_READY");
   const available=(Object.entries(opts.nodes) as [SourceKey,HTMLMediaElement|null][]).filter(([,v])=>v);
   if(!available.length)throw new Error("NO_VIDEO");
   const width=opts.format==="9:16"?720:opts.format==="1:1"?960:1280;
@@ -33,10 +35,10 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
   const painter=canvas.getContext("2d",{alpha:false});
   if(!painter)throw new Error("NO_CANVAS");
   const ctx=new AudioContext();
-  const source=ctx.createMediaElementSource(master);
+  const source=ctx.createMediaElementSource(finalTrack);
   const audioOut=ctx.createMediaStreamDestination();
   source.connect(audioOut);
-  // Keep monitoring while rendering, without duplicating tracks into output.
+  // Only the selected final audio gets encoded, irrespective of sync reference.
   source.connect(ctx.destination);
   const stream=new MediaStream([...canvas.captureStream(30).getVideoTracks(),...audioOut.stream.getAudioTracks()]);
   const chunks:Blob[]=[];
@@ -56,7 +58,7 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
     for(const [key,el] of available){
       if(!el)continue;
       el.pause();
-      el.muted=key!==opts.audioSource;
+      el.muted=key!==(opts.finalAudioSource||opts.audioSource);
       if(!Number.isFinite(el.duration)||el.readyState<1)throw new Error("MEDIA_NOT_READY");
       el.currentTime=Math.min(Math.max(0,el.duration-.1),sourceTime(opts.start,opts.offsets[key]));
     }
