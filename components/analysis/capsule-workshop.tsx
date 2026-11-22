@@ -58,7 +58,7 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
    selectedCapsuleId:chosen?.id===id?(capsules.find(c=>c.id!==id)?.id||""):project.selectedCapsuleId});
  }
  const validRange=chosen&&chosen.end>chosen.start&&chosen.end<=project.timeline.duration;
- return <section className="analysis-panel studio-step studio-workshop">
+ return <section id="studio-capsule-workshop" className="analysis-panel studio-step studio-workshop">
   <div className="analysis-panel-head"><h2>07B / {fr?"ATELIER DES CAPSULES":"CAPSULE WORKSHOP"}</h2>
    <span>{capsules.length} / 40 {fr?"PROJETS DE CAPSULES":"CAPSULE DRAFTS"}</span></div>
   <p>{fr?"Un seul épisode peut produire une série de capsules. Prépare les textes, les bulles, les couleurs et les versions. Chaque capsule garde ses propres réglages.":"One episode can produce multiple capsule versions. Each saves its own text, bubbles and graphics."}</p>
