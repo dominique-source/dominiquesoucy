@@ -33,6 +33,8 @@ export const timelineSchema = z.object({
     id:z.string().min(1).max(64),
     at:z.number().finite().min(0).max(7200),
     camera:z.enum(cameraKeys),
+    zoomStart:z.number().finite().min(1).max(1.25).optional(),
+    zoomEnd:z.number().finite().min(1).max(1.25).optional(),
   }).strict()).max(500),
 }).strict();
 export const episodeEventSchema=z.object({
