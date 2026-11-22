@@ -417,9 +417,6 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         {expandedReview?(fr?"RÉDUIRE LA VUE":"COLLAPSE VIEW"):(fr?"AGRANDIR LA VUE":"EXPAND VIEW")}
       </button>
     </div>
-      <strong>{fr?"06 · PRÉVISUALISER LES ANGLES":"06 · ANGLE PREVIEW"}</strong>
-      <span>{timeCode(playhead)} / {timeCode(duration)}</span>
-    </div>
     <div className={`analysis-multi-grid studio-synchronized-grid ${expandedReview?"is-expanded":""}`}>
       {videos.map(key=><div key={key} className={`analysis-multi-camera ${effectiveCamera===key?"is-active":""}`}>
         <video key={renderNonce} ref={el=>{elements.current[key]=el}} src={playbackUrls[key]} controls playsInline preload="metadata" muted
