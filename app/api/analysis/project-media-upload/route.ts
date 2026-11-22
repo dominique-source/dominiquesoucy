@@ -17,7 +17,7 @@ export async function POST(request:Request){
   if(body.type==="blob.generate-client-token"){
     if(!sameOrigin(request))return json({error:"ORIGIN_DENIED"},403);
     if(!await session().catch(()=>null))return json({error:"UNAUTHORIZED"},401);
-    if(!process.env.BLOB_READ_WRITE_TOKEN&&!process.env.BLOB_STORE_ID)
+    if(!process.env.BLOB_READ_WRITE_TOKEN)
       return json({error:"BLOB_NOT_CONFIGURED"},503);
   }else if(body.type!=="blob.upload-completed")return json({error:"BAD_REQUEST"},400);
   try{
@@ -49,6 +49,7 @@ export async function POST(request:Request){
       /UPLOAD_LIMIT/.test(message)?"UPLOAD_RATE_LIMIT":
       /size|large/i.test(message)?"MEDIA_TOO_LARGE":
       /content.type|mime/i.test(message)?"INVALID_MEDIA_TYPE":
+      /BLOB_NOT_CONFIGURED/i.test(message)?"BLOB_NOT_CONFIGURED":
       "BLOB_UPLOAD_REJECTED";
     console.error("[studio-media-upload] request rejected",code);
     return json({error:code},code==="UNAUTHORIZED"?401:code==="UPLOAD_RATE_LIMIT"?429:400);
