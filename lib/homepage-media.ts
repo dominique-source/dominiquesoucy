@@ -127,13 +127,14 @@ export type StudioUniverseConfig = {
 };
 export const studioUniverse: StudioUniverseConfig = {
   image: {
-    src: "/assets/studio/studio-universe.png",
+    // Approved personal studio image; keep the original studio-universe.png untouched.
+    src: "/assets/studio/studio-universe-personal.png",
     width: 1672,
     height: 941,
   },
   alt: {
-    fr: "Composition de studio cinématographique : fauteuil en cuir brun, caméra, boîte à lumière et collage sportif noir et blanc aux accents lime.",
-    en: "Cinematic studio artwork with a brown leather chair, camera, softbox and a black-and-white sports collage with lime accents.",
+    fr: "Dominique Soucy assis dans le fauteuil en cuir de son univers studio, devant une fresque d’archives sportives noir et blanc aux accents lime.",
+    en: "Dominique Soucy seated in the leather armchair of his studio, with black-and-white sports archive artwork and lime accents.",
   },
   slogan: {
     fr: ["Bienvenue dans", "mon univers"],
@@ -149,7 +150,8 @@ export const studioUniverse: StudioUniverseConfig = {
 /** The same supplied studio artwork, decorative only behind the main introduction. */
 export const heroAtmosphere = {
   enabled: true,
-  src: studioUniverse.image.src,
+  // Keep the original backdrop as a subtle layer behind the separate homepage hero.
+  src: "/assets/studio/studio-universe.png",
   opacity: 0.09,
   desktopPosition: "50% 45%",
   mobilePosition: "52% 45%",
