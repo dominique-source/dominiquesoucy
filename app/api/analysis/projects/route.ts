@@ -28,7 +28,7 @@ export async function GET(request:Request){
       if(!raw)return null;
       const p=projectSchema.safeParse(JSON.parse(raw));
       if(!p.success)return null;
-      return {id:p.data.id,name:p.data.name,updatedAt:p.data.updatedAt||0,
+      return {id:p.data.id,name:p.data.name,season:p.data.season,episode:p.data.episode,stage:p.data.stage,recordingDate:p.data.recordingDate,capsuleCount:p.data.capsules.length,failedCount:p.data.events.filter(e=>e.status==="failure").length,updatedAt:p.data.updatedAt||0,
         mediaCount:Object.keys(p.data.media).length,hasTranscript:!!p.data.transcript,hasAnalysis:!!p.data.analysis};
     }));
     return json({projects:rows.filter(Boolean)});
