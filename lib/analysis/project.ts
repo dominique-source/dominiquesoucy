@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { analysisResult } from "./schema";
 import { cameraKeys, type SourceKey } from "./multicam";
+import { studioBackdropIds } from "./studio-backdrops";
 
 export const PROJECT_TTL = 365 * 24 * 3600;
 export const MAX_PROJECT_MEDIA_BYTES = 5_000_000_000;
@@ -69,6 +70,7 @@ export const reconstructedQuestionSchema=z.object({
   label:z.literal("QUESTION_RECONSTRUITE_NON_ORIGINALE"),
 }).strict();
 export const projectSchema = z.object({
+  studioBackdrop:z.object({mode:z.enum(["manual","random","topic"]),selectedId:z.enum(studioBackdropIds)}).strict().default({mode:"random",selectedId:"basketball"}),
   reconstructedQuestions:z.array(reconstructedQuestionSchema).max(12).default([]),
   timedWords:z.array(timedWordSchema).max(6000).default([]),
   season:z.number().int().min(1).max(999).default(1),
@@ -104,7 +106,7 @@ export function validProjectMedia(project:StudioProject) {
   return true;
 }
 export function freshProject():StudioProject {
-  return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",events:[],capsules:[],selectedCapsuleId:"",reconstructedQuestions:[],timedWords:[],transcript:"",
+  return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",studioBackdrop:{mode:"random",selectedId:"basketball"},events:[],capsules:[],selectedCapsuleId:"",reconstructedQuestions:[],timedWords:[],transcript:"",
     analysis:null,selectedMoment:0,format:"9:16",media:{},
     timeline:{duration:300,clipStart:0,clipEnd:60,audioSource:"audio",finalAudioSource:"audio",alignmentApproved:false,visualClaps:{main:null,vertical:null,secondary:null},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},
       claps:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},cuts:[]}};

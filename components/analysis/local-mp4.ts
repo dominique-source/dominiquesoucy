@@ -1,4 +1,4 @@
-import { drawStudioFrame, type CanvasVisual } from "./canvas-overlays";
+import { drawStudioFrame, preloadStudioBackground, type CanvasVisual } from "./canvas-overlays";
 import { activeCamera, sourceTime, type CameraKey, type Cut, type SourceKey } from "@/lib/analysis/multicam";
 
 type RenderOptions={
@@ -23,6 +23,9 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
   const formats=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4"];
   const mime=formats.find(m=>MediaRecorder.isTypeSupported(m));
   if(!mime)throw new Error("MP4_NOT_SUPPORTED");
+  if(opts.visual?.background==="signature"&&opts.visual.backgroundUrl){
+    await preloadStudioBackground(opts.visual.backgroundUrl);
+  }
   const master=opts.nodes[opts.audioSource];
   const finalTrack=opts.nodes[opts.finalAudioSource||opts.audioSource];
   if(!master||!finalTrack)throw new Error("AUDIO_NOT_READY");

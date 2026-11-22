@@ -1,6 +1,7 @@
 "use client";
 import { episodeCode, type StudioProject } from "@/lib/analysis/project";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
+import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
 type Capsule=StudioProject["capsules"][number];
 type EventKind=StudioProject["events"][number]["type"];
 type EventStatus=StudioProject["events"][number]["status"];
@@ -63,6 +64,13 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
   <div className="analysis-panel-head"><h2>07B / {fr?"ATELIER DES CAPSULES":"CAPSULE WORKSHOP"}</h2>
    <span>{capsules.length} / 40 {fr?"PROJETS DE CAPSULES":"CAPSULE DRAFTS"}</span></div>
   <p>{fr?"Un seul épisode peut produire une série de capsules. Prépare les textes, les bulles, les couleurs et les versions. Chaque capsule garde ses propres réglages.":"One episode can produce multiple capsule versions. Each saves its own text, bubbles and graphics."}</p>
+  <div className="studio-workshop-wall-summary">
+    <strong>{fr?"DÉCOR DE L’ÉMISSION":"EPISODE BACKDROP"} : {resolveBackdrop(project.studioBackdrop,project.id,[project.name,project.transcript].join(" ")).label}</strong>
+    <button type="button" className="analysis-secondary" onClick={()=>
+      document.getElementById("studio-episode-backdrops")?.scrollIntoView({behavior:"smooth",block:"start"})}>
+      {fr?"CHANGER LE MUR SIGNATURE ↑":"CHANGE SIGNATURE WALL ↑"}
+    </button>
+  </div>
   <div className="studio-workshop-actions">
    <button type="button" className="analysis-secondary" onClick={addDraft}>
      {fr?"+ NOUVELLE CAPSULE":"+ NEW CAPSULE"}</button>
