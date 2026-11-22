@@ -18,6 +18,7 @@ import {
 } from "./editorial";
 import { AdaptiveVideo } from "./adaptive-video";
 import { pilotVideo } from "@/lib/config";
+import { pilotPoster } from "@/lib/homepage-media";
 import { Reveal } from "./reveal";
 export function EntryMeta({ entry, lang }: { entry: Entry; lang: Locale }) {
   const d = dict(lang);
@@ -107,8 +108,27 @@ export function VideoEditorial({
             <br />
             <span>{b.filmTitle[1]}</span>
           </h1>
-          <p>{b.filmIntro}</p>
+          <p className="reflection-hero-intro">
+            {lang === "fr"
+              ? "Un espace pour approfondir une idée, questionner nos certitudes et explorer ce que le sport révèle de notre société."
+              : "A place to explore an idea in depth, question our assumptions, and consider what sport reveals about our society."}
+          </p>
         </header>
+        <div className="reflection-method" aria-label={lang === "fr" ? "Notre démarche" : "Our approach"}>
+          {[
+            { number: "01", icon: "?", title: lang === "fr" ? "QUESTIONNER" : "QUESTION", body: lang === "fr" ? "Remettre une évidence en question." : "Challenge an assumption." },
+            { number: "02", icon: "◇", title: lang === "fr" ? "EXPLORER" : "EXPLORE", body: lang === "fr" ? "Approfondir les idées et leurs contradictions." : "Explore ideas and their contradictions." },
+            { number: "03", icon: "◎", title: lang === "fr" ? "DISCUTER" : "DISCUSS", body: lang === "fr" ? "Laisser de la place à la discussion." : "Leave room for discussion." },
+          ].map((step) => (
+            <div className="reflection-method-step" key={step.number}>
+              <span className="reflection-method-icon" aria-hidden="true">{step.icon}</span>
+              <div>
+                <strong>{step.number} {step.title}</strong>
+                <p>{step.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
         <section
           className={`screening-room ${orientation ? `video-orientation-${orientation}` : ""} ${featured || showPilot ? "" : "screening-empty"}`}
           aria-label={b.latestLabel}
@@ -160,21 +180,43 @@ export function VideoEditorial({
             </>
           ) : showPilot ? (
             <>
-              <div className="screening-media">
+              <div className="screening-media" id="reflection-player" tabIndex={-1}>
                 <AdaptiveVideo
                   videoUrl={pilotVideo.videoUrl}
                   orientation={pilotVideo.orientation}
                   layout={pilotVideo.layout}
                   poster={pilotVideo.poster}
+                  cinematicPoster={pilotPoster}
                   title={pilotVideo.label}
                   lang={lang}
                 />
               </div>
               <div className="screening-intro">
-                <p className="eyebrow accent">{d.nav.reflexions}</p>
-                <h2 lang="fr">{pilotVideo.label}</h2>
-                <p>{b.pilotDescription}</p>
-                <div className="screening-note">{d.mission}</div>
+                <p className="eyebrow reflection-feature-eyebrow">
+                  {lang === "fr" ? "ÉMISSION À DÉCOUVRIR" : "FEATURED EPISODE"}
+                </p>
+                <h2>{lang === "fr" ? "PILOTE — ÉPISODE 00" : "PILOT — EPISODE 00"}</h2>
+                <p className="reflection-feature-subtitle">{b.pilotDescription}</p>
+                <p className="reflection-feature-summary">
+                  {lang === "fr"
+                    ? "Un premier épisode pour explorer comment le sport reflète nos valeurs, nos contradictions et les grands enjeux qui nous rassemblent."
+                    : "A first episode exploring how sport reflects our values, our contradictions, and the issues that bring us together."}
+                </p>
+                <div className="reflection-feature-points">
+                  {(lang === "fr"
+                    ? ["Un regard différent", "Des enjeux bien réels", "Une réflexion ouverte"]
+                    : ["A different perspective", "Real-world issues", "An open conversation"]
+                  ).map((point, index) => <span key={point}><b aria-hidden="true">{["◎", "◇", "▷"][index]}</b>{point}</span>)}
+                </div>
+                <div className="reflection-feature-actions">
+                  <a className="reflection-watch" href="#reflection-player">
+                    <span aria-hidden="true">▶</span>
+                    {lang === "fr" ? "REGARDER LE PILOTE 00" : "WATCH PILOT 00"}
+                  </a>
+                  <a className="reflection-library-link" href="#bibliotheque">
+                    {lang === "fr" ? "Explorer les réflexions" : "Explore reflections"} <span aria-hidden="true">→</span>
+                  </a>
+                </div>
               </div>
             </>
           ) : (
@@ -201,6 +243,29 @@ export function VideoEditorial({
           )}
         </section>
       </div>
+      {allEntries.length === 0 && !active ? (
+      <section className="reflection-upcoming" id="bibliotheque" aria-labelledby="reflection-upcoming-title">
+        <div className="content-shell">
+          <h2 id="reflection-upcoming-title">
+            {lang === "fr" ? "LES PROCHAINES RÉFLEXIONS" : "UPCOMING REFLECTIONS"} <span>/</span>
+          </h2>
+          <div className="reflection-upcoming-body">
+            <span aria-hidden="true" className="reflection-upcoming-symbol">□</span>
+            <div>
+              <h3>{lang === "fr" ? "De nouvelles réflexions arrivent bientôt." : "New reflections are coming soon."}</h3>
+              <p>{lang === "fr"
+                ? "Des formats longs pour aller plus loin que l’actualité, avec des analyses, des textes et des épisodes qui prennent le temps d’explorer les idées."
+                : "Long-form perspectives that go beyond the headlines, with analysis, writing, and episodes that take time to explore ideas."}</p>
+            </div>
+          </div>
+          <p className="reflection-upcoming-note">
+            {lang === "fr"
+              ? "Les prochaines publications apparaîtront dans la bibliothèque dès leur mise en ligne."
+              : "New publications will appear in the library as soon as they are released."}
+          </p>
+        </div>
+      </section>
+      ) : (
       <section className="film-library" id="bibliotheque">
         <div className="content-shell">
           <div className="library-heading">
@@ -232,6 +297,7 @@ export function VideoEditorial({
           )}
         </div>
       </section>
+      )}
     </div>
   );
 }
