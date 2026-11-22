@@ -782,3 +782,16 @@
   .studio-finish-actions { flex-direction: column; }
   .studio-finish-actions button { width: 100%; }
 }
+
+/* DOM SOUCY MEDIA episode 001: production-ready preset visible before ON AIR. */
+.studio-episode-setup {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+  border: 1px solid #728c2e; border-radius: 12px; background: #1b2210;
+  padding: clamp(18px, 2vw, 26px); margin: 18px 0 24px;
+}
+.studio-episode-setup > span { font: 800 11px var(--font-sans),sans-serif; letter-spacing: .16em; color: #ccff00; }
+.studio-episode-setup > strong { color: #fff; font: 900 italic clamp(25px, 2.7vw, 38px)/1.1 var(--font-display),sans-serif; }
+.studio-episode-setup > p { margin: 0; max-width: 760px; font-size: 13px; line-height: 1.7; color: #d6dacd; }
+.studio-dashboard button.studio-episode-prepare { background: #ccff00; color: #080808; border-color: #ccff00; font-size: 13px; font-weight: 900; padding: 15px 24px; }
+.studio-episode-setup > .studio-episode-caveat { color: #c9c8a8; font-size: 11px; }
+.studio-episode-banner { border: 1px solid #ccff00; background: #192109; color: #ccff00; text-align: center; padding: 11px; font-weight: 800; font-size: clamp(10px, 1.2vw, 15px); letter-spacing: .08em; }
