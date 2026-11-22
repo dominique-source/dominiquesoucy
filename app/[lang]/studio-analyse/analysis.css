@@ -173,3 +173,8 @@
 .studio-production .analysis-multi-player-header{border-top:1px solid #667848;padding-top:24px}
 .studio-production .analysis-multi-edit{margin-top:32px;padding-top:24px}
 @media(max-width:900px){.studio-video-grid{grid-template-columns:1fr}.studio-production-header{gap:12px}.studio-save-state{min-width:0}}
+
+.analysis-multi-render-format{display:flex;flex-direction:column;gap:6px;color:#ccff00;font-size:11px;font-weight:800;min-width:155px}
+.analysis-multi-render-format select{background:#161d11;color:#fff;border:1px solid #667b3a;border-radius:7px;padding:11px;font-size:12px}
+.analysis-multi-actions>.analysis-primary{flex:1;min-width:180px}
+.studio-production .analysis-multicam{margin:24px 0}
