@@ -19,6 +19,7 @@ import {
 import { AdaptiveVideo } from "./adaptive-video";
 import { pilotVideo } from "@/lib/config";
 import { pilotPoster } from "@/lib/homepage-media";
+import { photograph } from "@/lib/photography";
 import { Reveal } from "./reveal";
 export function EntryMeta({ entry, lang }: { entry: Entry; lang: Locale }) {
   const d = dict(lang);
@@ -345,46 +346,149 @@ export function FieldNotes({
 }) {
   const d = dict(lang);
   const b = brand(lang);
+  const photo = photograph("03_moment_communautaire", lang);
+  const steps = lang === "fr"
+    ? [
+        { n: "01", title: "OBSERVER", body: "Ce qui se passe, sans détour." },
+        { n: "02", title: "QUESTIONNER", body: "Chercher ce qui se cache derrière." },
+        { n: "03", title: "PARTAGER", body: "Ouvrir la conversation." },
+      ]
+    : [
+        { n: "01", title: "OBSERVE", body: "What's happening, without spin." },
+        { n: "02", title: "QUESTION", body: "Look beyond the surface." },
+        { n: "03", title: "SHARE", body: "Open the conversation." },
+      ];
+  const formats = lang === "fr"
+    ? [
+        { n: "01", label: "VIDÉO", icon: "▷", name: "SUR LE VIF", body: "Une scène, une prise de parole, une réaction captée au bon moment." },
+        { n: "02", label: "PHOTO", icon: "□", name: "REGARDER", body: "Une image authentique et le contexte qu’elle mérite." },
+        { n: "03", label: "TEXTE", icon: "≡", name: "METTRE EN MOTS", body: "Une idée courte, directe, qui donne matière à penser." },
+      ]
+    : [
+        { n: "01", label: "VIDEO", icon: "▷", name: "IN THE MOMENT", body: "A scene, a statement, a reaction captured as it happens." },
+        { n: "02", label: "PHOTO", icon: "□", name: "LOOK CLOSER", body: "An authentic image and the context it deserves." },
+        { n: "03", label: "TEXT", icon: "≡", name: "PUT IT IN WORDS", body: "A short, direct idea worth thinking about." },
+      ];
   return (
-    <div className="field-notes content-shell">
-      <header className="field-heading">
-        <div>
-          <p className="eyebrow">{b.fieldNotes}</p>
-          <h1>
-            {d.nav.observations}
-            <span className="heading-swipe" aria-hidden="true" />
-          </h1>
-          <p>{b.fieldSubtitle}</p>
-        </div>
-        <div className="field-heading-art" aria-hidden="true">
-          <span />
-          <span />
-          <span />
+    <div className="field-notes observations-page">
+      <header className="observations-v2-hero">
+        <div className="content-shell">
+          <p className="eyebrow accent">{lang === "fr" ? "LE CARNET / OBSERVATIONS" : "THE JOURNAL / OBSERVATIONS"}</p>
+          <div className="observations-v2-hero-grid">
+            <h1>
+              <span>{lang === "fr" ? "LE RÉEL." : "REAL LIFE."}</span>
+              <span>{lang === "fr" ? "SANS FILTRE." : "UNFILTERED."}</span>
+            </h1>
+            <div className="observations-v2-intro">
+              <h2>{lang === "fr" ? "Une scène vécue. Un fait qui interpelle." : "A lived moment. A fact that makes you think."}</h2>
+              <p>{lang === "fr"
+                ? "Une observation part du quotidien — sport, société, culture, humain — et ouvre une question qu’on mérite de se poser."
+                : "An observation starts with everyday life — sport, society, culture, people — and opens a question worth asking."}</p>
+            </div>
+          </div>
+          <div className="observations-v2-steps" aria-label={lang === "fr" ? "Démarche du carnet" : "Journal approach"}>
+            {steps.map((step) => (
+              <div className="observations-v2-step" key={step.n}>
+                <span>{step.n}</span>
+                <div><strong>{step.title}</strong><p>{step.body}</p></div>
+              </div>
+            ))}
+          </div>
         </div>
       </header>
-      <TopicFilters
-        lang={lang}
-        section="observations"
-        entries={allEntries}
-        active={active}
-        observations
-      />
-      {entries.length ? (
-        <div className="field-grid" role="region" aria-label={b.fieldNotes}>
-          <h2 className="sr-only">{b.fieldNotes}</h2>
-          {entries.map((entry, index) => (
-            <Reveal
-              key={entry.slug}
-              className={`field-note field-note-${index % 6} field-${entry.contentType} media-${entry.mediaAspect}`}
-            >
-              <EditorialCard entry={entry} lang={lang} />
-            </Reveal>
-          ))}
+
+      <section className="observations-v2-story" aria-labelledby="observations-story-title">
+        <div className="content-shell">
+          <div className="observations-v2-story-head">
+            <div>
+              <p className="eyebrow">{lang === "fr" ? "UNE PHOTO. UNE HISTOIRE." : "ONE PHOTO. ONE STORY."}</p>
+              <h2 id="observations-story-title">{lang === "fr" ? "UN MOMENT QUI FAIT RÉFLÉCHIR." : "A MOMENT THAT MAKES YOU THINK."}</h2>
+            </div>
+            <p>{lang === "fr"
+              ? "Chaque observation commence quelque part. Parfois, il suffit d’une rencontre pour regarder les choses autrement."
+              : "Every observation starts somewhere. Sometimes a single encounter can change how we see things."}</p>
+          </div>
+          <div className="observations-v2-story-grid">
+            <figure className="observations-v2-photo">
+              <Image src={photo.src} alt={photo.alt} width={photo.width} height={photo.height}
+                sizes="(max-width: 760px) 100vw, 42vw" />
+              <figcaption>{lang === "fr" ? "ARCHIVES PERSONNELLES — PHOTOGRAPHIE ORIGINALE NON RETOUCHÉE" : "PERSONAL ARCHIVES — ORIGINAL UNRETOUCHED PHOTOGRAPH"}</figcaption>
+            </figure>
+            <div className="observations-v2-story-copy">
+              <p className="eyebrow accent">{lang === "fr" ? "PHOTOGRAPHIE D’ARCHIVE · MOMENT VÉCU" : "ARCHIVE PHOTOGRAPH · REAL MOMENT"}</p>
+              <h3>{lang === "fr" ? "L’HUMAIN DERRIÈRE LE SPORT." : "THE PEOPLE BEHIND SPORT."}</h3>
+              <p className="observations-v2-story-lead">{lang === "fr"
+                ? "Un sourire, une rencontre, une histoire. Le sport crée des moments qui dépassent le résultat."
+                : "A smile, an encounter, a story. Sport creates moments that go beyond the score."}</p>
+              <p className="observations-v2-story-disclaimer">{lang === "fr"
+                ? "Cette photographie illustre l’esprit du carnet. Il ne s’agit pas d’un article publié : les premières observations viendront prendre place ici au fil des événements et des rencontres."
+                : "This photograph illustrates the spirit of the journal. It is not a published article; the first observations will appear here as stories emerge."}</p>
+              <div className="observations-v2-story-closer">
+                {lang === "fr" ? "Des images réelles. Des questions ouvertes." : "Real images. Open questions."}
+                <span aria-hidden="true">↗</span>
+              </div>
+            </div>
+          </div>
         </div>
+      </section>
+
+      <section className="observations-v2-formats" id="formats" aria-labelledby="observations-formats-title">
+        <div className="content-shell">
+          <div className="observations-v2-formats-head">
+            <div>
+              <p className="eyebrow accent">{lang === "fr" ? "LE CARNET PREND PLUSIEURS FORMES" : "THE JOURNAL TAKES MANY FORMS"}</p>
+              <h2 id="observations-formats-title">{lang === "fr" ? "UNE IDÉE. TROIS FORMATS." : "ONE IDEA. THREE FORMATS."}</h2>
+            </div>
+            <p>{lang === "fr"
+              ? "Pas de format imposé : c’est l’histoire qui détermine la manière de la raconter."
+              : "No imposed format: the story determines how it should be told."}</p>
+          </div>
+          <div className="observations-v2-formats-grid">
+            {formats.map((format) => (
+              <article className="observations-v2-format" key={format.n}>
+                <div className="observations-v2-format-top">
+                  <span>{format.n} / {format.label}</span>
+                  <span aria-hidden="true">{format.icon}</span>
+                </div>
+                <h3>{format.name}</h3>
+                <p>{format.body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {allEntries.length > 0 ? (
+        <section className="observations-v2-published content-shell" id="carnet">
+          <h2>{lang === "fr" ? "LE CARNET." : "THE JOURNAL."}</h2>
+          <TopicFilters lang={lang} section="observations" entries={allEntries} active={active} observations />
+          {entries.length ? (
+            <div className="field-grid" role="region" aria-label={b.fieldNotes}>
+              {entries.map((entry, index) => (
+                <Reveal key={entry.slug} className={`field-note field-note-${index % 6} field-${entry.contentType} media-${entry.mediaAspect}`}>
+                  <EditorialCard entry={entry} lang={lang} />
+                </Reveal>
+              ))}
+            </div>
+          ) : <div className="library-empty"><span className="empty-dash" aria-hidden="true" /><p>{b.noResults}</p></div>}
+        </section>
       ) : (
-        <FieldNotesEmpty lang={lang} filtered={Boolean(active)} />
+        <section className="observations-v2-upcoming" id="carnet">
+          <div className="content-shell">
+            <div>
+              <p className="eyebrow accent">{lang === "fr" ? "LE CARNET EST OUVERT" : "THE JOURNAL IS OPEN"}</p>
+              <h2>{lang === "fr" ? "LES PROCHAINES OBSERVATIONS." : "UPCOMING OBSERVATIONS."}</h2>
+              <p>{lang === "fr"
+                ? "Les publications apparaîtront ici au fur et à mesure. Pas de fausse actualité, pas de remplissage : seulement des histoires et des idées à partager."
+                : "Publications will appear here as they are released. No invented news, no filler: just stories and ideas worth sharing."}</p>
+            </div>
+            <a className="observations-v2-cta" href="#formats">
+              {lang === "fr" ? "DÉCOUVRIR LES FORMATS" : "EXPLORE THE FORMATS"}
+              <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </section>
       )}
-      <SignatureQuote lang={lang} full />
     </div>
   );
 }
