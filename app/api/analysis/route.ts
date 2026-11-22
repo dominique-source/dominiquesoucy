@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { session, sameOrigin } from "@/lib/studio/auth";
 import { limit } from "@/lib/studio/store";
 import { analysisInput, analysisResult } from "@/lib/analysis/schema";
+import { verifiedMoments } from "@/lib/analysis/verify";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -83,9 +84,7 @@ export async function POST(request: Request) {
     const result = analysisResult.safeParse(value);
     if (!result.success) return json({ error: "AI_INVALID_OUTPUT" }, 502);
     // Never show a hallucinated quotation as an extract: require exact source match.
-    const verified = result.data.moments.filter((m) =>
-      m.excerpt.length >= 12 && transcript.includes(m.excerpt)
-    );
+    const verified = verifiedMoments(transcript, result.data.moments);
     return json({
       ...result.data, moments: verified, original_count: result.data.moments.length,
       notice: "PRIVATE_REVIEW_REQUIRED",
