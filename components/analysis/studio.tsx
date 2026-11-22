@@ -3,6 +3,7 @@ import { useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { capsuleModels, capsuleById, formats } from "@/lib/analysis/catalog";
 import type { AnalysisResult } from "@/lib/analysis/schema";
+import { MediaImport } from "@/components/analysis/media-import";
 
 type AnalysisResponse = AnalysisResult & { original_count: number; notice: string };
 const MAX_TRANSCRIPT = 26000;
@@ -86,16 +87,17 @@ export function AnalysisStudio({ lang }: { lang: "fr" | "en" }) {
       <div className="analysis-logo">DOMINIQUE SOUCY <span>/ STUDIO VIDÉO & CONTENU</span></div>
       <Link href={`/${lang}/studio-live`}>{fr ? "RETOUR AU STUDIO LIVE" : "BACK TO LIVE STUDIO"} ↗</Link>
     </div>
-    <div className="analysis-flow"><span className="done">✓ Projet</span><span className="done">✓ Importation texte</span><strong>03 / {fr ? "ANALYSE IA" : "AI ANALYSIS"}</strong><span>04 / {fr ? "Montage (à venir)" : "Editing (upcoming)"}</span><span>05 / {fr ? "Export vidéo (à venir)" : "Video export (upcoming)"}</span></div>
+    <div className="analysis-flow"><span className="done">✓ Projet</span><span className="done">✓ Importation média / texte</span><strong>03 / {fr ? "ANALYSE IA" : "AI ANALYSIS"}</strong><span>04 / {fr ? "Montage (à venir)" : "Editing (upcoming)"}</span><span>05 / {fr ? "Export vidéo (à venir)" : "Video export (upcoming)"}</span></div>
     <div className="analysis-heading">
       <div><p className="analysis-kicker">{fr ? "STUDIO PRIVÉ / PREMIÈRE VERSION" : "PRIVATE STUDIO / FIRST VERSION"}</p><h1>{fr ? "ANALYSE IA" : "AI ANALYSIS"}<em>.</em></h1><p>{fr ? "De ta transcription aux moments forts, avec une suggestion parmi nos 12 modèles approuvés." : "From transcript to highlights, mapped to your 12 approved capsule models."}</p></div>
       <div className="analysis-count"><b>12</b><span>{fr ? "MODÈLES DE CAPSULES" : "CAPSULE MODELS"}</span><small>16:9 / 9:16 / 1:1</small></div>
     </div>
     <div className="analysis-columns">
       <div className="analysis-main">
+        <MediaImport lang={lang} consent={consent} onTranscript={(text) => { setTranscript(text); setResult(null); setSelected(0); }} />
         <div className="analysis-panel">
-          <div className="analysis-panel-head"><h2>01 / {fr ? "IMPORTER UNE TRANSCRIPTION" : "IMPORT TRANSCRIPT"}</h2><span>.TXT / .SRT / .VTT</span></div>
-          <p>{fr ? "Colle la transcription d’une conférence de presse, ou importe un fichier texte. L’audio et la vidéo directs arriveront dans une prochaine version." : "Paste a press-conference transcript or import a text file. Direct audio/video upload is not available yet."}</p>
+          <div className="analysis-panel-head"><h2>02 / {fr ? "IMPORTER UNE TRANSCRIPTION" : "IMPORT TRANSCRIPT"}</h2><span>.TXT / .SRT / .VTT</span></div>
+          <p>{fr ? "Colle la transcription d’une conférence de presse, ou importe un fichier texte. Tu peux aussi importer un audio ou une vidéo ci-dessus." : "Paste a press-conference transcript or import a text file. You can also import audio or video above."}</p>
           <div className="analysis-actions">
             <button type="button" className="analysis-secondary" onClick={() => inputFile.current?.click()}>{fr ? "IMPORTER UN FICHIER TEXTE +" : "IMPORT TEXT FILE +"}</button>
             <input ref={inputFile} className="analysis-hidden" type="file" accept=".txt,.srt,.vtt,text/plain,text/vtt" onChange={loadFile} aria-label={fr ? "Importer transcription" : "Import transcript"} />
@@ -103,13 +105,13 @@ export function AnalysisStudio({ lang }: { lang: "fr" | "en" }) {
           </div>
           <label htmlFor="analysis-transcript" className="analysis-label">{fr ? "TRANSCRIPTION DE LA SÉANCE" : "SESSION TRANSCRIPT"}</label>
           <textarea id="analysis-transcript" value={transcript} maxLength={MAX_TRANSCRIPT} onChange={e=>{setTranscript(e.target.value);setResult(null)}} placeholder={fr ? "Dominique : ...\nJournaliste : ...\nDominique : ..." : "Dominique: ...\nJournalist: ..."} rows={12} />
-          <label className="analysis-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} /><span>{fr ? "J’autorise l’analyse privée de ce texte par le fournisseur IA. Je vérifierai les citations et les faits avant toute publication." : "I authorize private AI processing of this text. I will verify all quotes and facts before publication."}</span></label>
+          <label className="analysis-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} /><span>{fr ? "J’autorise la transcription et l’analyse privées de mon média ou de ce texte par le fournisseur IA. Je vérifierai les citations et les faits avant toute publication." : "I authorize private AI transcription and analysis of this media or text. I will verify all quotes and facts before publication."}</span></label>
           <button className="analysis-primary" type="button" disabled={pending || !consent || transcript.trim().length < 100} onClick={analyze}>{pending ? (fr ? "ANALYSE EN COURS…" : "ANALYZING…") : (fr ? "✦ ANALYSER LA SÉANCE" : "✦ ANALYZE SESSION")}</button>
           {error && <p role="alert" className="analysis-error">{error}</p>}
-          <p className="analysis-note">{fr ? "Aucune sauvegarde automatique : garde ton fichier source. Les résultats sont privés et soumis à ta validation." : "No autosave: keep your source. Results are private and require your approval."}</p>
+          <p className="analysis-note">{fr ? "Aucune sauvegarde automatique : conserve ton fichier source. Les résultats sont privés et soumis à ta validation." : "No autosave: keep your source. Results are private and require your approval."}</p>
         </div>
         {result && <div className="analysis-panel">
-          <div className="analysis-panel-head"><h2>02 / {fr ? "RÉSULTAT DE L’ANALYSE" : "ANALYSIS RESULTS"}</h2><span>{result.moments.length} {fr ? "EXTRAITS VÉRIFIÉS" : "VERIFIED EXCERPTS"}</span></div>
+          <div className="analysis-panel-head"><h2>03 / {fr ? "RÉSULTAT DE L’ANALYSE" : "ANALYSIS RESULTS"}</h2><span>{result.moments.length} {fr ? "EXTRAITS VÉRIFIÉS" : "VERIFIED EXCERPTS"}</span></div>
           <p className="analysis-synopsis">{result.synopsis}</p>
           <div className="analysis-tags">{result.themes.map((theme,i)=><span key={i}>{theme}</span>)}</div>
           {result.editorial_cautions.length>0 && <div className="analysis-cautions"><strong>{fr ? "À VÉRIFIER AVANT PUBLICATION" : "CHECK BEFORE PUBLISHING"}</strong>{result.editorial_cautions.map((item,i)=><p key={i}>{item}</p>)}</div>}
