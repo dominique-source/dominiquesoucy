@@ -55,7 +55,6 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     if(!ready)return;
     try{
       localStorage.setItem(recoveryKey,JSON.stringify(project));
-      setLocalBackup(project);
       setLocalBackupError("");
     }catch{
       setLocalBackupError(fr?
