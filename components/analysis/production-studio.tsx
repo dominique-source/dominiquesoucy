@@ -121,7 +121,25 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           setProject(p);persisted.current=JSON.stringify({...p,updatedAt:undefined});setStatus("saved");
         }else setStatus("pending");
       }catch{
-        if(!cancelled){setStatus("error");setError(fr?"Stockage du Studio indisponible. Ne ferme pas la page.":"Studio storage unavailable. Do not close the page.");}
+        if(!cancelled){
+          // Restore local metadata first. Otherwise setting ready=true would
+          // overwrite the last recovery copy with a fresh empty project.
+          let recovered:StudioProject|null=null;
+          try{
+            const raw=localStorage.getItem(recoveryKey);
+            if(raw){
+              const parsed=projectSchema.safeParse(JSON.parse(raw));
+              if(parsed.success)recovered=parsed.data;
+            }
+          }catch{ /* Browser storage may be blocked. */ }
+          if(recovered)setProject(recovered);
+          setStatus("error");
+          setError(fr?
+            recovered?"Serveur indisponible. Copie locale restaurée, mais non sauvegardée sur le serveur.":
+              "Stockage du Studio indisponible. Ne ferme pas la page.":
+            recovered?"Server unavailable. Local project restored, but not saved on the server.":
+              "Studio storage unavailable. Do not close the page.");
+        }
       }finally{if(!cancelled)setReady(true)}
     })();
     return()=>{cancelled=true};
