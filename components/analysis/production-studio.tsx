@@ -7,6 +7,7 @@ import { MultiCamEditor } from "./multicam-editor";
 import { EpisodeDashboard, type EpisodeRow } from "./episode-dashboard";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
+import { StudioBackdropPicker } from "./studio-backdrop-picker";
 import { CapsuleWorkshop } from "./capsule-workshop";
 import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
@@ -372,6 +373,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <label className="studio-project-field">{fr?"NOM DU PROJET":"PROJECT NAME"}
         <input maxLength={100} value={project.name} onChange={e=>modify({name:e.target.value})} disabled={!ready}/>
       </label>
+      <div id="studio-episode-backdrops"><StudioBackdropPicker lang={lang} project={project} onChange={patch=>modify(patch)}/></div>
       <div className="studio-project-row">
         <label>{fr?"REPRENDRE UN PROJET":"RESUME PROJECT"}
           <select value={projects.some(p=>p.id===project.id)?project.id:""}
