@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderLocalMp4 } from "./local-mp4";
-import { drawStudioFrame } from "./canvas-overlays";
+import { drawStudioFrame,preloadStudioBackground } from "./canvas-overlays";
 import type { StudioProject } from "@/lib/analysis/project";
 import { alignCameraAudio, type CameraSyncResult } from "@/lib/analysis/browser-audio-fingerprint";
 import {
@@ -15,7 +15,7 @@ const initialClaps: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, v
 
 type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; finalAudioSource:SourceKey; alignmentApproved:boolean; visualClaps:Record<CameraKey,number|null>; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
-export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules }: {
+export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules, selectedBackgroundUrl }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
   mediaMetadata?:Partial<Record<SourceKey,MediaInfo>>;
   name: string; lang: "fr"|"en"; highlight?: string;
@@ -23,6 +23,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   format?:"16:9"|"9:16"|"1:1"; onFormatChange?:(format:"16:9"|"9:16"|"1:1")=>void;
   capsule?:StudioProject["capsules"][number]; onExportOutcome?:(ok:boolean,details:string)=>void;
   onProceedToCapsules?:()=>void;
+  selectedBackgroundUrl?:string;
 }) {
   const fr = lang === "fr";
   const videos = cameraKeys.filter(key=>!!sources[key] || !!remoteUrls?.[key]);
@@ -216,6 +217,11 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   }
   useEffect(()=>{
     if(!decorPreview||!capsule)return;
+    if(capsule.background==="signature"&&selectedBackgroundUrl){
+      void preloadStudioBackground(selectedBackgroundUrl).catch(()=>setError(fr?
+        "Décor de sport non disponible dans le repo. Conserve les fichiers originaux et vérifie les ressources du Studio.":
+        "Sport backdrop file is missing in the repository. Verify the Studio assets."));
+    }
     let raf=0;let last=0;
     const paint=(now:number)=>{
       if(now-last>=95){
@@ -228,7 +234,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
           try{
             drawStudioFrame(ctx,el,canvas.width,canvas.height,0,0,{
               style:capsule.style,background:capsule.background,caption:"",
-              bubble:"",textPosition:capsule.textPosition,keying:capsule.keying,
+              bubble:"",textPosition:capsule.textPosition,keying:capsule.keying,backgroundUrl:selectedBackgroundUrl,
             });
           }catch{setDecorPreview(false);setError(fr?
             "Prévisualisation indisponible : la vidéo ne permet pas la lecture de pixels locale.":
@@ -239,7 +245,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     };
     raf=requestAnimationFrame(paint);
     return ()=>cancelAnimationFrame(raf);
-  },[decorPreview,decorCamera,capsule,fr,videos.join("|")]);
+  },[decorPreview,decorCamera,capsule,fr,selectedBackgroundUrl,videos.join("|")]);
   function proposeEdit(){
     pauseAll();
     const from=capsule?capsule.start:clipStart;
@@ -289,7 +295,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       const blob=await renderLocalMp4({
         nodes:elements.current,offsets,audioSource:realAudioSource,finalAudioSource:realFinalAudioSource,
         cuts,fallback:realCamera,duration,start:renderStart,end:renderEnd,format:capsule?.format||format||"16:9",
-        visual:capsule?{style:capsule.style,background:capsule.background,caption:capsule.caption,bubble:capsule.bubble,textPosition:capsule.textPosition,keying:capsule.keying}:undefined,
+        visual:capsule?{style:capsule.style,background:capsule.background,caption:capsule.caption,bubble:capsule.bubble,textPosition:capsule.textPosition,keying:capsule.keying,backgroundUrl:selectedBackgroundUrl}:undefined,
         onProgress:setRenderPercent,
       });
       const url=URL.createObjectURL(blob);
