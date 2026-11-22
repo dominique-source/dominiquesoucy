@@ -367,6 +367,13 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
           onError={()=>setError(fr?`Impossible de lire ${labels[key]}. Essaie de convertir ce fichier en MP4 H.264.`:`Cannot play ${labels[key]}. Try converting it to H.264 MP4.`)}
           aria-label={labels[key]}/>
         <div className="analysis-multi-camera-label"><span>{labels[key]}</span>
+          <button type="button" className="studio-clap-mark" onClick={()=>{
+            const node=elements.current[key];
+            if(!node||!Number.isFinite(node.currentTime))return;
+            setVisualClaps(old=>({...old,[key]:Math.round(node.currentTime*100)/100}));
+            setSuccess(fr?`Clap ${labels[key]} marqué à ${node.currentTime.toFixed(2)} seconde(s).`:
+              `Marked ${labels[key]} clap at ${node.currentTime.toFixed(2)} seconds.`);
+          }}>{fr?"MARQUER CLAP":"MARK CLAP"}</button>
           <button type="button" onClick={()=>{setSelectedCamera(key);setCuts(prev=>[
             ...prev.filter(c=>Math.abs(c.at-playhead)>.15),
             {id:crypto.randomUUID(),at:safeCutTime(playhead,duration),camera:key}
