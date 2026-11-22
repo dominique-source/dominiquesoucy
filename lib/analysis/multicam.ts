@@ -45,3 +45,38 @@ export function edl({
     notes: "Offsets are manually aligned by clap; files stay on the operator's computer. This JSON does not contain media and is not a video.",
   };
 }
+
+/**
+ * Editorial starter edit, NOT scene understanding or AI.
+ * A single primary shot remains the anchor, with short alternate cutaways.
+ * The plan is deterministic and can be revised before rendering.
+ */
+export function proposeMulticamCuts({
+  start,end,available,primary="main"
+}:{
+  start:number;end:number;available:readonly CameraKey[];primary?:CameraKey;
+}):Cut[]{
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return [];
+  const cameras=cameraKeys.filter(k=>available.includes(k));
+  if(!cameras.length)return [];
+  const base=cameras.includes(primary)?primary:cameras[0];
+  const others=cameras.filter(k=>k!==base);
+  const duration=end-start;
+  const cuts:Cut[]=[{id:crypto.randomUUID(),at:safeCutTime(start,end),camera:base}];
+  if(!others.length||duration<12)return cuts;
+  // Start each capsule on the main shot, then use brief cutaways.
+  // Alternates appear no more often than every ~7s, and the primary
+  // camera remains dominant. Supports a single or two-camera recording.
+  let time=start+Math.min(6.8,Math.max(4,duration*.18));
+  let number=0;
+  while(time<end-3.5 && cuts.length<24){
+    const alternate=others[number%others.length];
+    const altLength=Math.min(3.4,Math.max(2.4,duration*.10));
+    if(time+altLength>=end-2)break;
+    cuts.push({id:crypto.randomUUID(),at:safeCutTime(time,end),camera:alternate});
+    cuts.push({id:crypto.randomUUID(),at:safeCutTime(time+altLength,end),camera:base});
+    number++;
+    time+=altLength+Math.min(6.8,Math.max(4,duration*.15));
+  }
+  return cuts.sort((a,b)=>a.at-b.at);
+}
