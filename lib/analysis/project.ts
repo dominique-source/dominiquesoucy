@@ -25,6 +25,7 @@ export const timelineSchema = z.object({
   clipEnd:z.number().finite().min(0).max(7200),
   audioSource:sourceIdSchema,
   finalAudioSource:sourceIdSchema.default("audio"),
+  alignmentApproved:z.boolean().default(false),
   visualClaps:z.object({main:z.number().min(0).max(7200).nullable().default(null),vertical:z.number().min(0).max(7200).nullable().default(null),secondary:z.number().min(0).max(7200).nullable().default(null)}).strict().default({main:null,vertical:null,secondary:null}),
   offsets:offsetsSchema,
   claps:offsetsSchema,
@@ -96,7 +97,7 @@ export function validProjectMedia(project:StudioProject) {
 export function freshProject():StudioProject {
   return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",events:[],capsules:[],selectedCapsuleId:"",timedWords:[],transcript:"",
     analysis:null,selectedMoment:0,format:"9:16",media:{},
-    timeline:{duration:300,clipStart:0,clipEnd:60,audioSource:"audio",finalAudioSource:"audio",visualClaps:{main:null,vertical:null,secondary:null},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},
+    timeline:{duration:300,clipStart:0,clipEnd:60,audioSource:"audio",finalAudioSource:"audio",alignmentApproved:false,visualClaps:{main:null,vertical:null,secondary:null},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},
       claps:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},cuts:[]}};
 }
 

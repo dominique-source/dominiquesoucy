@@ -283,3 +283,33 @@
 .studio-recovery-available>strong{color:#f2d58b;font-size:12px}
 .studio-recovery-available>p{color:#f4f4ef}
 @media(max-width:640px){.studio-recovery-actions>*{width:100%!important}}
+
+/* Clear validation journey: alignment → simultaneous camera review → capsules */
+.studio-view-sync{width:100%;min-height:66px;justify-content:center;font:900 italic clamp(19px,2.6vw,31px)/1 "Barlow Condensed",Impact,sans-serif!important;color:#080808!important;letter-spacing:.015em}
+.studio-review-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:30px;background:#1d2614;padding:19px;border:1px solid #708e41;border-radius:12px}
+.studio-review-title{display:grid;gap:6px}
+.studio-review-title strong{font:900 italic clamp(25px,3vw,40px)/1 "Barlow Condensed",Impact,sans-serif;color:#ccff00}
+.studio-review-title small{color:#c3caba;font-size:12px}
+.studio-review-instructions{border:1px solid #506b35;background:#11190d;border-radius:12px;padding:18px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:13px 0}
+.studio-review-instructions>strong{flex-basis:100%;font-size:13px;letter-spacing:.055em;color:#ccff00}
+.studio-review-instructions>p{flex-basis:100%;margin:0;color:#d1dbc5;font-size:13px;line-height:1.5}
+.studio-review-instructions .studio-review-play{width:auto;min-width:260px;flex:1;font:900 italic clamp(20px,2.4vw,28px)/1 "Barlow Condensed",Impact,sans-serif}
+.studio-review-instructions>.analysis-secondary{margin:0}
+.studio-synchronized-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.studio-synchronized-grid .analysis-multi-camera video{height:clamp(210px,23vw,400px);object-fit:contain}
+.studio-synchronized-grid.is-expanded{grid-template-columns:repeat(3,minmax(0,1fr))}
+.studio-synchronized-grid.is-expanded .analysis-multi-camera video{height:clamp(260px,28vw,500px)}
+.studio-synchronized-grid .analysis-multi-camera-label{flex-wrap:wrap}
+.studio-synchronized-grid .analysis-multi-camera-label span{flex-basis:100%}
+.studio-review-secondary-playback{margin:14px 0}
+.studio-review-decision{display:grid;gap:12px;padding:22px;margin:24px 0;background:#182211;border:2px solid #556f34;border-radius:14px}
+.studio-review-decision>strong{font:900 italic clamp(23px,3vw,35px)/1 "Barlow Condensed",Impact,sans-serif;color:#ccff00}
+.studio-review-decision>p{font-size:13px;color:#d3dfc7;line-height:1.55;margin:0}
+.studio-review-decision-actions{display:flex;flex-wrap:wrap;gap:10px}
+.studio-review-decision-actions>*{flex:1;min-width:200px;margin:0}
+.studio-review-next{border-top:1px solid #778e48;padding-top:20px;display:grid;gap:15px}
+.studio-review-next>strong{color:#ccff00;font-size:15px}
+.studio-review-next>.analysis-primary{width:100%;min-height:64px;font:900 italic clamp(19px,2.5vw,30px)/1 "Barlow Condensed",Impact,sans-serif}
+#studio-capsule-workshop{scroll-margin-top:32px}
+@media(max-width:1150px){.studio-synchronized-grid,.studio-synchronized-grid.is-expanded{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.studio-synchronized-grid,.studio-synchronized-grid.is-expanded{grid-template-columns:1fr}.studio-review-instructions .studio-review-play{min-width:100%}.studio-synchronized-grid .analysis-multi-camera video{height:300px}}

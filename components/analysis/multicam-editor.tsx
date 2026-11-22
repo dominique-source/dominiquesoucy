@@ -12,15 +12,16 @@ import {
 const initialOffsets: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, vertical:0, secondary:0 };
 const initialClaps: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, vertical:0, secondary:0 };
 
-type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; finalAudioSource:SourceKey; visualClaps:Record<CameraKey,number|null>; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
+type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; finalAudioSource:SourceKey; alignmentApproved:boolean; visualClaps:Record<CameraKey,number|null>; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
-export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome }: {
+export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
   mediaMetadata?:Partial<Record<SourceKey,MediaInfo>>;
   name: string; lang: "fr"|"en"; highlight?: string;
   savedTimeline?:Timeline; onTimelineChange?:(value:Timeline)=>void;
   format?:"16:9"|"9:16"|"1:1"; onFormatChange?:(format:"16:9"|"9:16"|"1:1")=>void;
   capsule?:StudioProject["capsules"][number]; onExportOutcome?:(ok:boolean,details:string)=>void;
+  onProceedToCapsules?:()=>void;
 }) {
   const fr = lang === "fr";
   const videos = cameraKeys.filter(key=>!!sources[key] || !!remoteUrls?.[key]);
@@ -29,6 +30,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [finalAudioSource,setFinalAudioSource]=useState<SourceKey>(savedTimeline?.finalAudioSource || "audio");
   const [visualClaps,setVisualClaps]=useState<Record<CameraKey,number|null>>(savedTimeline?.visualClaps || {main:null,vertical:null,secondary:null});
   const [visualAligned,setVisualAligned]=useState<{anchor:CameraKey;projectClap:number;offsets:Record<SourceKey,number>;count:number}|null>(null);
+  const [alignmentReviewed,setAlignmentReviewed]=useState(savedTimeline?.alignmentApproved||false);
+  const [expandedReview,setExpandedReview]=useState(true);
 
   const [selectedCamera, setSelectedCamera] = useState<CameraKey>("main");
   const [offsets,setOffsets] = useState(savedTimeline?.offsets || initialOffsets);
@@ -60,7 +63,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   },[sources]);
   useEffect(()=>()=>Object.values(urls).forEach(url=>URL.revokeObjectURL(url)),[urls]);
   const playbackUrls={...remoteUrls,...urls};
-  const timeline={duration,clipStart,clipEnd,audioSource,finalAudioSource,visualClaps,offsets,claps,cuts};
+  const timeline={duration,clipStart,clipEnd,audioSource,finalAudioSource,alignmentApproved:alignmentReviewed,visualClaps,offsets,claps,cuts};
   const lastPersisted=useRef(JSON.stringify(savedTimeline||timeline));
   useEffect(()=>{
     if(!onTimelineChange)return;
@@ -68,7 +71,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     if(next===lastPersisted.current)return;
     lastPersisted.current=next;
     onTimelineChange(timeline);
-  },[duration,clipStart,clipEnd,audioSource,finalAudioSource,visualClaps,offsets,claps,cuts,onTimelineChange]);
+  },[duration,clipStart,clipEnd,audioSource,finalAudioSource,alignmentReviewed,visualClaps,offsets,claps,cuts,onTimelineChange]);
 
   const realAudioSource = availableAudio.includes(audioSource) ? audioSource : availableAudio[0];
   const realFinalAudioSource=availableAudio.includes(finalAudioSource)?finalAudioSource:(availableAudio.includes("enhanced")?"enhanced":realAudioSource);
@@ -105,6 +108,13 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     seekAll(targetTime,newOffsets,maxTime);
   },[pauseAll,seekAll,playhead,duration]);
 
+  function openSynchronizedPreview(){
+    pauseAll();
+    setExpandedReview(true);
+    const t=visualAligned?.projectClap!==undefined?Math.max(0,visualAligned.projectClap-2):Math.min(playhead,duration);
+    seekAll(t);
+    document.getElementById("studio-camera-preview")?.scrollIntoView({behavior:"smooth",block:"start"});
+  }
   const play=async()=>{
     if(playing){pauseAll();return}
     setError("");
@@ -331,11 +341,13 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             if(!node||!Number.isFinite(node.currentTime))return;
             setVisualClaps(old=>({...old,[key]:Math.round(node.currentTime*100)/100}));
             setVisualAligned(null);
+            setAlignmentReviewed(false);
           }}>{fr?"MARQUER L’IMAGE ACTUELLE":"MARK CURRENT FRAME"}</button>
         </div>)}
       </div>
       <button type="button" className="analysis-primary" onClick={()=>{
         setVisualAligned(null);
+        setAlignmentReviewed(false);
         const keys=videos.filter(key=>visualClaps[key]!==null);
         if(keys.length<2){setError(fr?"Marque la même image de clap sur au moins deux vidéos.":"Mark the same clap frame on at least two videos.");return}
         // Prefer a camera already matched to the external reference audio.
@@ -357,6 +369,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         const previewTime=Math.max(0,clapPosition-.15);
         synchronize(next,previewTime,nextDuration);
         setVisualAligned({anchor,projectClap:clapPosition,offsets:next,count:keys.length});
+        setAlignmentReviewed(false);
+        setExpandedReview(true);
         setError("");
         setSuccess(fr?
           `Clap visuel aligné pour ${keys.length} caméras. ${confirmed?"Référence audio transférée depuis la caméra fiable.":"Alignement relatif des caméras seulement : vérifie le son final."} Vérifie aussi le début de la vidéo.`:
@@ -374,11 +388,9 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             {key===visualAligned.anchor&&<small>{fr?"RÉFÉRENCE VISUELLE":"VISUAL REFERENCE"}</small>}
           </div>)}
         </div>
-        <button type="button" className="analysis-secondary" onClick={()=>{
-          const t=Math.max(0,visualAligned.projectClap-.15);
-          pauseAll();seekAll(t,visualAligned.offsets,Math.max(duration,t+1));
-          document.getElementById("studio-camera-preview")?.scrollIntoView({behavior:"smooth",block:"start"});
-        }}>{fr?"VOIR LES TROIS CLAPS ALIGNÉS ↓":"SEE ALIGNED CLAP FRAMES ↓"}</button>
+        <button type="button" className="analysis-primary studio-view-sync" onClick={openSynchronizedPreview}>
+          {fr?"▶ VOIR LES 3 CAMÉRAS ENSEMBLE ↓":"▶ REVIEW ALL 3 CAMERAS TOGETHER ↓"}
+        </button>
         <p className="analysis-note">{fr
           ?"Important : les images des caméras sont alignées entre elles. Si ton audio final est un fichier séparé, il doit être vérifié par rapport à une caméra; ce clap visuel seul ne prouve pas la synchronisation de la voix."
           :"Camera images are aligned to each other. A separately recorded final audio track still needs verification against a camera."}</p>
@@ -387,11 +399,25 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         ?"Le clap doit être visible dans au moins deux caméras. Si une caméra est déjà alignée au son principal, son repère est transmis aux autres. Sinon, les caméras sont alignées entre elles seulement. Vérifie la voix finale."
         :"If one camera has a trusted audio match, the clap transfers its offset to the other cameras. Otherwise, only relative alignment is possible. Verify final voice timing."}</p>
     </div>
-    <div className="analysis-multi-player-header" id="studio-camera-preview">
-      <strong>{fr?"06 · PRÉVISUALISER LES ANGLES":"06 · ANGLE PREVIEW"}</strong>
+    <div className="analysis-multi-player-header studio-review-header" id="studio-camera-preview">
+      <div className="studio-review-title">
+        <strong>{fr?"06 · VOIR LES CAMÉRAS SYNCHRONISÉES":"06 · REVIEW SYNCHRONIZED CAMERAS"}</strong>
+        <small>{fr?"Les trois angles côte à côte, pilotés par une seule lecture":"Three angles side by side, one playback control"}</small>
+      </div>
       <span>{timeCode(playhead)} / {timeCode(duration)}</span>
     </div>
-    <div className="analysis-multi-grid">
+    <div className="studio-review-instructions">
+      <strong>{fr?"ÉTAPE SUIVANTE : VÉRIFIER LES IMAGES":"NEXT: CHECK THE PICTURE"}</strong>
+      <p>{fr?"Clique « Lire les 3 caméras ensemble » et regarde si le clap arrive au même instant dans chaque image. Reviens aussi au début et au milieu de la vidéo pour vérifier.":"Play all three cameras and check that hands clap together. Also test the start and middle."}</p>
+      <button type="button" className="analysis-primary studio-review-play" onClick={play}>
+        {playing?(fr?"❚❚ METTRE LES 3 CAMÉRAS EN PAUSE":"❚❚ PAUSE ALL CAMERAS"):(fr?"▶ LIRE LES 3 CAMÉRAS ENSEMBLE":"▶ PLAY ALL 3 CAMERAS")}
+      </button>
+      <button type="button" className="analysis-secondary" onClick={()=>{pauseAll();seekAll(0)}}>{fr?"REVENIR AU DÉBUT":"GO TO START"}</button>
+      <button type="button" className="analysis-secondary" onClick={()=>setExpandedReview(v=>!v)}>
+        {expandedReview?(fr?"RÉDUIRE LA VUE":"COLLAPSE VIEW"):(fr?"AGRANDIR LA VUE":"EXPAND VIEW")}
+      </button>
+    </div>
+    <div className={`analysis-multi-grid studio-synchronized-grid ${expandedReview?"is-expanded":""}`}>
       {videos.map(key=><div key={key} className={`analysis-multi-camera ${effectiveCamera===key?"is-active":""}`}>
         <video key={renderNonce} ref={el=>{elements.current[key]=el}} src={playbackUrls[key]} controls playsInline preload="metadata" muted
           onTimeUpdate={realAudioSource===key?onClock:undefined}
@@ -403,6 +429,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             if(!node||!Number.isFinite(node.currentTime))return;
             setVisualClaps(old=>({...old,[key]:Math.round(node.currentTime*100)/100}));
             setVisualAligned(null);
+            setAlignmentReviewed(false);
             setSuccess(fr?`Clap ${labels[key]} marqué à ${node.currentTime.toFixed(2)} seconde(s).`:
               `Marked ${labels[key]} clap at ${node.currentTime.toFixed(2)} seconds.`);
           }}>{fr?"MARQUER CLAP":"MARK CLAP"}</button>
@@ -418,7 +445,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     {(sources.enhanced || remoteUrls?.enhanced)&&<audio key={renderNonce} ref={el=>{elements.current.enhanced=el}}
       src={playbackUrls.enhanced} preload="metadata"
       onTimeUpdate={realAudioSource==="enhanced"?onClock:undefined}/>}
-    <div className="analysis-multi-playback">
+    <div className="analysis-multi-playback studio-review-secondary-playback">
       <button className="analysis-primary" type="button" onClick={play}>{playing?(fr?"❚❚ PAUSE":"❚❚ PAUSE"):(fr?"▶ LIRE LES CAMÉRAS":"▶ PLAY CAMERAS")}</button>
       <button className="analysis-secondary" onClick={()=>{pauseAll();seekAll(0)}} type="button">{fr?"RETOUR DÉBUT":"REWIND"}</button>
     </div>
@@ -426,6 +453,27 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       <input aria-label={fr?"Position dans la timeline":"Timeline position"} type="range" min={0} max={duration} step={0.1} value={playhead}
         onChange={e=>{pauseAll();seekAll(Number(e.target.value))}} />
     </label>
+    <div className="studio-review-decision">
+      <strong>{fr?"LES TROIS IMAGES SONT-ELLES SYNCHRONISÉES ?":"ARE THE THREE VIDEOS IN SYNC?"}</strong>
+      <p>{fr?"Les réglages se sauvegardent automatiquement dans cet épisode. Valider signifie que tu as vérifié visuellement les trois images; cela ne certifie pas encore la piste audio finale.":"Alignment settings autosave. Confirmation means you visually reviewed the pictures; final voice timing still needs checking."}</p>
+      <div className="studio-review-decision-actions">
+        <button type="button" className="analysis-primary" disabled={videos.length<1} onClick={()=>{
+          setAlignmentReviewed(true);pauseAll();
+        }}>{fr?"✓ OUI, JE VALIDE LES ANGLES":"✓ YES, CONFIRM ANGLES"}</button>
+        <button type="button" className="analysis-secondary" onClick={()=>{
+          setAlignmentReviewed(false);pauseAll();
+          document.querySelector(".analysis-multi-visual-claps")?.scrollIntoView({behavior:"smooth",block:"center"});
+        }}>{fr?"NON, AJUSTER LES CLAPS":"NO, ADJUST CLAPS"}</button>
+      </div>
+      {alignmentReviewed&&<div className="studio-review-next">
+        <strong>✓ {fr?"ANGLES VALIDÉS — PRÊT POUR LES CAPSULES":"ANGLES CONFIRMED — READY FOR CAPSULES"}</strong>
+        <button type="button" className="analysis-primary" onClick={()=>{
+          pauseAll();
+          onProceedToCapsules?.();
+          document.getElementById("studio-capsule-workshop")?.scrollIntoView({behavior:"smooth",block:"start"});
+        }}>{fr?"✦ PASSER À LA CRÉATION DES CAPSULES ↓":"✦ START CREATING CAPSULES ↓"}</button>
+      </div>}
+    </div>
     <div className="analysis-multi-edit">
       <strong>{fr?"07 · PREMIER CLIP DE MONTAGE":"07 · FIRST VIDEO CLIP EDIT"}</strong>
       <p>{fr?"Clique « Couper ici » sur une caméra pour la choisir à la position courante. Le plan est mémorisé dans cet onglet et téléchargeable en JSON, sans fabriquer de vidéo.":"Click Cut Here on a camera to select it at the current position. This edit plan is kept in this tab and can be exported as JSON, not yet a video."}</p>
