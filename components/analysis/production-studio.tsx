@@ -309,11 +309,12 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     </>)}
     <MultiCamEditor key={project.id} sources={files} remoteUrls={remoteUrls} mediaMetadata={project.media}
       name={project.name} lang={lang} highlight={project.analysis?.moments[project.selectedMoment]?.excerpt}
-      savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}/>
-    {step(8,fr?"EXPORT VIDÉO":"VIDEO EXPORT","EN DÉVELOPPEMENT",<>
+      savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}
+      format={project.format} onFormatChange={format=>modify({format})}/>
+    {step(8,fr?"EXPORT VIDÉO":"VIDEO EXPORT","MP4 BÊTA",<>
       <p>{fr
-        ?"Ton projet et tes décisions de montage sont sauvegardés. Le rendu MP4 final nécessite un moteur d’encodage vidéo et n’est pas encore disponible. Le JSON de montage ne remplace pas une vidéo."
-        :"Your project and edit decisions are saved. Final MP4 encoding needs a render service and is not ready. An edit JSON is not a video."}</p>
+        ?"Ton projet et tes décisions de montage sont sauvegardés. Dans l’étape 07, essaie « Exporter MP4 · Bêta » : l’export est fait sur ton ordinateur, en temps réel, seulement si ton navigateur accepte MP4/H.264. Le rendu serveur haute qualité sera une phase suivante."
+        :"Your project and edit decisions are saved. In step 07, try Export MP4 · Beta. Rendering runs locally in real time and requires browser MP4/H.264 support. High-quality server rendering comes later."}</p>
     </>)}
     {message&&<p className="analysis-media-ok" role="status">{message}</p>}
     {error&&<p className="analysis-error" role="alert">{error}</p>}
