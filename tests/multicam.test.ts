@@ -30,7 +30,7 @@ test("project cut points and timecodes are bounded and human-readable",()=>{
 test("export is an honest edit decision list, not an MP4",()=>{
   const result=edl({
     projectName:"Épisode 001",duration:300,
-    offsets:{audio:0,main:4.7,vertical:-1.1,secondary:8.4},
+    offsets:{audio:0,enhanced:0,main:4.7,vertical:-1.1,secondary:8.4},
     cuts:[{id:"a",at:45,camera:"vertical"},{id:"b",at:5,camera:"main"}],
     sourceNames:{main:"Canon.MOV",vertical:"iPhone.MOV",secondary:"Samsung.mp4",audio:"Samsung.m4a"},
     audioSource:"audio"
