@@ -4,7 +4,7 @@ import { cameraKeys, type SourceKey } from "./multicam";
 
 export const PROJECT_TTL = 365 * 24 * 3600;
 export const MAX_PROJECT_MEDIA_BYTES = 5_000_000_000;
-export const sourceIds = ["audio", ...cameraKeys] as const;
+export const sourceIds = ["audio", "enhanced", ...cameraKeys] as const;
 export const sourceIdSchema = z.enum(sourceIds);
 export const mediaInfo = z.object({
   pathname: z.string().min(30).max(260),
