@@ -5,7 +5,13 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/fr/studio-live", "/en/studio-live", "/api/studio/"],
+      disallow: [
+        "/fr/studio-live",
+        "/en/studio-live",
+        "/api/studio/",
+        "/api/questions/admin",
+        "/api/questions/presentation",
+      ],
     },
     sitemap: site.url + "/sitemap.xml",
   };
