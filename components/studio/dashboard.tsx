@@ -509,6 +509,26 @@ export function StudioDashboard({
     );
     setEntries(entriesRef.current);
   }
+  function goToAnalysis() {
+    const fullTranscript = exportText(entriesRef.current);
+    if (!fullTranscript.trim()) {
+      router.push(`/${lang}/studio-analyse`);
+      return;
+    }
+    // Only an explicit user click transfers this private text. No cloud persistence.
+    // Save the complete original locally first: the analysis editor has a 26k limit.
+    saveFile("studio-transcription-complete.txt", fullTranscript);
+    try {
+      sessionStorage.setItem("ds-studio-pending-analysis", fullTranscript.slice(0, 26000));
+    } catch {
+      setError(t(
+        "Le transfert local est indisponible. Télécharge la transcription, puis importe-la dans le Studio d’analyse.",
+        "Local transfer is unavailable. Download the transcript, then import it in the Analysis Studio.",
+      ));
+      return;
+    }
+    router.push(`/${lang}/studio-analyse`);
+  }
   function summary() {
     return `${t("BILAN LOCAL — extraits non interprétés, pas une synthèse IA", "LOCAL REVIEW — uninterpreted excerpts, not an AI summary")}\n${Math.floor(seconds / 60)} min ${seconds % 60}s · ${entriesRef.current.filter((e) => e.speaker !== "Dominique").length} ${t("questions/interventions", "questions/interventions")}\n\n${exportText(entriesRef.current)}\n\n${t("Notes éditoriales privées", "Private editorial notes")}: ${note}`;
   }
@@ -518,7 +538,15 @@ export function StudioDashboard({
         <div className="studio-live-panel" role="region" aria-label={t("Commandes vocales en direct", "Live voice commands")}>
           <header className="studio-live-header">
             <div className="studio-live-brand">DOMINIQUE SOUCY <span>/ STUDIO LIVE</span></div>
-            <div className="studio-live-on"><span aria-hidden="true" />ON AIR · {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</div>
+            <div
+              className={`studio-live-on${mode === "paused" || (!demo && connection !== "connected") ? " is-paused" : " is-broadcasting"}`}
+              role="status"
+              aria-label={mode === "paused" || (!demo && connection !== "connected") ? t("Séance suspendue", "Session suspended") : t("Séance active dans le navigateur", "Browser session active")}
+            >
+              <span aria-hidden="true" />
+              {mode === "paused" || (!demo && connection !== "connected") ? "PAUSED" : "ON AIR"}
+              <small> · {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</small>
+            </div>
           </header>
           <div className="studio-live-heading">
             <p>{t("CONTRÔLE VOCAL", "VOICE CONTROL")}</p>
@@ -621,6 +649,32 @@ export function StudioDashboard({
         </span>
         <span className="studio-on-air-bulb" aria-hidden="true" />
       </div>
+      {mode === "ended" && !active && (
+        <section className="studio-finish-panel" aria-labelledby="studio-finish-title" role="region">
+          <span className="studio-finish-kicker">{t("SÉANCE TERMINÉE · PROCHAINE ÉTAPE", "SESSION ENDED · NEXT STEP")}</span>
+          <h2 id="studio-finish-title">{t("TON ENREGISTREMENT EST TERMINÉ. ET MAINTENANT?", "SESSION COMPLETE. WHAT'S NEXT?")}</h2>
+          <p>{entries.length
+            ? t(
+                `${entries.length} interventions textuelles disponibles dans cette page. Exporte-les avant de fermer l’onglet, ou transfère-les volontairement au Studio d’analyse IA.`,
+                `${entries.length} text entries available on this page. Export them before closing this tab, or explicitly transfer them to the AI Analysis Studio.`,
+              )
+            : t(
+                "Aucune transcription n’a été recueillie dans cette séance. Si tu as enregistré avec OBS ou une caméra, ouvre le Studio d’analyse IA pour importer ce fichier.",
+                "No transcript was captured in this session. If you recorded with OBS or a camera, open the AI Analysis Studio to import your file.",
+              )}</p>
+          <div className="studio-finish-actions">
+            <button type="button" onClick={() => saveFile("studio-transcription-complete.txt", exportText(entriesRef.current))}
+              disabled={!entries.length}>{t("1 · EXPORTER LA TRANSCRIPTION", "1 · EXPORT TRANSCRIPT")}</button>
+            <button type="button" className="studio-finish-next" onClick={goToAnalysis}>
+              {t("2 · PASSER À L’ANALYSE IA", "2 · OPEN AI ANALYSIS")}
+            </button>
+          </div>
+          <p className="studio-finish-warning">{t(
+            "Le Studio Live ne crée pas lui-même de vidéo OBS. ON AIR indique une séance active dans le navigateur, pas un enregistrement. Vérifie ton fichier caméra/OBS séparément. La transcription n’est pas sauvegardée automatiquement.",
+            "Studio Live does not record OBS video. ON AIR means the browser session is active, not that recording is underway. Check your camera/OBS file separately. Your transcript is not autosaved.",
+          )}</p>
+        </section>
+      )}
       <p className="studio-on-air-note">
         {t(
           "Voyant de la séance dans le navigateur — ne confirme ni diffusion publique ni enregistrement OBS.",
