@@ -467,16 +467,6 @@ export function StudioDashboard({
       const s = await microphone(input);
       streamRef.current = s;
       setStream(s);
-      try{
-        const recorder=new PressRecorder(s);
-        recorder.onError=code=>setRecordingError(code);
-        await recorder.start();
-        recorderRef.current=recorder;setRecordingActive(true);
-      }catch{
-        setRecordingError(t("Enregistrement local non disponible : lance un enregistrement OBS séparé.",
-                            "Local recording unavailable: record with OBS separately."));
-        setRecordingActive(false);
-      }
       await listDevices();
       testTimer.current = setTimeout(() => {
         s.getTracks().forEach((x) => x.stop());
@@ -512,6 +502,7 @@ export function StudioDashboard({
     setError("");
     silence();
     stopMedia();
+    setRecordingActive(false);
     setCurrent("reflection");
     entriesRef.current = [];
     setEntries([]);
@@ -539,6 +530,16 @@ export function StudioDashboard({
       }
       streamRef.current = s;
       setStream(s);
+      try{
+        const recorder=new PressRecorder(s);
+        recorder.onError=code=>setRecordingError(code);
+        await recorder.start();
+        recorderRef.current=recorder;setRecordingActive(true);
+      }catch{
+        setRecordingError(t("Enregistrement local non disponible : lance un enregistrement OBS séparé.",
+                            "Local recording unavailable: record with OBS separately."));
+        setRecordingActive(false);
+      }
       await listDevices();
       const call = new RealtimeStudio({
         transcript: receive,
@@ -736,7 +737,7 @@ export function StudioDashboard({
             <span>{t("JOURNALISTE", "JOURNALIST")}: <strong>{index >= 0 ? names[index] : "—"}</strong></span>
             <span>{t("MODE", "MODE")}: <strong>{labels[lang][mode]}</strong></span>
             <span>{t("MICRO", "MIC")}: <strong>{mode === "paused" ? t("COUPÉ", "OFF") : t("ACTIF", "ON")}</strong></span>
-            <span>{t("AUDIO", "AUDIO")}: <strong>{t("OBS NON CONFIRMÉ", "OBS NOT CONFIRMED")}</strong></span>
+            <span>{t("ENREGISTREMENT", "RECORDING")}: <strong>{recordingActive?t("● AUDIO EN COURS","● AUDIO RECORDING"):t("NON CONFIRMÉ","NOT CONFIRMED")}</strong></span>
             <span>{t("IA", "AI")}: <strong>{connection}</strong></span>
           </div>
           <footer className="studio-live-footer">
@@ -818,6 +819,17 @@ export function StudioDashboard({
                 "Aucune transcription n’a été recueillie dans cette séance. Si tu as enregistré avec OBS ou une caméra, ouvre le Studio d’analyse IA pour importer ce fichier.",
                 "No transcript was captured in this session. If you recorded with OBS or a camera, open the AI Analysis Studio to import your file.",
               )}</p>
+          {(recordingBlob||recoveredTake)&&<div className="studio-audio-recovery">
+            <strong>{recordingBlob?t("✓ AUDIO LOCAL FINALISÉ","✓ LOCAL AUDIO FINALIZED"):
+              t("COPIE DE RÉCUPÉRATION AUDIO DÉTECTÉE","RECOVERABLE AUDIO BACKUP FOUND")}</strong>
+            {recordingBlob&&<button type="button" onClick={downloadRecording}>
+              {t("TÉLÉCHARGER À NOUVEAU L’AUDIO","DOWNLOAD AUDIO AGAIN")}
+            </button>}
+            {recoveredTake&&<button type="button" onClick={downloadRecovered}>
+              {t("RÉCUPÉRER LES FRAGMENTS AUDIO PRÉCÉDENTS","RECOVER PREVIOUS AUDIO CHUNKS")}
+            </button>}
+          </div>}
+          {recordingError&&<p className="studio-error" role="alert">{recordingError}</p>}
           <div className="studio-finish-actions">
             <button type="button" onClick={() => saveFile("studio-transcription-complete.txt", exportText(entriesRef.current))}
               disabled={!entries.length}>{t("1 · EXPORTER LA TRANSCRIPTION", "1 · EXPORT TRANSCRIPT")}</button>
@@ -826,11 +838,21 @@ export function StudioDashboard({
             </button>
           </div>
           <p className="studio-finish-warning">{t(
-            "Le Studio Live ne crée pas lui-même de vidéo OBS. ON AIR indique une séance active dans le navigateur, pas un enregistrement. Vérifie ton fichier caméra/OBS séparément. La transcription n’est pas sauvegardée automatiquement.",
-            "Studio Live does not record OBS video. ON AIR means the browser session is active, not that recording is underway. Check your camera/OBS file separately. Your transcript is not autosaved.",
+            "Le Studio tente maintenant un enregistrement audio local distinct du voyant ON AIR. Vérifie le téléchargement du fichier audio en quittant la séance. Il ne commande toujours pas tes caméras ou OBS.",
+            "Studio now attempts a local audio recording, separate from ON AIR. Confirm the downloaded audio file when finishing. OBS and cameras remain independent.",
           )}</p>
         </section>
       )}
+      <div className="studio-recorder-indicator" role="status">
+        {recordingActive?t("● ENREGISTREMENT AUDIO LOCAL EN COURS — MICRO + JOURNALISTES IA",
+          "● LOCAL AUDIO RECORDING ACTIVE — MIC + AI JOURNALISTS"):
+          t("ENREGISTREMENT LOCAL NON ACTIF — ON AIR SEUL NE SAUVEGARDE RIEN",
+            "LOCAL RECORDING INACTIVE — ON AIR ALONE DOES NOT SAVE AUDIO")}
+        {recordingError&&<p>{recordingError}</p>}
+      </div>
+      {recoveredTake&&<button type="button" className="studio-recover-audio" onClick={downloadRecovered}>
+        {t("RÉCUPÉRER UN AUDIO ENREGISTRÉ SUR CE NAVIGATEUR","RECOVER PREVIOUS AUDIO FROM THIS BROWSER")}
+      </button>}
       <p className="studio-on-air-note">
         {t(
           "Voyant de la séance dans le navigateur — ne confirme ni diffusion publique ni enregistrement OBS.",
