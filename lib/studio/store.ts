@@ -5,8 +5,8 @@ const runtime = globalThis as typeof globalThis & {
 };
 const local = (runtime.__dsStudioDevStore ??= new Map());
 export async function redis(command: (string | number)[]) {
-  const url = process.env.STUDIO_REDIS_URL;
-  const token = process.env.STUDIO_REDIS_TOKEN;
+  const url = process.env.STUDIO_REDIS_URL || process.env.KV_REST_API_URL;
+  const token = process.env.STUDIO_REDIS_TOKEN || process.env.KV_REST_API_TOKEN;
   if (!url || !token) throw new Error("STORE_UNAVAILABLE");
   const r = await fetch(url, {
     method: "POST",
@@ -27,7 +27,7 @@ function development() {
   return (
     process.env.NODE_ENV !== "production" &&
     !process.env.VERCEL &&
-    !process.env.STUDIO_REDIS_URL
+    !(process.env.STUDIO_REDIS_URL || process.env.KV_REST_API_URL)
   );
 }
 export async function get(key: string): Promise<string | null> {
