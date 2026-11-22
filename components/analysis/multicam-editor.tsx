@@ -28,6 +28,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [audioSource, setAudioSource] = useState<SourceKey>(savedTimeline?.audioSource || "audio");
   const [finalAudioSource,setFinalAudioSource]=useState<SourceKey>(savedTimeline?.finalAudioSource || "audio");
   const [visualClaps,setVisualClaps]=useState<Record<CameraKey,number|null>>(savedTimeline?.visualClaps || {main:null,vertical:null,secondary:null});
+  const [visualAligned,setVisualAligned]=useState<{anchor:CameraKey;projectClap:number;offsets:Record<SourceKey,number>;count:number}|null>(null);
 
   const [selectedCamera, setSelectedCamera] = useState<CameraKey>("main");
   const [offsets,setOffsets] = useState(savedTimeline?.offsets || initialOffsets);
@@ -75,8 +76,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const selected = activeCamera(cuts,playhead,realCamera);
   const effectiveCamera = videos.includes(selected) ? selected : realCamera;
 
-  const seekAll=useCallback((time:number, offsetsValue=offsets)=>{
-    const t=safeCutTime(time,duration);
+  const seekAll=useCallback((time:number, offsetsValue=offsets,maxTime=duration)=>{
+    const t=safeCutTime(time,maxTime);
     for(const k of (Object.keys(elements.current) as SourceKey[])){
       const node=elements.current[k];
       if(!node || !Number.isFinite(node.duration)) continue;
@@ -98,11 +99,11 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     setPlayhead(0);
   },[urls,pauseAll]);
 
-  const synchronize=useCallback((newOffsets:Record<SourceKey,number>)=>{
+  const synchronize=useCallback((newOffsets:Record<SourceKey,number>,targetTime=playhead,maxTime=duration)=>{
     pauseAll();
     setOffsets(newOffsets);
-    seekAll(playhead,newOffsets);
-  },[pauseAll,seekAll,playhead]);
+    seekAll(targetTime,newOffsets,maxTime);
+  },[pauseAll,seekAll,playhead,duration]);
 
   const play=async()=>{
     if(playing){pauseAll();return}
@@ -329,10 +330,12 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             const node=elements.current[key];
             if(!node||!Number.isFinite(node.currentTime))return;
             setVisualClaps(old=>({...old,[key]:Math.round(node.currentTime*100)/100}));
+            setVisualAligned(null);
           }}>{fr?"MARQUER L’IMAGE ACTUELLE":"MARK CURRENT FRAME"}</button>
         </div>)}
       </div>
       <button type="button" className="analysis-primary" onClick={()=>{
+        setVisualAligned(null);
         const keys=videos.filter(key=>visualClaps[key]!==null);
         if(keys.length<2){setError(fr?"Marque la même image de clap sur au moins deux vidéos.":"Mark the same clap frame on at least two videos.");return}
         // Prefer a camera already matched to the external reference audio.
@@ -346,17 +349,45 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         const anchorOffset=offsets[anchor];
         const next={...offsets};
         for(const key of keys)next[key]=anchorOffset+(visualClaps[key]||0)-base;
-        synchronize(next);
+        const clapPosition=Math.max(0,base-anchorOffset);
+        // Most claps are at the END, far past the default 300-second timeline.
+        // Expand the preview range before seeking so the synchronized clap is actually visible.
+        const nextDuration=Math.min(7200,Math.max(duration,Math.ceil(clapPosition+2)));
+        if(nextDuration!==duration)setDuration(nextDuration);
+        const previewTime=Math.max(0,clapPosition-.15);
+        synchronize(next,previewTime,nextDuration);
+        setVisualAligned({anchor,projectClap:clapPosition,offsets:next,count:keys.length});
         setError("");
         setSuccess(fr?
           `Clap visuel aligné pour ${keys.length} caméras. ${confirmed?"Référence audio transférée depuis la caméra fiable.":"Alignement relatif des caméras seulement : vérifie le son final."} Vérifie aussi le début de la vidéo.`:
           `Visual clap matched for ${keys.length} cameras. ${confirmed?"Transferred timing from a trusted audio match.":"Cameras aligned relative to each other; check final audio."} Verify the start as well.`);
       }}>{fr?"ALIGNER SUR LE CLAP VISUEL":"ALIGN USING VISUAL CLAP"}</button>
+      {visualAligned&&<div className="studio-clap-confirmation" role="status" aria-live="polite">
+        <strong>✓ {fr?"ALIGNEMENT VISUEL CALCULÉ":"VISUAL ALIGNMENT CALCULATED"} · {visualAligned.count} {fr?"CAMÉRAS":"CAMERAS"}</strong>
+        <p>{fr
+          ? "Les vidéos ont été repositionnées près du clap commun dans l’étape 06. Les décalages sont ajoutés au projet par sauvegarde automatique."
+          : "Camera playback was moved near the matching clap in step 06. Offsets are automatically saved in the project."}</p>
+        <div className="studio-clap-offsets">
+          {videos.map(key=><div key={key}>
+            <span>{labels[key]}</span>
+            <strong>{visualAligned.offsets[key]>=0?"+":""}{visualAligned.offsets[key].toFixed(2)} s</strong>
+            {key===visualAligned.anchor&&<small>{fr?"RÉFÉRENCE VISUELLE":"VISUAL REFERENCE"}</small>}
+          </div>)}
+        </div>
+        <button type="button" className="analysis-secondary" onClick={()=>{
+          const t=Math.max(0,visualAligned.projectClap-.15);
+          pauseAll();seekAll(t,visualAligned.offsets,Math.max(duration,t+1));
+          document.getElementById("studio-camera-preview")?.scrollIntoView({behavior:"smooth",block:"start"});
+        }}>{fr?"VOIR LES TROIS CLAPS ALIGNÉS ↓":"SEE ALIGNED CLAP FRAMES ↓"}</button>
+        <p className="analysis-note">{fr
+          ?"Important : les images des caméras sont alignées entre elles. Si ton audio final est un fichier séparé, il doit être vérifié par rapport à une caméra; ce clap visuel seul ne prouve pas la synchronisation de la voix."
+          :"Camera images are aligned to each other. A separately recorded final audio track still needs verification against a camera."}</p>
+      </div>}
       <p className="analysis-note">{fr
         ?"Le clap doit être visible dans au moins deux caméras. Si une caméra est déjà alignée au son principal, son repère est transmis aux autres. Sinon, les caméras sont alignées entre elles seulement. Vérifie la voix finale."
         :"If one camera has a trusted audio match, the clap transfers its offset to the other cameras. Otherwise, only relative alignment is possible. Verify final voice timing."}</p>
     </div>
-    <div className="analysis-multi-player-header">
+    <div className="analysis-multi-player-header" id="studio-camera-preview">
       <strong>{fr?"06 · PRÉVISUALISER LES ANGLES":"06 · ANGLE PREVIEW"}</strong>
       <span>{timeCode(playhead)} / {timeCode(duration)}</span>
     </div>
@@ -371,6 +402,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             const node=elements.current[key];
             if(!node||!Number.isFinite(node.currentTime))return;
             setVisualClaps(old=>({...old,[key]:Math.round(node.currentTime*100)/100}));
+            setVisualAligned(null);
             setSuccess(fr?`Clap ${labels[key]} marqué à ${node.currentTime.toFixed(2)} seconde(s).`:
               `Marked ${labels[key]} clap at ${node.currentTime.toFixed(2)} seconds.`);
           }}>{fr?"MARQUER CLAP":"MARK CLAP"}</button>
