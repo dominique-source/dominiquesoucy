@@ -44,7 +44,15 @@ export async function POST(request:Request){
   let data:unknown;
   try {data=await request.json()}catch{return json({error:"BAD_REQUEST"},400)}
   const parsed=projectSchema.safeParse(data);
-  if(!parsed.success||!validProjectMedia(parsed.data))return json({error:"BAD_PROJECT"},400);
+  if(!parsed.success){
+    const fields=[...new Set(parsed.error.issues.map(issue=>issue.path.join(".")||"root"))].slice(0,8);
+    console.warn("[studio-project] invalid schema fields",fields);
+    return json({error:"BAD_PROJECT_SCHEMA",fields},400);
+  }
+  if(!validProjectMedia(parsed.data)){
+    console.warn("[studio-project] invalid media reference");
+    return json({error:"BAD_PROJECT_MEDIA"},400);
+  }
   const project={...parsed.data,updatedAt:Date.now()};
   try{
     // Every project is private to the single authenticated Studio workspace.
@@ -55,5 +63,8 @@ export async function POST(request:Request){
     await redis(["LTRIM",`studio:${indexKey}`,0,99]);
     await redis(["EXPIRE",`studio:${indexKey}`,PROJECT_TTL]);
     return json({ok:true,projectId:project.id,updatedAt:project.updatedAt});
-  }catch{return json({error:"PROJECT_SAVE_FAILED"},503)}
+  }catch(e){
+    console.error("[studio-project] save/index failed",e instanceof Error?e.message:"UNKNOWN");
+    return json({error:"PROJECT_SAVE_FAILED"},503);
+  }
 }
