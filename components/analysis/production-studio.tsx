@@ -9,7 +9,7 @@ import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
 import { StudioBackdropPicker } from "./studio-backdrop-picker";
 import { CapsuleWorkshop } from "./capsule-workshop";
-import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
+import { freshProject, projectSchema, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
 
 const names:Record<SourceKey,string>={audio:"AUDIO ORIGINAL",enhanced:"AUDIO FINAL OPTIMISÉ",main:"CANON · PLAN PRINCIPAL",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
@@ -36,6 +36,20 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [busy,setBusy]=useState<""|"transcribe"|"analyze"|"questions">("");
   const [error,setError]=useState("");
   const [saveFailure,setSaveFailure]=useState("");
+  const [storageHealth,setStorageHealth]=useState("");
+  const [checkingStorage,setCheckingStorage]=useState(false);
+  const checkStorage=async()=>{
+    setCheckingStorage(true);
+    try{
+      const response=await fetch("/api/analysis/storage-health",{cache:"no-store"});
+      const data=await response.json() as {projectStore?:string;mediaStore?:string;error?:string};
+      setStorageHealth(data.error?
+        `HTTP ${response.status} · ${data.error}`:
+        `HTTP ${response.status} · Redis: ${data.projectStore||"unknown"} · Blob: ${data.mediaStore||"unknown"} (configuration seulement)`);
+    }catch{
+      setStorageHealth(fr?"Diagnostic indisponible : vérifie ta connexion.":"Diagnostic unavailable: check your connection.");
+    }finally{setCheckingStorage(false)}
+  };
   const [localBackup,setLocalBackup]=useState<StudioProject|null>(null);
   const [localBackupError,setLocalBackupError]=useState("");
   const [retryKey,setRetryKey]=useState(0);
@@ -107,7 +121,25 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           setProject(p);persisted.current=JSON.stringify({...p,updatedAt:undefined});setStatus("saved");
         }else setStatus("pending");
       }catch{
-        if(!cancelled){setStatus("error");setError(fr?"Stockage du Studio indisponible. Ne ferme pas la page.":"Studio storage unavailable. Do not close the page.");}
+        if(!cancelled){
+          // Restore local metadata first. Otherwise setting ready=true would
+          // overwrite the last recovery copy with a fresh empty project.
+          let recovered:StudioProject|null=null;
+          try{
+            const raw=localStorage.getItem(recoveryKey);
+            if(raw){
+              const parsed=projectSchema.safeParse(JSON.parse(raw));
+              if(parsed.success)recovered=parsed.data;
+            }
+          }catch{ /* Browser storage may be blocked. */ }
+          if(recovered)setProject(recovered);
+          setStatus("error");
+          setError(fr?
+            recovered?"Serveur indisponible. Copie locale restaurée, mais non sauvegardée sur le serveur.":
+              "Stockage du Studio indisponible. Ne ferme pas la page.":
+            recovered?"Server unavailable. Local project restored, but not saved on the server.":
+              "Studio storage unavailable. Do not close the page.");
+        }
       }finally{if(!cancelled)setReady(true)}
     })();
     return()=>{cancelled=true};
@@ -126,8 +158,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(project),
         });
         if(!r.ok){
-          const data=await r.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string};
-          throw Error(`${r.status}:${data.error||"SAVE_FAILED"}`);
+          const data=await r.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string;fields?:string[]};
+          throw Error(`${r.status}:${data.error||"SAVE_FAILED"}${data.fields?.length?" ["+data.fields.join(", ")+"]":""}`);
         }
         const result=await r.json() as {updatedAt:number};
         if(ticket!==revision.current)return;
@@ -383,6 +415,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           </select>
         </label>
         <button type="button" className="analysis-secondary" onClick={newProject} disabled={!ready||uploading}>+ {fr?"NOUVEAU PROJET":"NEW PROJECT"}</button>
+      </div>
+      <div className="studio-recovery-actions">
+        <button type="button" className="analysis-secondary" disabled={!ready||checkingStorage}
+          onClick={checkStorage}>{checkingStorage?(fr?"VÉRIFICATION…":"CHECKING…"):(fr?"DIAGNOSTIC DU STOCKAGE":"CHECK STORAGE")}</button>
+        {storageHealth&&<small role="status">{storageHealth}</small>}
       </div>
       {status==="error"&&<div className="studio-recovery-alert" role="alert">
         <strong>{fr?"SAUVEGARDE SERVEUR NON CONFIRMÉE":"SERVER SAVE NOT CONFIRMED"}</strong>
