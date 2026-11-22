@@ -27,5 +27,5 @@ export const episode001 = {
 export function completedEpisodeTurn(text: string) {
   // FIN must be a standalone command. Natural mentions of 'la fin' must not hand over.
   // No triggering on 'enfin', 'finalement', or mid-sentence references to FIN.
-  return /(?:^|[\s.,!?;:])fin[.!?…\s]*$/i.test(text.trim());
+  return /^fin[.!?…]*$/i.test(text.trim());
 }
