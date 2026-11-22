@@ -257,3 +257,6 @@
 
 .analysis-multi-camera-label{flex-wrap:wrap}
 .analysis-multi-camera-label .studio-clap-mark{background:#242f15;color:#ccff00;border:1px solid #87a54c}
+
+.studio-audio-optimized .studio-enhance-cta{display:inline-flex;align-items:center;justify-content:center;background:#ccff00!important;color:#0a0a0a!important;font:900 italic clamp(19px,2.4vw,29px)/1 "Barlow Condensed",Impact,sans-serif!important;letter-spacing:.035em;padding:16px 25px;border:0;border-radius:8px;min-height:54px}
+.studio-audio-optimized .studio-enhance-cta:hover{background:#e2ff70!important}
