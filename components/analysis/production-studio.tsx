@@ -190,6 +190,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     if(!file)return;
     const id=latest.current.id;
     setUploads(p=>({...p,[key]:{busy:true,progress:0}}));setError("");
+    let uploadStage:"transfer"|"project-save"="transfer";
+    let uploadedPath="";
     try{
       const ext=file.name.split(".").pop()?.toLowerCase();
       const path=`studio-projects/${id}/${key}/${crypto.randomUUID()}.${ext}`;
@@ -197,6 +199,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         access:"private",handleUploadUrl:"/api/analysis/project-media-upload",multipart:true,
         onUploadProgress:({percentage})=>setUploads(p=>({...p,[key]:{busy:true,progress:Math.round(percentage)}})),
       });
+      uploadedPath=blob.pathname;
+      uploadStage="project-save";
       if(latest.current.id!==id)throw Error("PROJECT_CHANGED");
       const info:SourceMedia={pathname:blob.pathname,filename:file.name,bytes:file.size,
         contentType:file.type||"application/octet-stream"};
@@ -208,15 +212,32 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       const r=await fetch("/api/analysis/projects",{
         method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(next),
       });
-      if(!r.ok)throw Error("SAVE_FAILED");
+      if(!r.ok){
+        const data=await r.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string};
+        throw Error(`${r.status}:${data.error||"SAVE_FAILED"}`);
+      }
       setProject(next);
       setUploads(p=>({...p,[key]:{busy:false,progress:100}}));
       setMessage(fr?`${file.name} enregistré dans le stockage privé.`:`${file.name} saved privately.`);
       record("upload",`${key} : fichier privé enregistré`,"success");
-    }catch{
-      setUploads(p=>({...p,[key]:{busy:false,progress:0,error:"UPLOAD_FAILED"}}));
-      setError(fr?"Transfert non confirmé. Garde le fichier original et réessaie.":"Upload not confirmed. Keep your original and retry.");
-      record("error",`Transfert média ${key} échoué`,"failure");
+    }catch(e){
+      const details=e instanceof Error?e.message:"UNKNOWN";
+      // Persist a safe diagnostic without exposing signed tokens or private URLs.
+      const category=/401|unauthorized|token|403|forbidden|access/i.test(details)?"AUTH_OR_ACCESS":
+        /too.large|limit|size|413|quota/i.test(details)?"FILE_OR_QUOTA_LIMIT":
+        /network|fetch|timeout|abort/i.test(details)?"NETWORK_OR_TIMEOUT":
+        /content.type|mime|unsupported/i.test(details)?"MEDIA_TYPE":
+        "UNKNOWN";
+      const code=`${uploadStage.toUpperCase()}_${category}`;
+      setUploads(p=>({...p,[key]:{busy:false,progress:0,error:code}}));
+      setError(fr?
+        (uploadStage==="project-save"
+         ?"Le média a été transféré, mais son association au projet n'a pas été confirmée."
+         :"Le transfert privé de ce média a échoué.")+` (${code}). Conserve le fichier local; ne le supprime pas.`:
+        (uploadStage==="project-save"
+         ?"Media transfer succeeded, but saving the project reference was not confirmed."
+         :"Private media upload failed.")+` (${code}). Keep your local source file.`);
+      record("error",`${key}: ${code}${uploadedPath?" (média transféré, projet non confirmé)":""}`,"failure");
     }
   };
   const transcribe=async()=>{
