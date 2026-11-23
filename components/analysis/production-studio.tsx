@@ -610,7 +610,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
             void navigator.clipboard?.writeText(`${transcriptionFailure.stage}: ${transcriptionFailure.code}`)}>
             {fr?"COPIER LE CODE D'ERREUR":"COPY ERROR CODE"}</button>
         </div>
-      </div>
+      </div>}
       <p className="analysis-note">{fr?"Pour transcrire : 24 Mo maximum. Pour conserver l’original dans le projet, clique sur « Sauvegarder le média ».":"24 MB maximum for transcription. Save the original media separately."}</p>
     </>)}
     {step(2,fr?"TRANSCRIPTION":"TRANSCRIPT",`${project.transcript.length} / 26 000`,<>
