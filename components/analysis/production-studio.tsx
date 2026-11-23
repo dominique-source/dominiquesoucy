@@ -44,16 +44,20 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const persisted=useRef("");
   // Serialize uploads and autosaves: older requests must never overwrite newer media references.
   const saveQueue=useRef<Promise<void>>(Promise.resolve());
+  const serverVersions=useRef<Record<string,number>>({});
   const saveProject=useCallback((value:StudioProject):Promise<{updatedAt:number}>=>{
     const task=saveQueue.current.catch(()=>undefined).then(async()=>{
       const response=await fetch("/api/analysis/projects",{
-        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(value),
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({...value,updatedAt:serverVersions.current[value.id]??value.updatedAt??0}),
       });
       if(!response.ok){
         const data=await response.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string};
         throw Error(`${response.status}:${data.error||"SAVE_FAILED"}`);
       }
-      return response.json() as Promise<{updatedAt:number}>;
+      const saved=await response.json() as {updatedAt:number};
+      serverVersions.current[value.id]=saved.updatedAt;
+      return saved;
     });
     saveQueue.current=task.then(()=>undefined,()=>undefined);
     return task;
@@ -115,6 +119,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     const r=await fetch(`/api/analysis/projects?id=${encodeURIComponent(id)}`,{cache:"no-store"});
     if(!r.ok)throw Error("PROJECT_NOT_FOUND");
     const data=await r.json() as {project:StudioProject};
+    serverVersions.current[data.project.id]=data.project.updatedAt??0;
     return data.project;
   },[]);
   useEffect(()=>{
@@ -164,11 +169,14 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         const code=err instanceof Error?err.message:"SAVE_FAILED";
         setSaveFailure(code);
         const unauthorized=code.startsWith("401:");
+        const conflict=code.includes("PROJECT_VERSION_CONFLICT");
         const invalid=code.includes("BAD_PROJECT")||code.includes("TOO_LARGE");
         setError(fr?
+          conflict?"Une autre session a modifié ce projet. Tes changements restent dans la copie locale. Télécharge le JSON de secours avant de recharger la version serveur.":
           unauthorized?"Session Studio expirée. Une copie locale existe dans ce navigateur. Reconnecte-toi sans fermer cet onglet.":
           invalid?"Le serveur refuse une donnée du projet. Télécharge la copie JSON de secours.":
           "Le serveur n’a pas confirmé la sauvegarde. Conserve la copie locale et réessaie.":
+          conflict?"Another session changed this project. Your edits remain in local recovery. Download the backup JSON before reloading the server version.":
           unauthorized?"Studio session expired. Local recovery exists. Sign in again without closing this tab.":
           invalid?"Server rejected project data. Download the recovery JSON.":
           "Server save was not confirmed. Keep your recovery copy and try again.");
