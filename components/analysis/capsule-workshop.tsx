@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+import { buildHdRenderManifest,hdManifestFilename } from "@/lib/analysis/hd-render-manifest";
 import { episodeCode, type StudioProject } from "@/lib/analysis/project";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
@@ -10,7 +12,7 @@ type EventStatus=StudioProject["events"][number]["status"];
 
 const variants:Record<Capsule["style"],string>={
  classic:"PORTRAIT / CLASSIQUE",quote:"CITATION PERCUTANTE",
- conversation:"BULLES DE CONVERSATION",editorial:"ANALYSE / ÉDITORIAL",
+ conversation:"QUESTION JOURNALISTIQUE",rafale:"RAFALE DE QUESTIONS",editorial:"ANALYSE / ÉDITORIAL",
 };
 const backdrops:Record<Capsule["background"],string>={
  original:"VIDÉO PLEIN ÉCRAN",dark:"STUDIO NOIR",lime:"FOND LIME",
@@ -22,6 +24,9 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
  onEvent:(type:EventKind,message:string,status?:EventStatus)=>void;
 }){
  const fr=lang==="fr";
+ const [transparentForeground,setTransparentForeground]=useState(false);
+ const [reporterPortrait,setReporterPortrait]=useState(false);
+ const [manifestNotice,setManifestNotice]=useState("");
  const capsules=project.capsules;
  const chosen=capsules.find(c=>c.id===project.selectedCapsuleId)||capsules[0];
  function select(id:string){onChange({selectedCapsuleId:id})}
@@ -67,6 +72,18 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
   onChange({capsules:[...capsules,...newDrafts],
     selectedCapsuleId:newDrafts[0].id,stage:"editing"});
   onEvent("analysis",`${newDrafts.filter(c=>c.timingSource==="automatic").length}/${newDrafts.length} capsules horodatées et plans multicaméras préparés`,"success");
+ }
+ function exportHdManifest(capsule:Capsule){
+  try{
+   const manifest=buildHdRenderManifest(project,capsule,{transparentForeground,reporterPortrait});
+   const url=URL.createObjectURL(new Blob([JSON.stringify(manifest,null,2)],{type:"application/json"}));
+   const link=document.createElement("a");
+   link.href=url;link.download=hdManifestFilename(capsule);document.body.appendChild(link);link.click();link.remove();
+   window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+   setManifestNotice(fr?"Manifeste HD prêt. Copie master.mp4 et le JSON dans le moteur de rendu local : instructions ci-dessous.":"HD manifest ready. Copy master.mp4 and this JSON to the local renderer (instructions below).");
+  }catch(e){
+   setManifestNotice(fr?"Vérifie les secondes Début / Fin (maximum 10 minutes pour ce pilote).":"Check Start / End seconds (10-minute max for this pilot).");
+  }
  }
  function remove(id:string){
   onChange({capsules:capsules.filter(c=>c.id!==id),
@@ -174,6 +191,23 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
         ?"Prévisualise le résultat avec une vraie image vidéo dans la section export plus bas. Si la peau, les vêtements ou les cheveux disparaissent, diminue la tolérance; ce procédé par couleur n’est pas une segmentation IA. Sur une lumière inégale, le rendu peut nécessiter un traitement professionnel."
         :"Preview your actual camera frame in the export panel below. Lower tolerance if clothing or skin disappears. Color keying is not AI person segmentation and uneven lighting may require professional processing."}</p>
     </div>
+    {(chosen.style==="conversation"||chosen.style==="rafale")&&<div className="studio-keying-controls">
+      <div className="studio-keying-heading"><strong>{fr?"QUESTION(S) JOURNALISTIQUE(S)":"JOURNALIST QUESTION(S)"}</strong></div>
+      <label>{fr?"NOM RÉEL DU JOURNALISTE (OPTIONNEL)":"REAL JOURNALIST NAME (OPTIONAL)"}
+        <input value={chosen.journalistName||""} maxLength={100} placeholder={fr?"Ne pas inventer de nom":"Do not invent a name"}
+          onChange={e=>change(chosen.id,{journalistName:e.target.value})}/></label>
+      <label>{fr?"MÉDIA / ORGANISATION (OPTIONNEL)":"MEDIA OUTLET (OPTIONAL)"}
+        <input value={chosen.journalistOutlet||""} maxLength={100}
+          onChange={e=>change(chosen.id,{journalistOutlet:e.target.value})}/></label>
+      <label>{fr?"ORIGINE DE LA QUESTION":"QUESTION SOURCE"}
+        <select value={chosen.questionAttribution||"reconstructed"}
+          onChange={e=>change(chosen.id,{questionAttribution:e.target.value as "verified"|"reconstructed"})}>
+          <option value="reconstructed">{fr?"Question proposée par l’IA (non originale)":"AI-proposed question (not original)"}</option>
+          <option value="verified">{fr?"Question originale vérifiée":"Verified original question"}</option>
+        </select>
+      </label>
+      <p className="analysis-note">{fr?"Une question proposée par l’IA sera identifiée comme reconstitution dans le rendu, pas comme question réellement prononcée. Pour la rafale, écris une question par ligne dans le champ Bulle.":"AI-proposed questions are labeled as reconstructions, not actual spoken words. For question bursts, enter one question per line in the bubble field."}</p>
+    </div>}
     <label>{fr?"TEXTE ANIMÉ / CITATION":"ANIMATED TEXT / QUOTE"}<textarea rows={3} maxLength={500}
       value={chosen.caption} onChange={e=>change(chosen.id,{caption:e.target.value})}/></label>
     <label>{fr?"BULLE DE CONVERSATION":"CONVERSATION BUBBLE"}<textarea rows={2} maxLength={500}
@@ -187,6 +221,40 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
     <p className="analysis-note">{fr
       ?"Les textes bougent visuellement pendant l’export, mais ne sont pas encore synchronisés mot à mot avec les paroles. Le détourage par couleur est disponible en bêta pour un mur turquoise uniforme; une segmentation IA restera nécessaire pour les décors difficiles."
       :"Text animates visually during export but is not word-synced. Turquoise color keying is available in beta for a uniform wall; challenging scenes still require AI segmentation."}</p>
+    <div className="studio-auto-edit-panel">
+      <strong>{fr?"EXPORTER CETTE CAPSULE EN HD — MOTEUR LOCAL":"EXPORT THIS CAPSULE IN HD — LOCAL RENDERER"}</strong>
+      <p className="analysis-note">{fr?
+        "Cette sortie remplace le MP4 navigateur saccadé : le Studio crée un petit plan JSON, puis le moteur Remotion installé sur ton Mac traite ton master synchronisé en 1080p. Aucune vidéo n’est envoyée sur Vercel.":
+        "This replaces the choppy browser MP4: Studio downloads a JSON production plan; Remotion on your Mac renders the synced master at 1080p. No video is uploaded to Vercel."}</p>
+      <label className="studio-keying-toggle">
+        <input type="checkbox" checked={transparentForeground}
+          onChange={e=>setTransparentForeground(e.target.checked)}/>
+        {fr?"J’ai une vidéo détourée foreground.mov + audio.wav et un fond background.png":
+          "I have a keyed foreground.mov + audio.wav and background.png"}
+      </label>
+      <label className="studio-keying-toggle">
+        <input type="checkbox" checked={reporterPortrait}
+          onChange={e=>setReporterPortrait(e.target.checked)}/>
+        {fr?"J’ai la vraie photo reporter.png du journaliste, autorisée pour diffusion":
+          "I have an approved real reporter.png portrait"}
+      </label>
+      {!validRange&&<p role="alert" className="analysis-error">
+        {fr?"Corrige d’abord Début et Fin : la capsule ne doit pas être vide.":
+          "Fix Start and End first; the capsule cannot be empty."}
+      </p>}
+      <button type="button" className="analysis-primary" disabled={!validRange||chosen.end-chosen.start>600}
+        onClick={()=>exportHdManifest(chosen)}>
+        {fr?"↓ EXPORTER LE MANIFESTE HD (.JSON)":"↓ EXPORT HD RENDER MANIFEST (.JSON)"}
+      </button>
+      <p className="analysis-note">{fr?
+        "Étape suivante sur Mac : installe le moteur depuis GitHub → render-engine, copie master.mp4 dans public/, puis lance npm run render -- «/chemin/capsule.json». Instructions détaillées : render-engine/README.md.":
+        "Next on Mac: install the engine from GitHub → render-engine, copy master.mp4 to public/, run npm run render -- \"/path/capsule.json\". Read render-engine/README.md."}</p>
+      <a href="https://github.com/dominique-source/dominiquesoucy/tree/main/render-engine"
+        target="_blank" rel="noopener noreferrer" className="analysis-secondary">
+        {fr?"OUVRIR LES INSTRUCTIONS DU MOTEUR HD ↗":"OPEN HD RENDERER INSTRUCTIONS ↗"}
+      </a>
+      {manifestNotice&&<p role="status" className="analysis-note">{manifestNotice}</p>}
+    </div>
     <button type="button" className="analysis-secondary" onClick={()=>remove(chosen.id)}>
       {fr?"RETIRER CETTE CAPSULE":"REMOVE CAPSULE"}</button>
    </div>}
