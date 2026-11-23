@@ -59,6 +59,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [suggestedCuts,setSuggestedCuts]=useState<Cut[]|null>(null);
   const [decorPreview,setDecorPreview]=useState(false);
   const [decorCamera,setDecorCamera]=useState<CameraKey>("main");
+  const [decorFollowEdit,setDecorFollowEdit]=useState(true);
   const decorCanvas=useRef<HTMLCanvasElement|null>(null);
   const [error,setError] = useState("");
   const [success,setSuccess] = useState("");
@@ -269,13 +270,16 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         last=now;
         const canvas=decorCanvas.current;
         const ctx=canvas?.getContext("2d",{alpha:false});
-        const camera=videos.includes(decorCamera)?decorCamera:videos[0];
+        const clock=elements.current[realAudioSource];
+        const t=clock&&Number.isFinite(clock.currentTime)?Math.max(0,clock.currentTime-offsets[realAudioSource]):playhead;
+        const camera=decorFollowEdit?activeCamera(effectiveCuts,t,realCamera):
+          (videos.includes(decorCamera)?decorCamera:videos[0]);
         const el=elements.current[camera] as HTMLVideoElement|undefined;
         if(ctx&&canvas){
           try{
-            drawStudioFrame(ctx,el,canvas.width,canvas.height,0,0,{
-              style:capsule.style,background:capsule.background,caption:"",
-              bubble:"",textPosition:capsule.textPosition,keying:capsule.keying,backgroundUrl:selectedBackgroundUrl,
+            drawStudioFrame(ctx,el,canvas.width,canvas.height,t,capsule.start,{
+              style:capsule.style,background:capsule.background,caption:capsule.caption,
+              bubble:capsule.bubble,textPosition:capsule.textPosition,keying:capsule.keying,backgroundUrl:selectedBackgroundUrl,
             });
           }catch{setDecorPreview(false);setError(fr?
             "Prévisualisation indisponible : la vidéo ne permet pas la lecture de pixels locale.":
@@ -286,7 +290,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     };
     raf=requestAnimationFrame(paint);
     return ()=>cancelAnimationFrame(raf);
-  },[decorPreview,decorCamera,capsule,fr,selectedBackgroundUrl,videos.join("|")]);
+  },[decorPreview,decorCamera,decorFollowEdit,capsule,fr,selectedBackgroundUrl,videos.join("|"),effectiveCuts,realAudioSource,realCamera,offsets,playhead]);
   function proposeEdit(){
     pauseAll();
     const from=capsule?capsule.start:clipStart;
@@ -668,13 +672,17 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         <br/>{fr?`Montage : ${effectiveCuts.length} décisions de caméra · ${capsule.cameraEditSource==="automatic"?"automatique":"modifiable"}`:`Edit: ${effectiveCuts.length} camera decisions` }
         <br/>{fr?"L’export utilise les timecodes, les textes, les bulles et le format propres à cette capsule.":"Export uses this capsule’s times, graphics, bubbles and format."}</p>}
       {capsule&&<div className="studio-decor-preview-panel">
-        <strong>{fr?"DÉTOURAGE ET DÉCOR · PRÉVISUALISATION":"KEYING & BACKDROP · LIVE PREVIEW"}</strong>
+        <strong>{fr?"APERÇU DU MONTAGE · VIDÉO + BULLES + DÉCOR":"EDIT PREVIEW · FOOTAGE + BUBBLES + BACKDROP"}</strong>
         <p>{fr
           ?"Les réglages de l’atelier des capsules sont appliqués à cet aperçu réel et au MP4. Teste séparément chaque caméra avant le rendu final."
           :"Capsule settings are applied to this actual footage preview and to the MP4. Check each camera before final export."}</p>
         <div className="studio-decor-preview-actions">
-          <label>{fr?"CAMÉRA À VÉRIFIER":"CAMERA TO PREVIEW"}
-            <select value={videos.includes(decorCamera)?decorCamera:videos[0]} onChange={e=>setDecorCamera(e.target.value as CameraKey)}>
+          <label>{fr?"ANGLE DANS L’APERÇU":"PREVIEW CAMERA"}
+            <select value={decorFollowEdit?"edit":decorCamera} onChange={e=>{
+              setDecorFollowEdit(e.target.value==="edit");
+              if(e.target.value!=="edit")setDecorCamera(e.target.value as CameraKey);
+            }}>
+              <option value="edit">{fr?"Montage automatique / en cours":"Current edit / automatic"}</option>
               {videos.map(k=><option key={k} value={k}>{labels[k]}</option>)}
             </select>
           </label>
@@ -682,8 +690,11 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             {decorPreview?(fr?"FERMER L’APERÇU":"CLOSE PREVIEW"):(fr?"▶ PRÉVISUALISER LE DÉTOURAGE":"▶ PREVIEW BACKGROUND REMOVAL")}
           </button>
         </div>
-        {decorPreview&&<canvas ref={decorCanvas} width={640} height={360} className="studio-decor-preview-canvas"
-          aria-label={fr?"Aperçu du détourage sur la vidéo réelle":"Live camera chroma-key preview"}/>}
+        {decorPreview&&<canvas ref={decorCanvas}
+          width={capsule.format==="9:16"?360:capsule.format==="1:1"?480:640}
+          height={capsule.format==="9:16"?640:capsule.format==="1:1"?480:360}
+          className="studio-decor-preview-canvas"
+          aria-label={fr?"Aperçu vidéo avec angles, textes, bulles et décor":"Video preview with edits and graphic overlays"}/>} 
         {capsule.keying.enabled&&<p className="analysis-note">{fr
           ?"Ce détourage par couleur peut supprimer des objets turquoises, y compris des vêtements. Vérifie les cheveux et les mains sur les trois angles; le rendu expérimental s’effectue localement dans ton navigateur."
           :"Color keying may remove turquoise clothing as well. Check hair and hands on all camera angles; beta rendering happens in your browser."}</p>}
