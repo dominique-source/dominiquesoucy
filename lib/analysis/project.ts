@@ -85,7 +85,7 @@ export const projectSchema = z.object({
   name:z.string().trim().min(1).max(100),
   transcript:z.string().max(26000),
   analysis:analysisResult.nullable(),
-  selectedMoment:z.number().int().min(0).max(7),
+  selectedMoment:z.number().int().min(0).max(14),
   format:z.enum(["16:9","9:16","1:1"]),
   media:z.object({
     audio:mediaInfo.optional(),enhanced:mediaInfo.optional(),main:mediaInfo.optional(),vertical:mediaInfo.optional(),secondary:mediaInfo.optional(),
