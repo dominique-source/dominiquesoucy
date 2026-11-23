@@ -22,6 +22,26 @@ function download(filename:string,content:string,mime="application/json"){
   const a=document.createElement("a");a.href=url;a.download=filename;a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+function transcriptionFailureMessage(code:string,stage:"upload"|"transcribe",fr:boolean){
+  const known:Record<string,[string,string]>={
+    RATE_LIMITED:["Trop de demandes de transcription. Réessaie plus tard.","Transcription request limit reached. Try again later."],
+    AI_RATE_LIMITED:["Le service de transcription limite actuellement les requêtes. Réessaie plus tard.","AI transcription is rate limited. Try again later."],
+    AUDIO_REJECTED:["Le service refuse cet audio. Essaie un fichier MP3 ou M4A compatible.","The service rejected this audio. Try a compatible MP3 or M4A file."],
+    MEDIA_TOO_LARGE:["Le fichier dépasse la limite de 24 Mo. Importe une version MP3 ou M4A compressée.","The file exceeds 24 MB. Import a compressed MP3 or M4A."],
+    TRANSCRIPTION_TIMEOUT:["Le traitement audio a dépassé le délai serveur. Le fichier n'a pas été modifié.","Audio processing timed out. Your source file was not changed."],
+    AI_AUTH_FAILED:["Le service IA refuse l'accès. La configuration serveur doit être vérifiée.","AI provider authorization failed. Server configuration needs checking."],
+    AI_NOT_CONFIGURED:["Le service IA n'est pas configuré sur ce déploiement.","The AI service is not configured on this deployment."],
+    MEDIA_NOT_OWNED:["L'accès au fichier temporaire n'a pas pu être confirmé. Relance la transcription.","Temporary file ownership could not be verified. Retry transcription."],
+    MEDIA_READ_FAILED:["Le Studio n'a pas pu lire le fichier audio privé. Relance la transcription.","The Studio could not read the private audio. Retry transcription."],
+  };
+  const match=known[code];
+  if(match)return match[fr?0:1];
+  if(stage==="upload")return fr
+    ?"L'envoi de l'audio a échoué. Vérifie la connexion et le format du fichier, puis réessaie."
+    :"Audio upload failed. Check your connection and file type, then retry.";
+  return fr?"La transcription n'a pas abouti. Le fichier reste sélectionné : utilise Réessayer ou communique le code d'erreur."
+    :"Transcription did not complete. Your source is still selected: retry or share the error code.";
+}
 export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const fr=lang==="fr";
   const [project,setProject]=useState<StudioProject>(()=>freshProject());
@@ -39,6 +59,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [busy,setBusy]=useState<""|"transcribe"|"analyze"|"questions">("");
   const [error,setError]=useState("");
   const [saveFailure,setSaveFailure]=useState("");
+  // Transcription errors must survive unrelated autosave responses and section changes.
+  const [transcriptionFailure,setTranscriptionFailure]=useState<{code:string;stage:"upload"|"transcribe";detail:string}|null>(null);
   const [localBackupError,setLocalBackupError]=useState("");
   const [retryKey,setRetryKey]=useState(0);
   const [message,setMessage]=useState("");
@@ -311,29 +333,53 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const transcribe=async()=>{
     const audio=files.audio;
     if(!audio||!consent||busy)return;
-    if(audio.size>24_000_000){setError(fr?"La transcription accepte un audio compressé de 24 Mo maximum.":"Transcription needs an audio under 24 MB.");return}
+    setTranscriptionFailure(null);
+    if(audio.size>24_000_000){
+      setTranscriptionFailure({stage:"upload",code:"MEDIA_TOO_LARGE",
+        detail:fr?"Le fichier dépasse la limite de 24 Mo de transcription. Choisis un audio compressé MP3 ou M4A de moins de 24 Mo. Ton original demeure intact.":
+          "File exceeds the 24 MB transcription limit. Select a compressed MP3 or M4A under 24 MB. Your original is untouched."});
+      return;
+    }
+    const ext=audio.name.split(".").pop()?.toLowerCase()||"";
+    if(!["mp3","mp4","m4a","mpeg","mpga","wav","webm","ogg","flac"].includes(ext)){
+      setTranscriptionFailure({stage:"upload",code:"UNSUPPORTED_TRANSCRIPTION_FORMAT",
+        detail:fr?"Ce format n'est pas accepté pour la transcription. Utilise MP3, M4A, WAV ou MP4 audio.":
+          "Unsupported transcription format. Use MP3, M4A, WAV, or MP4 audio."});
+      return;
+    }
+    let stage:"upload"|"transcribe"="upload";
     setBusy("transcribe");setError("");
     try{
+      // Limit the basename, not the extension; the server validates this exact path.
       const filename=audio.name.replace(/[^a-zA-Z0-9_.-]/g,"_").slice(-100);
       const blob=await upload(`private-studio/${crypto.randomUUID()}/${filename}`,audio,{
         access:"private",handleUploadUrl:"/api/analysis/media-upload",multipart:true,
       });
+      stage="transcribe";
       const response=await fetch("/api/analysis/transcribe",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({pathname:blob.pathname,lang,consent:true}),
       });
-      const data=await response.json() as {transcript?:string;timedWords?:StudioProject["timedWords"];error?:string};
-      if(!response.ok||!data.transcript)throw Error(data.error||"TRANSCRIBE_FAILED");
+      const data=await response.json().catch(()=>null) as
+        {transcript?:string;timedWords?:StudioProject["timedWords"];error?:string}|null;
+      if(!response.ok||!data?.transcript){
+        const code=data?.error||`HTTP_${response.status}`;
+        throw Error(code.replace(/[^A-Z0-9_:-]/gi,"").slice(0,90)||"TRANSCRIBE_FAILED");
+      }
       const words=data.timedWords||[];
       const audioDuration=words.length?Math.ceil(words[words.length-1].end+1):0;
       modify({transcript:data.transcript,timedWords:words,analysis:null,selectedMoment:0,stage:"transcription",
         timeline:{...latest.current.timeline,duration:Math.min(7200,Math.max(latest.current.timeline.duration,audioDuration))}});
       record("transcription","Transcription générée","success");
+      setTranscriptionFailure(null);
+      setActiveSection("analysis");
       setMessage(fr?"Transcription obtenue. Vérifie le texte ci-dessous.":"Transcript received. Review the text below.");
     }catch(e){
-      record("error",`Échec transcription : ${e instanceof Error?e.message:"UNKNOWN"}`,"failure");
-      setError(fr?`Transcription impossible (${e instanceof Error?e.message:"ERROR"}). Le fichier reste sélectionné.`:
-        `Transcription failed (${e instanceof Error?e.message:"ERROR"}). Your file remains selected.`);
+      const code=(e instanceof Error?e.message:"UNKNOWN").slice(0,90);
+      const detail=transcriptionFailureMessage(code,stage,fr);
+      setTranscriptionFailure({code,stage,detail});
+      record("error",`Échec transcription [${stage}]: ${code}`,"failure");
+      setMessage("");
     }finally{setBusy("")}
   };
   const reconstructQuestions=async()=>{
@@ -375,7 +421,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     try{
       const p=await load(id);setFiles({});setUploads({});setRemoteUrls({});setPendingMedia({});
       persisted.current=JSON.stringify({...p,updatedAt:undefined});
-      latest.current=p;setProject(p);setStatus("saved");setError("");setActiveSection("projects");
+      latest.current=p;setProject(p);setStatus("saved");setError("");setTranscriptionFailure(null);setActiveSection("projects");
     }catch{setError(fr?"Impossible d’ouvrir ce projet.":"Cannot open this project.")}
   };
   const newProject=()=>{
@@ -384,6 +430,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});setUploads({});setRemoteUrls({});setPendingMedia({});
     latest.current=p;setProject(p);setStatus("pending");setError("");setMessage("");
     setRecoveryCandidate(null);
+    setTranscriptionFailure(null);
     setActiveSection("import");
   };
   const stepSection=(n:number)=>n===0?"projects":n===1||n===4?"import":n===2||n===3?"analysis":"advanced";
@@ -426,6 +473,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         status==="saving"?"SAUVEGARDE EN COURS":status==="saved"?"✓ PROJET SAUVEGARDÉ":"ÉCHEC DE SAUVEGARDE"}
       </div>
     </header>
+    {transcriptionFailure&&<div className="studio-transcription-banner" role="alert">
+      <strong>{fr?"TRANSCRIPTION EN ÉCHEC":"TRANSCRIPTION FAILED"}</strong>
+      <span>{transcriptionFailure.code}</span>
+      <button type="button" onClick={()=>setActiveSection("import")}>{fr?"VOIR L'ERREUR":"VIEW ERROR"}</button>
+    </div>}
     <div className="studio-phase5-flow" aria-label={fr?"Navigation de production":"Production navigation"}>
       {([
         ["projects",fr?"01 · PROJETS":"01 · PROJECTS"],
@@ -544,6 +596,21 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <button type="button" className="analysis-primary" disabled={!consent||!files.audio||!!busy} onClick={transcribe}>
         {busy==="transcribe"?"TRANSCRIPTION EN COURS…":fr?"TRANSCRIRE L’AUDIO":"TRANSCRIBE AUDIO"}
       </button>
+      {transcriptionFailure&&<div className="studio-transcription-failure" role="alert" aria-live="assertive" id="studio-transcription-failure">
+        <div className="studio-transcription-failure-header">
+          <strong>{fr?"TRANSCRIPTION BLOQUÉE":"TRANSCRIPTION BLOCKED"}</strong>
+          <button type="button" aria-label={fr?"Fermer l'erreur":"Dismiss error"} onClick={()=>setTranscriptionFailure(null)}>×</button>
+        </div>
+        <p>{transcriptionFailure.detail}</p>
+        <code>{transcriptionFailure.stage.toUpperCase()} · {transcriptionFailure.code}</code>
+        <div className="studio-transcription-failure-actions">
+          <button type="button" className="analysis-primary" disabled={!!busy||!consent||!files.audio}
+            onClick={()=>{void transcribe()}}>{fr?"RÉESSAYER LA TRANSCRIPTION":"RETRY TRANSCRIPTION"}</button>
+          <button type="button" className="analysis-secondary" onClick={()=>
+            void navigator.clipboard?.writeText(`${transcriptionFailure.stage}: ${transcriptionFailure.code}`)}>
+            {fr?"COPIER LE CODE D'ERREUR":"COPY ERROR CODE"}</button>
+        </div>
+      </div>}
       <p className="analysis-note">{fr?"Pour transcrire : 24 Mo maximum. Pour conserver l’original dans le projet, clique sur « Sauvegarder le média ».":"24 MB maximum for transcription. Save the original media separately."}</p>
     </>)}
     {step(2,fr?"TRANSCRIPTION":"TRANSCRIPT",`${project.transcript.length} / 26 000`,<>

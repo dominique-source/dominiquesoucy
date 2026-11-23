@@ -78,3 +78,18 @@
 @media(prefers-reduced-motion:reduce){
  .studio-workspace *{scroll-behavior:auto!important;transition:none!important}
 }
+
+/* Transcription incidents must remain legible, independent of autosave notices. */
+.studio-transcription-banner{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:16px 18px;margin:12px 0 18px;background:#2a1414;border:1px solid #ec7878;border-left:5px solid #ff9292;color:#f4f4ef;border-radius:5px}
+.studio-transcription-banner strong{font:800 14px/1.2 var(--font-sans),sans-serif;letter-spacing:.06em}
+.studio-transcription-banner span{font:600 12px/1.4 ui-monospace,monospace;color:#ffc2c2;overflow-wrap:anywhere}
+.studio-transcription-banner button{margin-left:auto;border:1px solid #ffb3b3;padding:9px 12px;color:#fff;background:transparent;font-weight:700;font-size:11px}
+.studio-transcription-failure{display:grid;gap:14px;max-width:850px;padding:22px;margin:18px 0;background:#211312;border:2px solid #f48686;border-radius:8px;color:#fff}
+.studio-transcription-failure-header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.studio-transcription-failure-header strong{font:800 21px/1.1 var(--font-display),Impact,sans-serif;letter-spacing:.04em}
+.studio-transcription-failure-header button{font-size:28px;line-height:1;min-width:44px;min-height:44px;color:#f4f4ef;border:1px solid #8c6d6d;background:#352121}
+.studio-transcription-failure p{color:#f2d5d5;line-height:1.65;margin:0;font-size:14px}
+.studio-transcription-failure code{display:inline-block;align-self:start;color:#ffb2b2;background:#100b0b;padding:10px;font:600 12px/1.4 ui-monospace,monospace;overflow-wrap:anywhere}
+.studio-transcription-failure-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.studio-transcription-failure-actions button{min-height:44px}
+@media(max-width:620px){.studio-transcription-banner button{margin-left:0}.studio-transcription-failure{padding:16px}.studio-transcription-failure-actions button{width:100%}}
