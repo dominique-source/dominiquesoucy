@@ -25,6 +25,7 @@ function download(filename:string,content:string,mime="application/json"){
 export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const fr=lang==="fr";
   const [project,setProject]=useState<StudioProject>(()=>freshProject());
+  const [activeSection,setActiveSection]=useState<"projects"|"import"|"analysis"|"editing"|"production"|"advanced">("projects");
   const [projects,setProjects]=useState<ProjectRow[]>([]);
   const [files,setFiles]=useState<SourceFiles>({});
   const [remoteUrls,setRemoteUrls]=useState<Partial<Record<SourceKey,string>>>({});
@@ -139,8 +140,14 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           const incoming={...freshProject(),transcript:pendingLive.slice(0,26000)};
           latest.current=incoming;setProject(incoming);setStatus("pending");
           try{sessionStorage.removeItem("ds-studio-pending-analysis")}catch{}
+        }else if(new URLSearchParams(window.location.search).get("mode")==="new"){
+          setActiveSection("import");
+          const fresh=freshProject();
+          latest.current=fresh;setProject(fresh);setStatus("pending");
         }else if(available.length){
-          const p=await load(available[0].id);
+          const requested=new URLSearchParams(window.location.search).get("project");
+          const requestedRow=available.find(item=>item.id===requested);
+          const p=await load(requestedRow?.id||available[0].id);
           if(cancelled)return;
           latest.current=p;setProject(p);persisted.current=JSON.stringify({...p,updatedAt:undefined});setStatus("saved");
         }else setStatus("pending");
@@ -368,7 +375,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     try{
       const p=await load(id);setFiles({});setUploads({});setRemoteUrls({});setPendingMedia({});
       persisted.current=JSON.stringify({...p,updatedAt:undefined});
-      latest.current=p;setProject(p);setStatus("saved");setError("");
+      latest.current=p;setProject(p);setStatus("saved");setError("");setActiveSection("projects");
     }catch{setError(fr?"Impossible d’ouvrir ce projet.":"Cannot open this project.")}
   };
   const newProject=()=>{
@@ -377,8 +384,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});setUploads({});setRemoteUrls({});setPendingMedia({});
     latest.current=p;setProject(p);setStatus("pending");setError("");setMessage("");
     setRecoveryCandidate(null);
+    setActiveSection("import");
   };
-  const step=(n:number,title:string,meta:string,children:React.ReactNode)=><section className="analysis-panel studio-step">
+  const stepSection=(n:number)=>n===0?"projects":n===1||n===4?"import":n===2||n===3?"analysis":"advanced";
+  const step=(n:number,title:string,meta:string,children:React.ReactNode)=><section
+    hidden={activeSection!==stepSection(n)} className="analysis-panel studio-step">
     <div className="analysis-panel-head"><h2>{String(n).padStart(2,"0")} / {title}</h2><span>{meta}</span></div>{children}
   </section>;
   const tile=(key:SourceKey)=>{
@@ -416,8 +426,33 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         status==="saving"?"SAUVEGARDE EN COURS":status==="saved"?"✓ PROJET SAUVEGARDÉ":"ÉCHEC DE SAUVEGARDE"}
       </div>
     </header>
-    <EpisodeDashboard lang={lang} episodes={projects} currentId={project.id} onOpen={openProject}
-      onNew={newProject} disabled={!ready||uploading||status==="pending"||status==="saving"}/>
+    <div className="studio-phase5-flow" aria-label={fr?"Navigation de production":"Production navigation"}>
+      {([
+        ["projects",fr?"01 · PROJETS":"01 · PROJECTS"],
+        ["import",fr?"02 · IMPORT":"02 · IMPORT"],
+        ["analysis",fr?"03 · ANALYSE":"03 · ANALYSIS"],
+        ["editing",fr?"04 · MONTAGE":"04 · EDIT"],
+        ["production",fr?"05 · PRODUCTION":"05 · PRODUCTION"],
+        ["advanced",fr?"RÉGLAGES +":"SETTINGS +"],
+      ] as const).map(([tab,label])=><button type="button" key={tab}
+        aria-current={activeSection===tab?"step":undefined}
+        className={activeSection===tab?"is-active":""}
+        onClick={()=>{setActiveSection(tab);document.getElementById("studio-phase5-current")?.scrollIntoView({behavior:"smooth",block:"start"})}}>
+        {label}</button>)}
+    </div>
+    <div id="studio-phase5-current" className="studio-phase5-context" role="status">
+      <span>{project.name} / {episodeCode(project.season,project.episode)}</span>
+      <strong>{activeSection==="projects"?(fr?"BIBLIOTHÈQUE":"LIBRARY"):
+        activeSection==="import"?(fr?"FICHIERS SOURCES":"SOURCE FILES"):
+        activeSection==="analysis"?(fr?"TRANSCRIPTION & IA":"TRANSCRIPT & AI"):
+        activeSection==="editing"?(fr?"MONTAGE & BULLES":"EDIT & GRAPHICS"):
+        activeSection==="production"?(fr?"EXPORTS MP4":"MP4 EXPORTS"):
+        fr?"OUTILS AVANCÉS":"ADVANCED TOOLS"}</strong>
+    </div>
+    <div hidden={activeSection!=="projects"} className="studio-workspace-project-library">
+      <EpisodeDashboard lang={lang} episodes={projects} currentId={project.id} onOpen={openProject}
+        onNew={newProject} disabled={!ready||uploading||status==="pending"||status==="saving"}/>
+    </div>
     {step(0,fr?"PROJET ET SAUVEGARDE":"PROJECT & SAVE","AUTO-SAVE",<>
       <div className="studio-episode-identity">
         <label>{fr?"SAISON":"SEASON"}
@@ -583,6 +618,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         ?"Les médias marqués « MÉDIA ENREGISTRÉ » appartiennent déjà au projet. Le montage peut reprendre avec ces fichiers; la bêta d’export MP4 exige encore les originaux locaux."
         :"Media marked MEDIA SAVED already belongs to this project. Editing can resume with them; beta MP4 export still requires local originals."}</p>
     </>)}
+    <div hidden={activeSection!=="editing"&&activeSection!=="production"}
+      className={`studio-phase5-editor ${activeSection==="production"?"is-production":""}`}>
     <MultiCamEditor key={project.id+"-"+Object.values(project.media).map(m=>m?.pathname||"").join("|")}
       autoSyncEnabled={ready&&!uploading&&!bulkBusy&&status!=="error"&&
         !Object.values(uploads).some(u=>!!u?.error)&&
@@ -616,8 +653,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         const id=project.selectedCapsuleId;
         if(id)modify({capsules:project.capsules.map(c=>c.id===id?{...c,status:ok?"rendered":"failed"}:c)});
       }}/>
-    <CapsuleWorkshop lang={lang} project={project}
-      onChange={patch=>modify(patch)} onEvent={record}/>
+    </div>
+    <div hidden={activeSection!=="editing"} className="studio-phase5-capsules">
+      <CapsuleWorkshop lang={lang} project={project}
+        onChange={patch=>modify(patch)} onEvent={record}/>
+    </div>
 
     {step(9,fr?"HISTORIQUE ET INCIDENTS":"HISTORY & ISSUES",`${project.events.length} LOGS`,<>
       <p>{fr?"Tableau de bord de cet épisode : retrouve les événements, les transferts, les erreurs de traitement et les exports. Les détails techniques confidentiels ne sont pas enregistrés.":"Episode dashboard: processing events and recoverable errors. Sensitive technical details are not logged."}</p>
