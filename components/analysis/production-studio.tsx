@@ -315,9 +315,9 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({pathname:blob.pathname,lang,consent:true}),
       });
-      const data=await response.json() as {transcript?:string;error?:string};
+      const data=await response.json() as {transcript?:string;timedWords?:StudioProject["timedWords"];error?:string};
       if(!response.ok||!data.transcript)throw Error(data.error||"TRANSCRIBE_FAILED");
-      modify({transcript:data.transcript,analysis:null,selectedMoment:0,stage:"transcription"});
+      modify({transcript:data.transcript,timedWords:data.timedWords||[],analysis:null,selectedMoment:0,stage:"transcription"});
       record("transcription","Transcription générée","success");
       setMessage(fr?"Transcription obtenue. Vérifie le texte ci-dessous.":"Transcript received. Review the text below.");
     }catch(e){
@@ -507,9 +507,10 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <p className="analysis-note">{fr?"Pour transcrire : 24 Mo maximum. Pour conserver l’original dans le projet, clique sur « Sauvegarder le média ».":"24 MB maximum for transcription. Save the original media separately."}</p>
     </>)}
     {step(2,fr?"TRANSCRIPTION":"TRANSCRIPT",`${project.transcript.length} / 26 000`,<>
-      <p>{fr?"Relis et corrige tes paroles. Le texte se sauvegarde automatiquement.":"Review your transcript; text edits autosave."}</p>
+      <p>{fr?"Relis tes paroles. La transcription horodatée permet de découper automatiquement les capsules. Toute correction manuelle du texte invalide les anciens repères et nécessite une nouvelle transcription horodatée.":"Review the transcript. Word timestamps can create capsule cuts automatically. Editing the transcript invalidates previous timestamps and requires re-transcription."}</p>
+      <p className="analysis-note">{fr?`${project.timedWords.length} mots horodatés`:`${project.timedWords.length} timed words`}</p>
       <textarea aria-label={fr?"Transcription":"Transcript"} rows={11} maxLength={26000}
-        value={project.transcript} onChange={e=>modify({transcript:e.target.value,analysis:null,selectedMoment:0})}
+        value={project.transcript} onChange={e=>modify({transcript:e.target.value,timedWords:[],analysis:null,selectedMoment:0})}
         placeholder={fr?"La transcription apparaît ici après traitement…":"Transcription appears here…"}/>
       <button type="button" className="analysis-secondary" disabled={!project.transcript}
         onClick={()=>download("dom-soucy-transcription.txt",project.transcript,"text/plain")}>
