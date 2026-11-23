@@ -1,0 +1,21 @@
+{
+  "name": "dom-soucy-hd-renderer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "render": "node scripts/render.mjs",
+    "preview": "remotion studio src/index.tsx"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.530",
+    "remotion": "4.0.530",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "@types/react": "^19.2.0",
+    "@types/node": "^22.0.0"
+  }
+}
