@@ -1,4 +1,3 @@
-import { StudioUniverseSection } from "@/components/studio-universe-section";
 import { CinematicHero } from "@/components/cinematic-hero";
 import { PilotThumbnailCollection } from "@/components/pilot-thumbnail-collection";
 import { PurInstinctBridge } from "@/components/site";
@@ -47,7 +46,6 @@ export default async function Home({
         }}
       />
       <CinematicHero lang={lang} />
-      <StudioUniverseSection lang={lang} />
       <PilotThumbnailCollection lang={lang} />
       <PilotFeature lang={lang} />
       <PremiumHomeEditorial lang={lang} entries={getEntries(lang)} />
