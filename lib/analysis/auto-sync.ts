@@ -14,6 +14,15 @@ export type Match = {
 };
 export const SYNC_RATE=20;
 export const MAX_LAG_SECONDS=18;
+export type ScanRegion="start"|"middle"|"end";
+/** Pick a bounded media-time search window; end scans must seek near the end. */
+export function scanRegionStart(duration:number,region:ScanRegion,windowSeconds=44):number {
+  if(!Number.isFinite(duration)||duration<=0)return 0;
+  const length=Math.max(1,Math.min(windowSeconds,duration));
+  if(region==="end")return Math.max(0,duration-length-1);
+  if(region==="middle")return Math.max(0,(duration-length)/2);
+  return 0;
+}
 const finite=(n:number)=>Number.isFinite(n)?n:0;
 
 export function matchEnvelopes(reference:readonly number[],source:readonly number[],

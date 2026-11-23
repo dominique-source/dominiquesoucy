@@ -29,6 +29,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [files,setFiles]=useState<SourceFiles>({});
   const [remoteUrls,setRemoteUrls]=useState<Partial<Record<SourceKey,string>>>({});
   const [uploads,setUploads]=useState<PendingUploads>({});
+  const [pendingMedia,setPendingMedia]=useState<Partial<Record<SourceKey,boolean>>>({});
+  const [bulkBusy,setBulkBusy]=useState(false);
   const uploading=Object.values(uploads).some(u=>u?.busy);
   const [ready,setReady]=useState(false);
   const [status,setStatus]=useState<"loading"|"pending"|"saving"|"saved"|"error">("loading");
@@ -44,16 +46,20 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const persisted=useRef("");
   // Serialize uploads and autosaves: older requests must never overwrite newer media references.
   const saveQueue=useRef<Promise<void>>(Promise.resolve());
+  const serverVersions=useRef<Record<string,number>>({});
   const saveProject=useCallback((value:StudioProject):Promise<{updatedAt:number}>=>{
     const task=saveQueue.current.catch(()=>undefined).then(async()=>{
       const response=await fetch("/api/analysis/projects",{
-        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(value),
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({...value,updatedAt:serverVersions.current[value.id]??value.updatedAt??0}),
       });
       if(!response.ok){
         const data=await response.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string};
         throw Error(`${response.status}:${data.error||"SAVE_FAILED"}`);
       }
-      return response.json() as Promise<{updatedAt:number}>;
+      const saved=await response.json() as {updatedAt:number};
+      serverVersions.current[value.id]=saved.updatedAt;
+      return saved;
     });
     saveQueue.current=task.then(()=>undefined,()=>undefined);
     return task;
@@ -115,6 +121,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     const r=await fetch(`/api/analysis/projects?id=${encodeURIComponent(id)}`,{cache:"no-store"});
     if(!r.ok)throw Error("PROJECT_NOT_FOUND");
     const data=await r.json() as {project:StudioProject};
+    serverVersions.current[data.project.id]=data.project.updatedAt??0;
     return data.project;
   },[]);
   useEffect(()=>{
@@ -164,11 +171,14 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         const code=err instanceof Error?err.message:"SAVE_FAILED";
         setSaveFailure(code);
         const unauthorized=code.startsWith("401:");
+        const conflict=code.includes("PROJECT_VERSION_CONFLICT");
         const invalid=code.includes("BAD_PROJECT")||code.includes("TOO_LARGE");
         setError(fr?
+          conflict?"Une autre session a modifié ce projet. Tes changements restent dans la copie locale. Télécharge le JSON de secours avant de recharger la version serveur.":
           unauthorized?"Session Studio expirée. Une copie locale existe dans ce navigateur. Reconnecte-toi sans fermer cet onglet.":
           invalid?"Le serveur refuse une donnée du projet. Télécharge la copie JSON de secours.":
           "Le serveur n’a pas confirmé la sauvegarde. Conserve la copie locale et réessaie.":
+          conflict?"Another session changed this project. Your edits remain in local recovery. Download the backup JSON before reloading the server version.":
           unauthorized?"Studio session expired. Local recovery exists. Sign in again without closing this tab.":
           invalid?"Server rejected project data. Download the recovery JSON.":
           "Server save was not confirmed. Keep your recovery copy and try again.");
@@ -217,6 +227,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       return;
     }
     setFiles(prev=>({...prev,[key]:file}));
+    setPendingMedia(prev=>({...prev,[key]:true}));
     setMessage("");setError("");
   };
   const saveMedia=async(key:SourceKey)=>{
@@ -241,14 +252,24 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       const current=latest.current;
       // A processed voice track becomes the default final sound while the
       // original remains available for transcription and camera sync.
+      const previous=current.media[key];
+      const mediaChanged=!previous||previous.pathname!==info.pathname;
       const next={...current,media:{...current.media,[key]:info},
-        timeline:key==="enhanced"?{...current.timeline,finalAudioSource:"enhanced" as const}:current.timeline};
+        timeline:{
+          ...current.timeline,
+          alignmentApproved:mediaChanged?false:current.timeline.alignmentApproved,
+          offsets:mediaChanged?{...current.timeline.offsets,[key]:0}:current.timeline.offsets,
+          visualClaps:mediaChanged&&["main","vertical","secondary"].includes(key)
+            ?{...current.timeline.visualClaps,[key]:null}:current.timeline.visualClaps,
+          finalAudioSource:key==="enhanced"?"enhanced" as const:current.timeline.finalAudioSource,
+        }};
       // Keep metadata in browser recovery even if the server request fails.
       latest.current=next;
       setProject(next);
       setStatus("pending");
       await saveProject(next);
       setUploads(p=>({...p,[key]:{busy:false,progress:100}}));
+      setPendingMedia(p=>({...p,[key]:false}));
       setMessage(fr?`${file.name} enregistré dans le stockage privé.`:`${file.name} saved privately.`);
       record("upload",`${key} : fichier privé enregistré`,"success");
     }catch(e){
@@ -270,6 +291,15 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
          :"Private media upload failed.")+` (${code}). Keep your local source file.`);
       record("error",`${key}: ${code}${uploadedPath?" (média transféré, projet non confirmé)":""}`,"failure");
     }
+  };
+  const saveAllMedia=async()=>{
+    if(bulkBusy||uploading)return;
+    setBulkBusy(true);
+    try{
+      for(const key of ["audio","enhanced","main","vertical","secondary"] as SourceKey[]){
+        if(files[key] && (pendingMedia[key]||!latest.current.media[key]))await saveMedia(key);
+      }
+    }finally{setBulkBusy(false)}
   };
   const transcribe=async()=>{
     const audio=files.audio;
@@ -331,7 +361,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const openProject=async(id:string)=>{
     if(uploading||status==="saving"||status==="pending")return;
     try{
-      const p=await load(id);setFiles({});setUploads({});setRemoteUrls({});
+      const p=await load(id);setFiles({});setUploads({});setRemoteUrls({});setPendingMedia({});
       persisted.current=JSON.stringify({...p,updatedAt:undefined});
       latest.current=p;setProject(p);setStatus("saved");setError("");
     }catch{setError(fr?"Impossible d’ouvrir ce projet.":"Cannot open this project.")}
@@ -339,7 +369,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const newProject=()=>{
     if(uploading||status==="pending"||status==="saving")return;
     const last=[project,...projects].reduce((n,item)=>item.season===project.season?Math.max(n,item.episode):n,0);
-    const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});setUploads({});setRemoteUrls({});
+    const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});setUploads({});setRemoteUrls({});setPendingMedia({});
     latest.current=p;setProject(p);setStatus("pending");setError("");setMessage("");
     setRecoveryCandidate(null);
   };
@@ -534,8 +564,12 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     </>)}
     {step(4,fr?"IMPORTER LES VIDÉOS":"UPLOAD VIDEO SOURCES",
       `${["main","vertical","secondary"].filter(k=>!!project.media[k as SourceKey]).length} / 3`,<>
-      <p>{fr?"Importe tes trois caméras, une par une, puis clique sur « Sauvegarder le média » pour chacune. Les fichiers volumineux sont transférés directement dans un stockage privé.":"Upload your three cameras one by one and save each to private storage."}</p>
+      <p>{fr?"Choisis tes fichiers audio et vidéo, puis enregistre tous les médias sélectionnés en une seule opération. Les transferts utilisent le stockage privé.":"Select your audio and video files, then save all selected media in one operation to private storage."}</p>
       <div className="studio-video-grid">{(["main","vertical","secondary"] as SourceKey[]).map(k=><div key={k}>{tile(k)}</div>)}</div>
+      <button className="analysis-primary" type="button" onClick={saveAllMedia}
+        disabled={bulkBusy||uploading||!ready||!(["audio","enhanced","main","vertical","secondary"] as SourceKey[]).some(k=>!!files[k]&&(pendingMedia[k]||!project.media[k]))}>
+        {bulkBusy?(fr?"ENREGISTREMENT DES MÉDIAS…":"SAVING MEDIA…"):(fr?"ENREGISTRER TOUS LES MÉDIAS SÉLECTIONNÉS":"SAVE ALL SELECTED MEDIA")}
+      </button>
       {linksError&&<p className="analysis-error" role="alert">{fr
         ?"Certaines vidéos sont enregistrées, mais leur accès privé n’a pas pu être restauré. Vérifie ta session avant de refaire le clap."
         :"Some saved videos could not be reopened privately. Check your session before recalibrating."}</p>}
@@ -543,7 +577,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         ?"Les médias marqués « MÉDIA ENREGISTRÉ » appartiennent déjà au projet. Le montage peut reprendre avec ces fichiers; la bêta d’export MP4 exige encore les originaux locaux."
         :"Media marked MEDIA SAVED already belongs to this project. Editing can resume with them; beta MP4 export still requires local originals."}</p>
     </>)}
-    <MultiCamEditor key={project.id} sources={files} remoteUrls={remoteUrls} mediaMetadata={project.media}
+    <MultiCamEditor key={project.id+"-"+Object.values(project.media).map(m=>m?.pathname||"").join("|")}
+      autoSyncEnabled={ready&&!uploading&&!bulkBusy&&status!=="error"&&
+        !Object.values(uploads).some(u=>!!u?.error)&&
+        (["audio","enhanced","main","vertical","secondary"] as SourceKey[]).every(k=>!pendingMedia[k])}
+      sources={files} remoteUrls={remoteUrls} mediaMetadata={project.media}
       name={project.name} lang={lang} highlight={project.analysis?.moments[project.selectedMoment]?.excerpt}
       savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}
       format={project.format} onFormatChange={format=>modify({format})}

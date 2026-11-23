@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderLocalMp4 } from "./local-mp4";
 import { drawStudioFrame,preloadStudioBackground } from "./canvas-overlays";
 import type { StudioProject } from "@/lib/analysis/project";
-import { alignCameraAudio, type CameraSyncResult } from "@/lib/analysis/browser-audio-fingerprint";
+import { alignCameraAudio, type CameraSyncResult, type ScanRegion } from "@/lib/analysis/browser-audio-fingerprint";
 import {
   activeCamera, cameraKeys, edl, labels, offsetFromClap,
   safeCutTime, sourceTime, timeCode, proposeMulticamCuts,
@@ -15,7 +15,7 @@ const initialClaps: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, v
 
 type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; finalAudioSource:SourceKey; alignmentApproved:boolean; visualClaps:Record<CameraKey,number|null>; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
-export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules, selectedBackgroundUrl }: {
+export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules, selectedBackgroundUrl, autoSyncEnabled=false }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
   mediaMetadata?:Partial<Record<SourceKey,MediaInfo>>;
   name: string; lang: "fr"|"en"; highlight?: string;
@@ -24,6 +24,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   capsule?:StudioProject["capsules"][number]; onExportOutcome?:(ok:boolean,details:string)=>void;
   onProceedToCapsules?:()=>void;
   selectedBackgroundUrl?:string;
+  autoSyncEnabled?:boolean;
 }) {
   const fr = lang === "fr";
   const videos = cameraKeys.filter(key=>!!sources[key] || !!remoteUrls?.[key]);
@@ -66,7 +67,10 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [autoSyncBusy,setAutoSyncBusy]=useState(false);
   const [autoSyncProgress,setAutoSyncProgress]=useState("");
   const [autoSyncResults,setAutoSyncResults]=useState<CameraSyncResult[]>([]);
+  const [syncRegion,setSyncRegion]=useState<ScanRegion>("start");
+  const [syncNeedsHelp,setSyncNeedsHelp]=useState(false);
   const autoSyncController=useRef<AbortController|null>(null);
+  const autoSyncAttempted=useRef("");
   useEffect(()=>()=>autoSyncController.current?.abort(),[]);
   const elements=useRef<Partial<Record<SourceKey,HTMLMediaElement|null>>>({});
   const urls=useMemo(() => {
@@ -172,7 +176,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   };
 
   async function synchronizeAutomatically(){
-    if(autoSyncBusy||rendering||!realAudioSource||!videos.length)return;
+    if(autoSyncController.current||rendering||!realAudioSource||!videos.length)return;
     pauseAll();setError("");setSuccess("");setAutoSyncResults([]);
     const controller=new AbortController();
     autoSyncController.current=controller;
@@ -180,7 +184,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     setAutoSyncProgress(fr?"Préparation de l’audio de référence…":"Preparing reference audio…");
     try{
       const results=await alignCameraAudio({
-        urls:playbackUrls,master:realAudioSource,sources:videos,
+        urls:playbackUrls,master:realAudioSource,sources:[...videos,...(realAudioSource!=="enhanced"&&availableAudio.includes("enhanced")?["enhanced" as const]:[])],region:syncRegion,
         signal:controller.signal,
         onProgress:key=>setAutoSyncProgress(
           key==="REFERENCE"?(fr?"Lecture de l’audio de référence…":"Scanning reference audio…"):
@@ -189,13 +193,15 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       });
       if(controller.signal.aborted)return;
       setAutoSyncResults(results);
-      const accepted=results.filter(r=>r.match.confidence!=="unreliable"&&!r.error);
+      const accepted=results.filter(r=>r.match.confidence==="strong"&&!r.error);
       if(accepted.length){
         const next={...offsets,[realAudioSource]:0};
         for(const entry of accepted)next[entry.source]=entry.match.lagSeconds;
         synchronize(next);
       }
       const failed=results.length-accepted.length;
+      setSyncNeedsHelp(failed>0);
+      setAlignmentReviewed(failed===0&&results.length>0);
       setSuccess(accepted.length
         ? fr?`${accepted.length} caméra(s) alignée(s) automatiquement et sauvegardée(s). ${failed? `${failed} à vérifier manuellement.`:"Vérifie le résultat à l’écoute."}`:
           `${accepted.length} camera(s) aligned and saved. ${failed? `${failed} require manual review.`:"Verify by listening."}`
@@ -203,7 +209,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     }catch(e){
       if(controller.signal.aborted)return;
       const code=e instanceof Error?e.message:"UNKNOWN";
-      onExportOutcome?.(false,`Échec MP4 : ${code}`);
+      setSyncNeedsHelp(true);
       setError(fr?`Synchronisation automatique indisponible (${code}). Essaie les repères manuels ou un MP4 H.264 avec audio.`:
         `Automatic sync unavailable (${code}). Try manual markers or an H.264 MP4 with audio.`);
     }finally{
@@ -211,6 +217,29 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       setAutoSyncBusy(false);setAutoSyncProgress("");
     }
   }
+  // Try synchronization automatically as soon as the imported media can be played.
+  // The asset signature avoids repeating costly scans when signed links refresh.
+  const syncAssetsKey=JSON.stringify([
+    realAudioSource,
+    ...videos.map(k=>[k,mediaMetadata?.[k]?.pathname||sources[k]?.name||""]),
+    mediaMetadata?.audio?.pathname||sources.audio?.name||"",
+    mediaMetadata?.enhanced?.pathname||sources.enhanced?.name||"",
+  ]);
+  useEffect(()=>{
+    if(!autoSyncEnabled||alignmentReviewed||!realAudioSource||!videos.length||rendering)return;
+    const required=[realAudioSource,...videos];
+    if(required.some(key=>!playbackUrls[key]))return;
+    if(autoSyncAttempted.current===syncAssetsKey)return;
+    const timer=setTimeout(()=>{
+      if(autoSyncAttempted.current===syncAssetsKey||autoSyncController.current)return;
+      autoSyncAttempted.current=syncAssetsKey;
+      void synchronizeAutomatically();
+    },500);
+    return()=>clearTimeout(timer);
+    // Deliberately bound to media identities, not short-lived presigned URLs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[autoSyncEnabled,alignmentReviewed,syncAssetsKey,rendering,realAudioSource,videos.join("|"),
+    ...[realAudioSource,...videos].map(k=>Boolean(playbackUrls[k]))]);
   function setClap(key:SourceKey,value:number){
     setClaps(prev=>({...prev,[key]:Math.max(0,Number.isFinite(value)?value:0)}));
   }
@@ -401,7 +430,21 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             `${r.match.lagSeconds>=0?"+":""}${r.match.lagSeconds.toFixed(2)} s · ${r.match.confidence==="strong"?(fr?"CONFIANCE ÉLEVÉE":"HIGH CONFIDENCE"):(fr?"À VÉRIFIER":"REVIEW")}`}</span>
         </div>)}
       </div>}
-      <details className="analysis-multi-manual">
+      {syncNeedsHelp&&<div className="analysis-multi-manual" role="group" aria-label={fr?"Recherche du clap":"Clap search"}>
+        <strong>{fr?"RECHERCHER LE CLAP À UN AUTRE ENDROIT":"SEARCH FOR THE CLAP ELSEWHERE"}</strong>
+        <p>{fr?"La première recherche n’a pas aligné toutes les caméras. Choisis la zone contenant le clap et relance l’analyse.":"The first scan did not align all cameras. Choose the region containing the clap and scan again."}</p>
+        <label>{fr?"POSITION DU CLAP":"CLAP POSITION"}
+          <select value={syncRegion} onChange={e=>setSyncRegion(e.target.value as ScanRegion)}>
+            <option value="start">{fr?"Au début":"At the start"}</option>
+            <option value="middle">{fr?"Au milieu":"In the middle"}</option>
+            <option value="end">{fr?"À la fin":"At the end"}</option>
+          </select>
+        </label>
+        <button type="button" className="analysis-secondary" disabled={autoSyncBusy} onClick={synchronizeAutomatically}>
+          {fr?"RECHERCHER À CET ENDROIT":"SEARCH THIS REGION"}
+        </button>
+      </div>}
+      {syncNeedsHelp&&<details className="analysis-multi-manual">
         <summary>{fr?"AJUSTEMENT MANUEL (SI NÉCESSAIRE)":"MANUAL ALIGNMENT (IF NEEDED)"}</summary>
         <p>{fr
           ?"Si le son d’une caméra est inexploitable, repère un clap commun et saisis la seconde dans chaque fichier. Exemple : audio 4, Canon 9."
@@ -414,7 +457,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         <button className="analysis-secondary" type="button" disabled={autoSyncBusy} onClick={syncFromClap}>
           {fr?"APPLIQUER LES REPÈRES MANUELS":"APPLY MANUAL MARKERS"}
         </button>
-      </details>
+      </details>}
       {success&&<p role="status" className="analysis-multi-success">{success}</p>}
     </div>
 

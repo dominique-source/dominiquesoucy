@@ -45,15 +45,43 @@ export async function POST(request:Request){
   try {data=await request.json()}catch{return json({error:"BAD_REQUEST"},400)}
   const parsed=projectSchema.safeParse(data);
   if(!parsed.success||!validProjectMedia(parsed.data))return json({error:"BAD_PROJECT"},400);
-  const project={...parsed.data,updatedAt:Date.now()};
+  const project=parsed.data;
   try{
-    // Every project is private to the single authenticated Studio workspace.
-    // Redis persists metadata/transcripts; raw media lives exclusively in private Blob.
-    await set(key(project.id),JSON.stringify(project),PROJECT_TTL);
+    // Optimistic concurrency: an older tab or pending request may not overwrite
+    // a newer project, its media references, or its saved synchronization.
+    // Redis EVAL makes the check and write atomic across Vercel instances.
+    const expected=project.updatedAt??0;
+    let updatedAt:number;
+    if(process.env.NODE_ENV!=="production"&&!process.env.VERCEL&&
+      !(process.env.STUDIO_REDIS_URL||process.env.KV_REST_API_URL)){
+      const existing=await get(key(project.id));
+      const current=existing?projectSchema.safeParse(JSON.parse(existing)):null;
+      const previous=current?.success?(current.data.updatedAt??0):0;
+      if(previous!==expected)return json({error:"PROJECT_VERSION_CONFLICT"},409);
+      updatedAt=Math.max(Date.now(),previous+1);
+      await set(key(project.id),JSON.stringify({...project,updatedAt}),PROJECT_TTL);
+    }else{
+      const script=[
+        "local current=redis.call('GET',KEYS[1])",
+        "local previous=0",
+        "if current then local ok, obj=pcall(cjson.decode,current); if not ok then return -2 end; previous=tonumber(obj.updatedAt) or 0 end",
+        "if previous~=tonumber(ARGV[1]) then return -1 end",
+        "local now=math.max(tonumber(ARGV[3]),previous+1)",
+        "local payload=cjson.decode(ARGV[2]); payload.updatedAt=now",
+        "redis.call('SET',KEYS[1],cjson.encode(payload),'EX',ARGV[4])",
+        "return now"
+      ].join("\n");
+      const result=Number(await redis(["EVAL",script,1,`studio:${key(project.id)}`,
+        expected,JSON.stringify(project),Date.now(),PROJECT_TTL]));
+      if(result===-1)return json({error:"PROJECT_VERSION_CONFLICT"},409);
+      if(result===-2)return json({error:"PROJECT_CORRUPT"},500);
+      if(!Number.isFinite(result)||result<=0)throw Error("PROJECT_SAVE_FAILED");
+      updatedAt=result;
+    }
     await redis(["LREM",`studio:${indexKey}`,0,project.id]);
     await redis(["LPUSH",`studio:${indexKey}`,project.id]);
     await redis(["LTRIM",`studio:${indexKey}`,0,99]);
     await redis(["EXPIRE",`studio:${indexKey}`,PROJECT_TTL]);
-    return json({ok:true,projectId:project.id,updatedAt:project.updatedAt});
+    return json({ok:true,projectId:project.id,updatedAt});
   }catch{return json({error:"PROJECT_SAVE_FAILED"},503)}
 }
