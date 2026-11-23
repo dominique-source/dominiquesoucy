@@ -705,8 +705,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       </a>
       <p className="analysis-note">{fr?"Aujourd’hui, le Studio fournit un manifeste JSON par capsule. L’export HD en un clic directement sur le site reste à développer; aucun rendu n’est lancé ici automatiquement.":"Currently Studio downloads a JSON manifest for each capsule. One-click HD rendering from this page is not implemented; no render starts here automatically."}</p>
     </section>
-    <div hidden={activeSection!=="editing"||!showTechnicalMontage}
-      className={`studio-phase5-editor ${activeSection==="production"?"is-production":""}`}>
+    {showTechnicalMontage&&activeSection==="editing"&&<div className="studio-phase5-editor">
     <MultiCamEditor key={project.id}
       autoSyncEnabled={ready&&!!files.audio&&(["main","vertical","secondary"] as SourceKey[]).some(k=>!!files[k])}
       projectId={project.id} capsules={project.capsules}
@@ -738,7 +737,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         const id=project.selectedCapsuleId;
         if(id)modify({capsules:project.capsules.map(c=>c.id===id?{...c,status:ok?"rendered":"failed"}:c)});
       }}/>
-    </div>
+    </div>}
     {step(9,fr?"HISTORIQUE ET INCIDENTS":"HISTORY & ISSUES",`${project.events.length} LOGS`,<>
       <div className="studio-auto-edit-panel">
         <strong>{fr?"NETTOYAGE DES ANCIENNES COPIES VERCEL":"LEGACY VERCEL MEDIA CLEANUP"}</strong>
