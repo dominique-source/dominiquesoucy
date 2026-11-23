@@ -36,7 +36,6 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [busy,setBusy]=useState<""|"transcribe"|"analyze"|"questions">("");
   const [error,setError]=useState("");
   const [saveFailure,setSaveFailure]=useState("");
-  const [localBackup,setLocalBackup]=useState<StudioProject|null>(null);
   const [localBackupError,setLocalBackupError]=useState("");
   const [retryKey,setRetryKey]=useState(0);
   const [message,setMessage]=useState("");
@@ -70,7 +69,6 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       if(!raw)return;
       const p=JSON.parse(raw) as StudioProject;
       if(p?.id && p?.timeline?.visualClaps){
-        setLocalBackup(p);
         setRecoveryCandidate(p);
       }
     }catch{}
