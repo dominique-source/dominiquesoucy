@@ -29,6 +29,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [files,setFiles]=useState<SourceFiles>({});
   const [remoteUrls,setRemoteUrls]=useState<Partial<Record<SourceKey,string>>>({});
   const [uploads,setUploads]=useState<PendingUploads>({});
+  const [bulkBusy,setBulkBusy]=useState(false);
   const uploading=Object.values(uploads).some(u=>u?.busy);
   const [ready,setReady]=useState(false);
   const [status,setStatus]=useState<"loading"|"pending"|"saving"|"saved"|"error">("loading");
@@ -278,6 +279,15 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
          :"Private media upload failed.")+` (${code}). Keep your local source file.`);
       record("error",`${key}: ${code}${uploadedPath?" (média transféré, projet non confirmé)":""}`,"failure");
     }
+  };
+  const saveAllMedia=async()=>{
+    if(bulkBusy||uploading)return;
+    setBulkBusy(true);
+    try{
+      for(const key of ["audio","enhanced","main","vertical","secondary"] as SourceKey[]){
+        if(files[key] && !latest.current.media[key])await saveMedia(key);
+      }
+    }finally{setBulkBusy(false)}
   };
   const transcribe=async()=>{
     const audio=files.audio;
@@ -542,8 +552,12 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     </>)}
     {step(4,fr?"IMPORTER LES VIDÉOS":"UPLOAD VIDEO SOURCES",
       `${["main","vertical","secondary"].filter(k=>!!project.media[k as SourceKey]).length} / 3`,<>
-      <p>{fr?"Importe tes trois caméras, une par une, puis clique sur « Sauvegarder le média » pour chacune. Les fichiers volumineux sont transférés directement dans un stockage privé.":"Upload your three cameras one by one and save each to private storage."}</p>
+      <p>{fr?"Choisis tes fichiers audio et vidéo, puis enregistre tous les médias sélectionnés en une seule opération. Les transferts utilisent le stockage privé.":"Select your audio and video files, then save all selected media in one operation to private storage."}</p>
       <div className="studio-video-grid">{(["main","vertical","secondary"] as SourceKey[]).map(k=><div key={k}>{tile(k)}</div>)}</div>
+      <button className="analysis-primary" type="button" onClick={saveAllMedia}
+        disabled={bulkBusy||uploading||!ready||!(["audio","enhanced","main","vertical","secondary"] as SourceKey[]).some(k=>!!files[k]&&!project.media[k])}>
+        {bulkBusy?(fr?"ENREGISTREMENT DES MÉDIAS…":"SAVING MEDIA…"):(fr?"ENREGISTRER TOUS LES MÉDIAS SÉLECTIONNÉS":"SAVE ALL SELECTED MEDIA")}
+      </button>
       {linksError&&<p className="analysis-error" role="alert">{fr
         ?"Certaines vidéos sont enregistrées, mais leur accès privé n’a pas pu être restauré. Vérifie ta session avant de refaire le clap."
         :"Some saved videos could not be reopened privately. Check your session before recalibrating."}</p>}
