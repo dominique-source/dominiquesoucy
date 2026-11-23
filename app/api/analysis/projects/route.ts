@@ -70,7 +70,7 @@ export async function POST(request:Request){
         "local payload=cjson.decode(ARGV[2]); payload.updatedAt=now",
         "redis.call('SET',KEYS[1],cjson.encode(payload),'EX',ARGV[4])",
         "return now"
-      ].join("\\n");
+      ].join("\n");
       const result=Number(await redis(["EVAL",script,1,`studio:${key(project.id)}`,
         expected,JSON.stringify(project),Date.now(),PROJECT_TTL]));
       if(result===-1)return json({error:"PROJECT_VERSION_CONFLICT"},409);
