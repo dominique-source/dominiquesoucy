@@ -587,6 +587,9 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       autoSyncEnabled={ready&&!uploading&&!bulkBusy&&status!=="error"&&
         !Object.values(uploads).some(u=>!!u?.error)&&
         (["audio","enhanced","main","vertical","secondary"] as SourceKey[]).every(k=>!pendingMedia[k])}
+      projectId={project.id} capsules={project.capsules}
+      backdrops={Object.fromEntries(project.capsules.map(c=>[c.id,
+        resolveBackdrop(project.studioBackdrop,project.id,[project.name,project.transcript,c.title].join(" ")).file]))}
       sources={files} remoteUrls={remoteUrls} mediaMetadata={project.media}
       name={project.name} lang={lang} highlight={project.analysis?.moments[project.selectedMoment]?.excerpt}
       savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}
@@ -615,11 +618,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       }}/>
     <CapsuleWorkshop lang={lang} project={project}
       onChange={patch=>modify(patch)} onEvent={record}/>
-    {step(8,fr?"EXPORT VIDÉO":"VIDEO EXPORT","MP4 BÊTA",<>
-      <p>{fr
-        ?"Ton projet et tes décisions de montage sont sauvegardés. Dans l’étape 07, essaie « Exporter MP4 · Bêta » : l’export est fait sur ton ordinateur, en temps réel, seulement si ton navigateur accepte MP4/H.264. Le rendu serveur haute qualité sera une phase suivante."
-        :"Your project and edit decisions are saved. In step 07, try Export MP4 · Beta. Rendering runs locally in real time and requires browser MP4/H.264 support. High-quality server rendering comes later."}</p>
-    </>)}
+
     {step(9,fr?"HISTORIQUE ET INCIDENTS":"HISTORY & ISSUES",`${project.events.length} LOGS`,<>
       <p>{fr?"Tableau de bord de cet épisode : retrouve les événements, les transferts, les erreurs de traitement et les exports. Les détails techniques confidentiels ne sont pas enregistrés.":"Episode dashboard: processing events and recoverable errors. Sensitive technical details are not logged."}</p>
       <div className="studio-event-log">{project.events.length?project.events.map(e=><div key={e.id} className={`studio-event ${e.status}`}>
