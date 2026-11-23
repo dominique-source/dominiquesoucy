@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchEnvelopes, interpolateEnvelope, SYNC_RATE } from "../lib/analysis/auto-sync";
+import { matchEnvelopes, interpolateEnvelope, scanRegionStart, SYNC_RATE } from "../lib/analysis/auto-sync";
 
 const pseudoRandom=(seed:number)=>{
   let x=seed>>>0;
@@ -33,4 +33,21 @@ test("sample interpolation stays aligned to a common audio timeline",()=>{
   const envelope=interpolateEnvelope(samples,2,SYNC_RATE);
   assert.equal(envelope.length,2*SYNC_RATE);
   assert.ok(Math.abs(envelope[10]-.5)<1e-8);
+});
+
+test("clap search targets beginning, middle and end without exceeding recording",()=>{
+  assert.equal(scanRegionStart(600,"start"),0);
+  assert.equal(scanRegionStart(600,"middle"),278);
+  assert.equal(scanRegionStart(600,"end"),555);
+  assert.equal(scanRegionStart(25,"end"),0);
+  assert.equal(scanRegionStart(Number.NaN,"end"),0);
+});
+test("late clap offset stays absolute when scan windows start at different times",()=>{
+  const rand=pseudoRandom(741);
+  const base=Array.from({length:880},()=>Math.pow(rand(),3));
+  const delayed=[...Array(30).fill(0),...base.slice(0,850)];
+  const match=matchEnvelopes(base,delayed);
+  const absolute=match.lagSeconds + (556-553);
+  assert.ok(Math.abs(absolute-4.5)<.08,JSON.stringify({match,absolute}));
+  assert.equal(match.confidence,"strong");
 });
