@@ -14,7 +14,7 @@ Une fois le dépôt téléchargé et Node.js 22+ installé, ouvre Terminal dans
 bash RENDU-HD.command
 ```
 
-L'assistant demande le `master.mp4` exporté par DaVinci et le manifeste JSON
+L'assistant demande le `master.mp4` exporté par Premiere et le manifeste JSON
 exporté par DOM SOUCY STUDIO, installe les dépendances si nécessaire et ouvre
 le dossier `out/` après le rendu. Il crée un **lien symbolique local** vers le
 master pour éviter d'en copier plusieurs gigaoctets. Le premier essai doit
@@ -25,12 +25,12 @@ relancer. Le bouton du Studio qui produit le manifeste nécessite que
 la nouvelle version du site soit déployée; avant cela, on peut modifier
 `sample-manifest.json` en renseignant les vrais timecodes et les textes.
 
-## Phase 1 — DaVinci Resolve
+## Phase 1 — Adobe Premiere Pro
 
-- Synchroniser le son et l'image **une seule fois** pour l'épisode, vérifier la bouche.
+- Dans Premiere Pro, synchroniser les 3 caméras et le son **une seule fois** pour l'épisode; vérifier les lèvres. Monter les changements de caméra avant l'export.
 - Exporter **master.mp4**, en H.264 haute qualité, contenant son final et image propre,
   sans sous-titres ou bulles, depuis 00:00 de la timeline originale.
-- Ne pas raccourcir le début sans aussi corriger les timecodes du Studio.
+- Conserver le départ 00:00 et la durée exacte du master pour garder les timecodes du Studio correspondants. Toute coupe à ripple après l'analyse décale les extraits.
 - Option premium : exporter **foreground.mov** avec canal alpha via un codec alpha
   compatible (ex. ProRes 4444), ainsi que **audio.wav** parfaitement synchronisé.
   Sans alpha, le moteur affiche master.mp4 intact derrière les bulles.
@@ -47,6 +47,8 @@ journaliste et ne doit jamais être identifiée comme une citation vérifiée.
 Renseigner un nom seulement pour une vraie question attribuable.
 
 ## Phase 3 — Rendu local Remotion
+
+Tu règles tes **bulles dans DOM SOUCY STUDIO**, pas dans Premiere. Le moteur local les positionne selon le modèle et le format. Le rendu direct depuis le navigateur n'est pas encore intégré : tu exportes un petit manifeste JSON par capsule et le lanceur Mac fait le montage graphique.
 
 Prérequis : Node.js 22+ et npm installés sur macOS, puis terminal :
 
