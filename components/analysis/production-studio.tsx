@@ -29,6 +29,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [files,setFiles]=useState<SourceFiles>({});
   const [remoteUrls,setRemoteUrls]=useState<Partial<Record<SourceKey,string>>>({});
   const [uploads,setUploads]=useState<PendingUploads>({});
+  const [pendingMedia,setPendingMedia]=useState<Partial<Record<SourceKey,boolean>>>({});
   const [bulkBusy,setBulkBusy]=useState(false);
   const uploading=Object.values(uploads).some(u=>u?.busy);
   const [ready,setReady]=useState(false);
@@ -226,6 +227,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       return;
     }
     setFiles(prev=>({...prev,[key]:file}));
+    setPendingMedia(prev=>({...prev,[key]:true}));
     setMessage("");setError("");
   };
   const saveMedia=async(key:SourceKey)=>{
@@ -250,14 +252,24 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       const current=latest.current;
       // A processed voice track becomes the default final sound while the
       // original remains available for transcription and camera sync.
+      const previous=current.media[key];
+      const mediaChanged=!previous||previous.pathname!==info.pathname;
       const next={...current,media:{...current.media,[key]:info},
-        timeline:key==="enhanced"?{...current.timeline,finalAudioSource:"enhanced" as const}:current.timeline};
+        timeline:{
+          ...current.timeline,
+          alignmentApproved:mediaChanged?false:current.timeline.alignmentApproved,
+          offsets:mediaChanged?{...current.timeline.offsets,[key]:0}:current.timeline.offsets,
+          visualClaps:mediaChanged&&["main","vertical","secondary"].includes(key)
+            ?{...current.timeline.visualClaps,[key]:null}:current.timeline.visualClaps,
+          finalAudioSource:key==="enhanced"?"enhanced" as const:current.timeline.finalAudioSource,
+        }};
       // Keep metadata in browser recovery even if the server request fails.
       latest.current=next;
       setProject(next);
       setStatus("pending");
       await saveProject(next);
       setUploads(p=>({...p,[key]:{busy:false,progress:100}}));
+      setPendingMedia(p=>({...p,[key]:false}));
       setMessage(fr?`${file.name} enregistré dans le stockage privé.`:`${file.name} saved privately.`);
       record("upload",`${key} : fichier privé enregistré`,"success");
     }catch(e){
@@ -285,7 +297,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     setBulkBusy(true);
     try{
       for(const key of ["audio","enhanced","main","vertical","secondary"] as SourceKey[]){
-        if(files[key] && !latest.current.media[key])await saveMedia(key);
+        if(files[key] && (pendingMedia[key]||!latest.current.media[key]))await saveMedia(key);
       }
     }finally{setBulkBusy(false)}
   };
@@ -349,7 +361,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const openProject=async(id:string)=>{
     if(uploading||status==="saving"||status==="pending")return;
     try{
-      const p=await load(id);setFiles({});setUploads({});setRemoteUrls({});
+      const p=await load(id);setFiles({});setUploads({});setRemoteUrls({});setPendingMedia({});
       persisted.current=JSON.stringify({...p,updatedAt:undefined});
       latest.current=p;setProject(p);setStatus("saved");setError("");
     }catch{setError(fr?"Impossible d’ouvrir ce projet.":"Cannot open this project.")}
@@ -357,7 +369,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const newProject=()=>{
     if(uploading||status==="pending"||status==="saving")return;
     const last=[project,...projects].reduce((n,item)=>item.season===project.season?Math.max(n,item.episode):n,0);
-    const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});setUploads({});setRemoteUrls({});
+    const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});setUploads({});setRemoteUrls({});setPendingMedia({});
     latest.current=p;setProject(p);setStatus("pending");setError("");setMessage("");
     setRecoveryCandidate(null);
   };
@@ -555,7 +567,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <p>{fr?"Choisis tes fichiers audio et vidéo, puis enregistre tous les médias sélectionnés en une seule opération. Les transferts utilisent le stockage privé.":"Select your audio and video files, then save all selected media in one operation to private storage."}</p>
       <div className="studio-video-grid">{(["main","vertical","secondary"] as SourceKey[]).map(k=><div key={k}>{tile(k)}</div>)}</div>
       <button className="analysis-primary" type="button" onClick={saveAllMedia}
-        disabled={bulkBusy||uploading||!ready||!(["audio","enhanced","main","vertical","secondary"] as SourceKey[]).some(k=>!!files[k]&&!project.media[k])}>
+        disabled={bulkBusy||uploading||!ready||!(["audio","enhanced","main","vertical","secondary"] as SourceKey[]).some(k=>!!files[k]&&(pendingMedia[k]||!project.media[k]))}>
         {bulkBusy?(fr?"ENREGISTREMENT DES MÉDIAS…":"SAVING MEDIA…"):(fr?"ENREGISTRER TOUS LES MÉDIAS SÉLECTIONNÉS":"SAVE ALL SELECTED MEDIA")}
       </button>
       {linksError&&<p className="analysis-error" role="alert">{fr
@@ -565,7 +577,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         ?"Les médias marqués « MÉDIA ENREGISTRÉ » appartiennent déjà au projet. Le montage peut reprendre avec ces fichiers; la bêta d’export MP4 exige encore les originaux locaux."
         :"Media marked MEDIA SAVED already belongs to this project. Editing can resume with them; beta MP4 export still requires local originals."}</p>
     </>)}
-    <MultiCamEditor key={project.id} sources={files} remoteUrls={remoteUrls} mediaMetadata={project.media}
+    <MultiCamEditor key={project.id+"-"+Object.values(project.media).map(m=>m?.pathname||"").join("|")}
+      autoSyncEnabled={ready&&!uploading&&!bulkBusy&&status!=="error"&&
+        !Object.values(uploads).some(u=>!!u?.error)&&
+        (["audio","enhanced","main","vertical","secondary"] as SourceKey[]).every(k=>!pendingMedia[k])}
+      sources={files} remoteUrls={remoteUrls} mediaMetadata={project.media}
       name={project.name} lang={lang} highlight={project.analysis?.moments[project.selectedMoment]?.excerpt}
       savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}
       format={project.format} onFormatChange={format=>modify({format})}
