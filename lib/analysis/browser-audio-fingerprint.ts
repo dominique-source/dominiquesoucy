@@ -6,12 +6,13 @@ export type CameraSyncResult={source:SourceKey;match:Match;error?:string};
 const SCAN_SECONDS=44;
 const SPEED=2;
 const SAMPLE_EVERY_MS=45;
+export type ScanRegion="start"|"middle"|"end";
 
 /** Capture a short audio activity fingerprint via browser decoders.
  *  Works on remote private media only when CORS and the media codec allow it.
  *  Files are read through media elements, without loading multi-GB files into JS memory.
  */
-async function captureFingerprint(url:string,signal:AbortSignal):Promise<number[]>{
+async function captureFingerprint(url:string,signal:AbortSignal,region:ScanRegion="start"):Promise<{envelope:number[];start:number}>{
   const element=document.createElement("video");
   const isRemote=/^https?:/i.test(url);
   if(isRemote)element.crossOrigin="anonymous";
@@ -49,7 +50,9 @@ async function captureFingerprint(url:string,signal:AbortSignal):Promise<number[
     source.connect(analyser);analyser.connect(silence);silence.connect(context.destination);
     const floats=new Float32Array(analyser.fftSize);
     const samples:Array<{at:number;level:number}>=[];
-    element.currentTime=0;
+    const start=region==="end"?Math.max(0,element.duration-SCAN_SECONDS-1):
+      region==="middle"?Math.max(0,element.duration/2-SCAN_SECONDS/2):0;
+    element.currentTime=start;
     element.playbackRate=SPEED;
     await context.resume();
     try{await element.play()}catch{throw new Error("MEDIA_PLAYBACK_UNSUPPORTED")}
@@ -62,18 +65,18 @@ async function captureFingerprint(url:string,signal:AbortSignal):Promise<number[
         let energy=0;
         for(let i=0;i<floats.length;i++)energy+=floats[i]*floats[i];
         const level=Math.sqrt(energy/floats.length);
-        samples.push({at:element.currentTime,level:Math.log1p(level*60)});
-        if(element.currentTime>=Math.min(SCAN_SECONDS,element.duration-.1)||element.ended){
+        samples.push({at:element.currentTime-start,level:Math.log1p(level*60)});
+        if(element.currentTime>=Math.min(start+SCAN_SECONDS,element.duration-.1)||element.ended){
           resolve();return;
         }
         if(performance.now()-started>35000)reject(new Error("MEDIA_SCAN_TIMEOUT"));
       },SAMPLE_EVERY_MS);
     });
-    const envelope=interpolateEnvelope(samples,Math.min(SCAN_SECONDS,element.duration-.1),SYNC_RATE);
+    const envelope=interpolateEnvelope(samples,Math.min(SCAN_SECONDS,element.duration-start-.1),SYNC_RATE);
     const mean=envelope.reduce((sum,x)=>sum+x,0)/Math.max(1,envelope.length);
     const variance=envelope.reduce((sum,x)=>sum+(x-mean)**2,0)/Math.max(1,envelope.length);
     if(envelope.length<SYNC_RATE*8||variance<.0004)throw new Error("NO_USABLE_AUDIO");
-    return envelope;
+    return {envelope,start};
   }finally{
     if(timeout)clearTimeout(timeout);
     if(interval)clearInterval(interval);
@@ -83,18 +86,19 @@ async function captureFingerprint(url:string,signal:AbortSignal):Promise<number[
 }
 
 export async function alignCameraAudio({
-  urls,master,sources,onProgress,signal,
+  urls,master,sources,onProgress,signal,region="start",
 }:{
   urls:Partial<Record<SourceKey,string>>;
   master:SourceKey;
   sources:SourceKey[];
   onProgress:(text:string)=>void;
   signal:AbortSignal;
+  region?:ScanRegion;
 }):Promise<CameraSyncResult[]>{
   const referenceUrl=urls[master];
   if(!referenceUrl)throw new Error("MISSING_REFERENCE_AUDIO");
   onProgress("REFERENCE");
-  const reference=await captureFingerprint(referenceUrl,signal);
+  const reference=await captureFingerprint(referenceUrl,signal,region);
   const results:CameraSyncResult[]=[];
   for(const key of sources){
     if(key===master)continue;
@@ -102,9 +106,9 @@ export async function alignCameraAudio({
     if(!url)continue;
     onProgress(key);
     try{
-      const fingerprint=await captureFingerprint(url,signal);
-      const match=matchEnvelopes(reference,fingerprint);
-      results.push({source:key,match});
+      const fingerprint=await captureFingerprint(url,signal,region);
+      const match=matchEnvelopes(reference.envelope,fingerprint.envelope);
+      results.push({source:key,match:{...match,lagSeconds:Math.round((match.lagSeconds+fingerprint.start-reference.start)*100)/100}});
     }catch(e){
       if(signal.aborted)throw new Error("CANCELLED");
       const error=e instanceof Error?e.message:"UNKNOWN_ERROR";
