@@ -91,7 +91,14 @@ export const projectSchema = z.object({
   format:z.enum(["16:9","9:16","1:1"]),
   media:z.object({
     audio:mediaInfo.optional(),enhanced:mediaInfo.optional(),main:mediaInfo.optional(),vertical:mediaInfo.optional(),secondary:mediaInfo.optional(),
-  }).strict(),
+  }).strict(), // Legacy Vercel Blob paths only; never used for new media.
+  localMedia:z.object({
+    audio:z.object({filename:z.string().max(180),bytes:z.number().int().nonnegative()}).strict().optional(),
+    enhanced:z.object({filename:z.string().max(180),bytes:z.number().int().nonnegative()}).strict().optional(),
+    main:z.object({filename:z.string().max(180),bytes:z.number().int().nonnegative()}).strict().optional(),
+    vertical:z.object({filename:z.string().max(180),bytes:z.number().int().nonnegative()}).strict().optional(),
+    secondary:z.object({filename:z.string().max(180),bytes:z.number().int().nonnegative()}).strict().optional(),
+  }).strict().default({}),
   timeline:timelineSchema,
   updatedAt:z.number().int().nonnegative().optional(),
 }).strict();
@@ -110,7 +117,7 @@ export function validProjectMedia(project:StudioProject) {
 }
 export function freshProject():StudioProject {
   return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",studioBackdrop:{mode:"random",selectedId:"basketball"},events:[],capsules:[],selectedCapsuleId:"",reconstructedQuestions:[],timedWords:[],transcript:"",
-    analysis:null,selectedMoment:0,format:"9:16",media:{},
+    analysis:null,selectedMoment:0,format:"9:16",media:{},localMedia:{},
     timeline:{duration:300,clipStart:0,clipEnd:60,audioSource:"audio",finalAudioSource:"audio",alignmentApproved:false,visualClaps:{main:null,vertical:null,secondary:null},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},
       claps:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},cuts:[]}};
 }
