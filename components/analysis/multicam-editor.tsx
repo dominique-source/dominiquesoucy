@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderLocalMp4 } from "./local-mp4";
+import { ProductionBatch } from "./production-batch";
 import { drawStudioFrame,preloadStudioBackground } from "./canvas-overlays";
 import type { StudioProject } from "@/lib/analysis/project";
 import { alignCameraAudio, type CameraSyncResult, type ScanRegion } from "@/lib/analysis/browser-audio-fingerprint";
@@ -15,7 +16,7 @@ const initialClaps: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, v
 
 type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; finalAudioSource:SourceKey; alignmentApproved:boolean; visualClaps:Record<CameraKey,number|null>; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
-export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules, selectedBackgroundUrl, autoSyncEnabled=false, onCapsuleChange }: {
+export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules, selectedBackgroundUrl, autoSyncEnabled=false, onCapsuleChange, projectId, capsules=[], backdrops={} }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
   mediaMetadata?:Partial<Record<SourceKey,MediaInfo>>;
   name: string; lang: "fr"|"en"; highlight?: string;
@@ -26,6 +27,9 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   onCapsuleChange?:(id:string,patch:Partial<StudioProject["capsules"][number]>)=>void;
   selectedBackgroundUrl?:string;
   autoSyncEnabled?:boolean;
+  projectId?:string;
+  capsules?:StudioProject["capsules"];
+  backdrops?:Record<string,string>;
 }) {
   const fr = lang === "fr";
   const videos = cameraKeys.filter(key=>!!sources[key] || !!remoteUrls?.[key]);
@@ -741,6 +745,10 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         <button type="button" onClick={exportEdl} className="analysis-secondary">{fr?"TÉLÉCHARGER LE PLAN DE MONTAGE (.JSON)":"DOWNLOAD EDIT PLAN (.JSON)"}</button>
       </div>
     </div>
+    {projectId&&<ProductionBatch key={projectId} projectId={projectId} lang={lang} name={name}
+      capsules={capsules} duration={duration} mediaFiles={sources} offsets={offsets}
+      audioSource={realAudioSource} finalAudioSource={realFinalAudioSource}
+      episodeCuts={cuts} getNodes={()=>elements.current} backdrops={backdrops}/>}
     {error&&<p role="alert" className="analysis-error">{error}</p>}
     <p className="analysis-note">{fr
       ?"Limites : les MOV non compatibles ne seront pas lus, les grosses vidéos peuvent ralentir ton navigateur, et l’alignement automatique dépend de la présence de son exploitable sur chaque caméra. N’efface pas les originaux. L’export MP4 local est expérimental et prend le temps réel du clip. Un moteur serveur haute qualité, les sous-titres et une synchronisation professionnelle avec correction de dérive restent à développer."
