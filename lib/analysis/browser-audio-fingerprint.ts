@@ -1,12 +1,12 @@
 "use client";
-import { interpolateEnvelope, matchEnvelopes, type Match, SYNC_RATE } from "./auto-sync";
+import { interpolateEnvelope, matchEnvelopes, scanRegionStart, type Match, type ScanRegion, SYNC_RATE } from "./auto-sync";
 import type { SourceKey } from "./multicam";
 
 export type CameraSyncResult={source:SourceKey;match:Match;error?:string};
 const SCAN_SECONDS=44;
 const SPEED=2;
 const SAMPLE_EVERY_MS=45;
-export type ScanRegion="start"|"middle"|"end";
+export type { ScanRegion } from "./auto-sync";
 
 /** Capture a short audio activity fingerprint via browser decoders.
  *  Works on remote private media only when CORS and the media codec allow it.
@@ -50,9 +50,26 @@ async function captureFingerprint(url:string,signal:AbortSignal,region:ScanRegio
     source.connect(analyser);analyser.connect(silence);silence.connect(context.destination);
     const floats=new Float32Array(analyser.fftSize);
     const samples:Array<{at:number;level:number}>=[];
-    const start=region==="end"?Math.max(0,element.duration-SCAN_SECONDS-1):
-      region==="middle"?Math.max(0,element.duration/2-SCAN_SECONDS/2):0;
-    element.currentTime=start;
+    const start=scanRegionStart(element.duration,region,SCAN_SECONDS);
+    if(start>0){
+      // Await the actual seek before collecting samples; the media element
+      // otherwise may still be decoding the beginning of the recording.
+      await new Promise<void>((resolve,reject)=>{
+        let timer:ReturnType<typeof setTimeout>;
+        const finish=(error?:Error)=>{
+          clearTimeout(timer);
+          element.removeEventListener("seeked",onSeeked);
+          signal.removeEventListener("abort",onAbort);
+          if(error)reject(error);else resolve();
+        };
+        const onSeeked=()=>finish();
+        const onAbort=()=>finish(new Error("CANCELLED"));
+        element.addEventListener("seeked",onSeeked,{once:true});
+        signal.addEventListener("abort",onAbort,{once:true});
+        timer=setTimeout(()=>finish(new Error("MEDIA_SEEK_TIMEOUT")),12000);
+        try{element.currentTime=start}catch{finish(new Error("MEDIA_SEEK_UNSUPPORTED"))}
+      });
+    }
     element.playbackRate=SPEED;
     await context.resume();
     try{await element.play()}catch{throw new Error("MEDIA_PLAYBACK_UNSUPPORTED")}
