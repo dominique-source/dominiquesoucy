@@ -9,6 +9,7 @@ import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
 import { StudioBackdropPicker } from "./studio-backdrop-picker";
 import { CapsuleWorkshop } from "./capsule-workshop";
+import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
 
@@ -602,6 +603,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           `Tes ${project.analysis.moments.length} moments sont repérés. Passe à l’atelier pour préparer des capsules, choisir nos bulles et exporter un plan HD.`:
           `${project.analysis.moments.length} highlights found. Open the workshop to prepare clips, choose graphics and export an HD plan.`}</p>
         <button type="button" className="analysis-primary" onClick={()=>{
+          const drafts=createDraftsFromAnalysis(latest.current);
+          if(drafts.length)modify({capsules:[...latest.current.capsules,...drafts],selectedCapsuleId:drafts[0].id,stage:"editing"});
           setActiveSection("editing");
           window.setTimeout(()=>document.getElementById("studio-capsule-workshop")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
         }}>
