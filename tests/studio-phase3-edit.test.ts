@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { freshProject, projectSchema } from "../lib/analysis/project";
 import { activeCamera, proposeMulticamCuts } from "../lib/analysis/multicam";
+import { defaultChroma } from "../lib/analysis/chroma-key";
 
 test("each capsule can store its own independently editable camera decisions",()=>{
   const p=freshProject();
@@ -10,10 +11,10 @@ test("each capsule can store its own independently editable camera decisions",()
   const b=proposeMulticamCuts({start:90,end:130,available:["main","secondary"]});
   p.capsules=[
     {id:crypto.randomUUID(),title:"One",start:15,end:48,format:"16:9",style:"conversation",
-     caption:"",bubble:"",background:"dark",textPosition:"bottom",status:"draft",
+     caption:"",bubble:"",background:"dark",textPosition:"bottom",status:"draft",keying:{...defaultChroma},
      cameraCuts:a,cameraEditSource:"automatic"},
     {id:crypto.randomUUID(),title:"Two",start:90,end:130,format:"9:16",style:"quote",
-     caption:"",bubble:"",background:"original",textPosition:"bottom",status:"draft",
+     caption:"",bubble:"",background:"original",textPosition:"bottom",status:"draft",keying:{...defaultChroma},
      cameraCuts:b,cameraEditSource:"automatic"},
   ];
   const parsed=projectSchema.parse(p);
