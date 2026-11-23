@@ -48,6 +48,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [files,setFiles]=useState<SourceFiles>({});
   const uploading=false;
   const [transcriptionProgress,setTranscriptionProgress]=useState("");
+  const [cleanupBusy,setCleanupBusy]=useState(false);
+  const [cleanupFeedback,setCleanupFeedback]=useState("");
   const [ready,setReady]=useState(false);
   const [status,setStatus]=useState<"loading"|"pending"|"saving"|"saved"|"error">("loading");
   const [consent,setConsent]=useState(false);
@@ -364,6 +366,32 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           `Legacy Vercel file: ${legacy.filename}. Reselect the local original.`}</p>:null}
     </div>;
   };
+  const cleanupLegacyMedia=async()=>{
+    if(cleanupBusy||!Object.keys(project.media).length)return;
+    if(!window.confirm(fr?
+      "Supprimer définitivement les anciens médias de ce projet dans Vercel Blob ? Assure-toi que les originaux sont disponibles dans Google Drive. Aucun fichier Google Drive ne sera supprimé.":
+      "Permanently delete this project's legacy Vercel Blob media? Confirm your originals are in Google Drive. Drive files will not be touched."))return;
+    setCleanupBusy(true);setCleanupFeedback("");
+    try{
+      const response=await fetch("/api/analysis/legacy-media-cleanup",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({projectId:project.id,confirm:"DELETE_PROJECT_VERCEL_MEDIA"}),
+      });
+      const data=await response.json() as {deleted?:string[];failed?:string[];total?:number;error?:string};
+      if(!response.ok)throw Error(data.error||"CLEANUP_FAILED");
+      if(data.deleted?.length){
+        const media={...latest.current.media};
+        for(const key of data.deleted as SourceKey[])delete media[key];
+        modify({media});
+      }
+      setCleanupFeedback(fr?
+        `${data.deleted?.length||0} fichier(s) supprimé(s) de Vercel. ${data.failed?.length||0} échec(s). ${data.failed?.length?"Si Vercel refuse les suppressions pendant la suspension, supprime-les via Storage > Manage Blobs.":""}`:
+        `${data.deleted?.length||0} Vercel files deleted; ${data.failed?.length||0} failed.`);
+    }catch(e){
+      setCleanupFeedback(fr?`Suppression impossible : ${e instanceof Error?e.message:"UNKNOWN"}. Utilise Vercel Storage > Manage Blobs.`:
+        `Delete failed: ${e instanceof Error?e.message:"UNKNOWN"}. Use Vercel Storage > Manage Blobs.`);
+    }finally{setCleanupBusy(false)}
+  };
   const projectSaved=status==="saved";
   return <section className="analysis-studio studio-production">
     <div className="analysis-topline">
@@ -626,6 +654,18 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     </div>
 
     {step(9,fr?"HISTORIQUE ET INCIDENTS":"HISTORY & ISSUES",`${project.events.length} LOGS`,<>
+      <div className="studio-auto-edit-panel">
+        <strong>{fr?"NETTOYAGE DES ANCIENNES COPIES VERCEL":"LEGACY VERCEL MEDIA CLEANUP"}</strong>
+        <p>{fr?
+          "Les nouveaux fichiers ne sont plus envoyés sur Vercel. Tu peux supprimer les anciennes copies Blob de ce projet; les projets, transcriptions, réglages et fichiers Google Drive ne seront pas supprimés.":
+          "New files no longer upload to Vercel. Delete the legacy Blob copies for this project; project metadata, transcripts, edits and Google Drive files are untouched."}</p>
+        <p className="analysis-note">{Object.keys(project.media).length} {fr?"ancienne(s) référence(s) Vercel":"legacy Vercel references"}</p>
+        <button type="button" className="analysis-secondary" disabled={cleanupBusy||!Object.keys(project.media).length}
+          onClick={()=>{void cleanupLegacyMedia()}}>
+          {cleanupBusy?(fr?"SUPPRESSION…":"DELETING…"):(fr?"SUPPRIMER CES COPIES DE VERCEL":"DELETE THESE VERCEL COPIES")}
+        </button>
+        {cleanupFeedback&&<p role="status" className="analysis-note">{cleanupFeedback}</p>}
+      </div>
       <p>{fr?"Tableau de bord de cet épisode : retrouve les événements, les transferts, les erreurs de traitement et les exports. Les détails techniques confidentiels ne sont pas enregistrés.":"Episode dashboard: processing events and recoverable errors. Sensitive technical details are not logged."}</p>
       <div className="studio-event-log">{project.events.length?project.events.map(e=><div key={e.id} className={`studio-event ${e.status}`}>
         <span>{new Date(e.date).toLocaleString(fr?"fr-CA":"en-CA")}</span><strong>{e.type.toUpperCase()}</strong><p>{e.message}</p>
