@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { buildHdRenderManifest,hdManifestFilename } from "@/lib/analysis/hd-render-manifest";
+import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { episodeCode, type StudioProject } from "@/lib/analysis/project";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
@@ -47,31 +48,16 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
   onChange({capsules:[...capsules,draft],selectedCapsuleId:id,stage:"editing"});
  }
  function generateDrafts(){
-  const moments=project.analysis?.moments||[];
-  const openSlots=40-capsules.length;
-  if(!moments.length||openSlots<=0)return;
-  const newDrafts:Capsule[]=moments.slice(0,openSlots).map((m)=>{
-   const audioRange=findQuotedRange(m.excerpt,project.timedWords);
-   const range=audioRange?toProjectRange(audioRange,project.timeline.offsets.audio,
-     Math.max(project.timeline.duration,project.timedWords.at(-1)?.end||0)):null;
-   const cameras=cameraKeys.filter(k=>!!project.media[k]);
-   const cameraCuts=range&&cameras.length?proposeMulticamCuts({start:range.start,end:range.end,
-     available:cameras,primary:cameras.includes("main")?"main":cameras[0]}):undefined;
-   return {
-   id:crypto.randomUUID(),
-   title:m.title.slice(0,100),
-   start:range?.start??0,end:range?.end??0,
-   timingSource:range?"automatic":"unmatched",
-   cameraCuts,cameraEditSource:cameraCuts?"automatic":undefined,
-   format:project.format,
-   style:m.model_id===11?"editorial":m.model_id===4?"quote":"conversation",
-   caption:m.excerpt.slice(0,500),
-   bubble:m.model_id===1?m.excerpt.slice(0,160):"",
-   background:"dark",keying:{...defaultChroma},textPosition:"bottom",status:"draft",
-  };});
-  onChange({capsules:[...capsules,...newDrafts],
+  const newDrafts=createDraftsFromAnalysis(project);
+  if(!newDrafts.length){
+    setManifestNotice(fr?"Toutes les propositions de l'analyse sont déjà créées ou la limite de 40 capsules est atteinte.":"All analysis drafts already exist or the 40-capsule limit was reached.");
+    return;
+  }
+  onChange({capsules:[...project.capsules,...newDrafts],
     selectedCapsuleId:newDrafts[0].id,stage:"editing"});
-  onEvent("analysis",`${newDrafts.filter(c=>c.timingSource==="automatic").length}/${newDrafts.length} capsules horodatées et plans multicaméras préparés`,"success");
+  onEvent("analysis",`${newDrafts.filter(c=>c.timingSource==="automatic").length}/${newDrafts.length} capsules horodatées et préparées`,"success");
+  setManifestNotice(fr?`${newDrafts.length} capsules ajoutées. Choisis une capsule dans la liste ci-dessous.`:
+    `${newDrafts.length} capsule drafts added. Choose one below.`);
  }
  function exportHdManifest(capsule:Capsule){
   try{
