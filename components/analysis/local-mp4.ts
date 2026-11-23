@@ -16,6 +16,23 @@ type RenderOptions={
   onProgress:(percentage:number)=>void;
 };
 
+// Browsers permit only one MediaElementAudioSourceNode per media element.
+// Reuse the same audio bus across successive renders; clone its tracks.
+type AudioBus={ctx:AudioContext;output:MediaStreamAudioDestinationNode};
+const audioBuses=new WeakMap<HTMLMediaElement,AudioBus>();
+function audioBus(element:HTMLMediaElement):AudioBus {
+  const existing=audioBuses.get(element);
+  if(existing&&existing.ctx.state!=="closed")return existing;
+  const ctx=new AudioContext();
+  const source=ctx.createMediaElementSource(element);
+  const output=ctx.createMediaStreamDestination();
+  source.connect(output);
+  source.connect(ctx.destination);
+  const bus={ctx,output};
+  audioBuses.set(element,bus);
+  return bus;
+}
+
 /** A real-time, browser-local canvas render. Requires locally selected files.
  *  Browser must support MediaRecorder MP4/H264. No media uploaded for rendering.
  */
@@ -37,13 +54,12 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
   canvas.width=width;canvas.height=height;
   const painter=canvas.getContext("2d",{alpha:false});
   if(!painter)throw new Error("NO_CANVAS");
-  const ctx=new AudioContext();
-  const source=ctx.createMediaElementSource(finalTrack);
-  const audioOut=ctx.createMediaStreamDestination();
-  source.connect(audioOut);
-  // Only the selected final audio gets encoded, irrespective of sync reference.
-  source.connect(ctx.destination);
-  const stream=new MediaStream([...canvas.captureStream(30).getVideoTracks(),...audioOut.stream.getAudioTracks()]);
+  const bus=audioBus(finalTrack);
+  // Keep original destination tracks alive for subsequent jobs.
+  const stream=new MediaStream([
+    ...canvas.captureStream(30).getVideoTracks(),
+    ...bus.output.stream.getAudioTracks().map(track=>track.clone()),
+  ]);
   const chunks:Blob[]=[];
   const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:3_000_000,audioBitsPerSecond:128_000});
   let frame=0;
@@ -65,7 +81,7 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
       if(!Number.isFinite(el.duration)||el.readyState<1)throw new Error("MEDIA_NOT_READY");
       el.currentTime=Math.min(Math.max(0,el.duration-.1),sourceTime(opts.start,opts.offsets[key]));
     }
-    await ctx.resume();
+    await bus.ctx.resume();
     recorder.start(1000);
     await Promise.all(available.map(async([,el])=>{if(el)await el.play()}));
     await new Promise<void>((resolve,reject)=>{
@@ -91,6 +107,6 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
     if(recorder.state!=="inactive")recorder.stop();
     available.forEach(([,el])=>el?.pause());
     stream.getTracks().forEach(track=>track.stop());
-    await ctx.close().catch(()=>{});
+    // Bus stays alive for subsequent outputs in this editor session.
   }
 }
