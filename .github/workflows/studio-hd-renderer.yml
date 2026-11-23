@@ -1,0 +1,49 @@
+name: Studio HD renderer validation
+on:
+  pull_request:
+    paths:
+      - 'render-engine/**'
+      - 'lib/analysis/hd-render-manifest.ts'
+      - 'components/analysis/capsule-workshop.tsx'
+      - '.github/workflows/studio-hd-renderer.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'render-engine/**'
+      - 'lib/analysis/hd-render-manifest.ts'
+      - '.github/workflows/studio-hd-renderer.yml'
+permissions:
+  contents: read
+jobs:
+  renderer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install renderer dependencies
+        working-directory: render-engine
+        run: npm install --no-audit --no-fund
+      - name: Typecheck renderer
+        working-directory: render-engine
+        run: npm run typecheck
+      - name: Install FFmpeg on minimal CI runner
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Generate a synthetic 2-second master with audio
+        working-directory: render-engine
+        run: |
+          mkdir -p public
+          ffmpeg -hide_banner -loglevel error -y \
+            -f lavfi -i "color=c=0x222222:size=1920x1080:rate=30:duration=2" \
+            -f lavfi -i "sine=frequency=440:sample_rate=48000:duration=2" \
+            -c:v libx264 -preset veryfast -pix_fmt yuv420p \
+            -c:a aac -shortest public/master.mp4
+      - name: Render journalist bubble and H264 MP4
+        working-directory: render-engine
+        run: |
+          npm run render -- sample-manifest.json
+          test -s out/Question-journaliste-pilote-16x9.mp4
