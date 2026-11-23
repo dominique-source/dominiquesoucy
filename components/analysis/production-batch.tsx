@@ -47,13 +47,13 @@ export function ProductionBatch({
   const toggleCapsule=(id:string)=>setSelected(old=>old.includes(id)?old.filter(x=>x!==id):[...old,id]);
   const requested=createProductionPlan({capsules,selectedIds:selected,formats:selectedFormats,includeEpisode,duration});
   const updateJob=(id:string,patch:Partial<JobStatus>)=>setJobs(old=>old.map(j=>j.job.id===id?{...j,...patch}:j));
-  async function produce(){
+  async function produce(retryFailed=false){
     if(busy)return;
     setError("");
     setArchiveError("");
     if(!canRender){setError(fr?"Sélectionne les originaux locaux de toutes les caméras et des pistes audio nécessaires avant de lancer ce lot.":"Select the local video and audio sources before starting this batch.");return}
-    if(!requested.length){setError(fr?"Sélectionne au moins une vidéo et un format.":"Select at least one video and format.");return}
-    const plan=requested;
+    const plan=retryFailed?jobs.filter(j=>j.state==="failed").map(j=>({...j.job,id:crypto.randomUUID()})):requested;
+    if(!plan.length){setError(fr?"Sélectionne au moins une vidéo et un format.":"Select at least one video and format.");return}
     setJobs(plan.map(job=>({job,state:"queued",progress:0})));
     setBusy(true);cancel.current=false;
     const nodes=getNodes();
@@ -150,6 +150,9 @@ export function ProductionBatch({
         {busy?(fr?"PRODUCTION EN COURS…":"RENDERING…"):
           fr?`✦ PRODUIRE ${requested.length} MP4 ET ARCHIVER`:`✦ PRODUCE ${requested.length} MP4 AND ARCHIVE`}
       </button>
+      {!busy&&failed>0&&<button type="button" className="analysis-secondary" onClick={()=>{void produce(true)}}>
+        {fr?`RELANCER LES ${failed} RENDUS EN ÉCHEC`:`RETRY ${failed} FAILED RENDERS`}
+      </button>}
       {busy&&<button type="button" className="analysis-secondary" onClick={()=>{cancel.current=true}}>
         {fr?"ARRÊTER APRÈS LE RENDU EN COURS":"STOP AFTER CURRENT RENDER"}
       </button>}
