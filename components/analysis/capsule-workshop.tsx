@@ -2,6 +2,7 @@
 import { episodeCode, type StudioProject } from "@/lib/analysis/project";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
+import { cameraKeys, proposeMulticamCuts } from "@/lib/analysis/multicam";
 import { findQuotedRange, toProjectRange } from "@/lib/analysis/timed-excerpts";
 type Capsule=StudioProject["capsules"][number];
 type EventKind=StudioProject["events"][number]["type"];
@@ -26,7 +27,8 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
  function select(id:string){onChange({selectedCapsuleId:id})}
  function change(capsuleId:string,patch:Partial<Capsule>){
   onChange({capsules:capsules.map(c=>c.id===capsuleId?{...c,...patch,status:"draft",timingSource:
-    ("start" in patch||"end" in patch)?"manual":c.timingSource}:c)});
+    ("start" in patch||"end" in patch)?"manual":c.timingSource,
+    cameraCuts:("start" in patch||"end" in patch)&&c.cameraEditSource==="automatic"?undefined:c.cameraCuts}:c)});
  }
  function addDraft(){
   if(capsules.length>=40)return;
@@ -47,11 +49,15 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
    const audioRange=findQuotedRange(m.excerpt,project.timedWords);
    const range=audioRange?toProjectRange(audioRange,project.timeline.offsets.audio,
      Math.max(project.timeline.duration,project.timedWords.at(-1)?.end||0)):null;
+   const cameras=cameraKeys.filter(k=>!!project.media[k]);
+   const cameraCuts=range&&cameras.length?proposeMulticamCuts({start:range.start,end:range.end,
+     available:cameras,primary:cameras.includes("main")?"main":cameras[0]}):undefined;
    return {
    id:crypto.randomUUID(),
    title:m.title.slice(0,100),
    start:range?.start??0,end:range?.end??0,
    timingSource:range?"automatic":"unmatched",
+   cameraCuts,cameraEditSource:cameraCuts?"automatic":undefined,
    format:project.format,
    style:m.model_id===11?"editorial":m.model_id===4?"quote":"conversation",
    caption:m.excerpt.slice(0,500),
@@ -60,7 +66,7 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
   };});
   onChange({capsules:[...capsules,...newDrafts],
     selectedCapsuleId:newDrafts[0].id,stage:"editing"});
-  onEvent("analysis",`${newDrafts.filter(c=>c.timingSource==="automatic").length}/${newDrafts.length} capsules horodatées automatiquement`,"success");
+  onEvent("analysis",`${newDrafts.filter(c=>c.timingSource==="automatic").length}/${newDrafts.length} capsules horodatées et plans multicaméras préparés`,"success");
  }
  function remove(id:string){
   onChange({capsules:capsules.filter(c=>c.id!==id),
@@ -111,6 +117,7 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
        <input type="number" min={0} max={7200} step={0.1} value={chosen.end}
          onChange={e=>change(chosen.id,{end:Math.max(0,Math.min(7200,Number(e.target.value)||0))})}/></label>
     </div>
+    {chosen.cameraCuts?.length?<p className="analysis-note">{fr?`Montage préparé : ${chosen.cameraCuts.length} décisions de caméra · ${chosen.cameraEditSource==="automatic"?"proposition automatique":"ajustements manuels"}.`:`Edit prepared: ${chosen.cameraCuts.length} camera decisions.`}</p>:null}
     {chosen.timingSource==="automatic"&&<p className="analysis-note">{fr?"Découpage proposé à partir de l’audio original horodaté. Vérifie la synchronisation de la caméra avant l’export.":"Cut based on timestamps in the original audio. Confirm the camera is synchronized before exporting."}</p>}
     {!validRange&&<p className="studio-capsule-warning">{fr?"Choisis un début et une fin valides avant l’export.":"Set valid start and end times before exporting."}</p>}
     <div className="studio-capsule-2col">

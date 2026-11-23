@@ -15,7 +15,7 @@ const initialClaps: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, v
 
 type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; finalAudioSource:SourceKey; alignmentApproved:boolean; visualClaps:Record<CameraKey,number|null>; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
-export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules, selectedBackgroundUrl, autoSyncEnabled=false }: {
+export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules, selectedBackgroundUrl, autoSyncEnabled=false, onCapsuleChange }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
   mediaMetadata?:Partial<Record<SourceKey,MediaInfo>>;
   name: string; lang: "fr"|"en"; highlight?: string;
@@ -23,6 +23,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   format?:"16:9"|"9:16"|"1:1"; onFormatChange?:(format:"16:9"|"9:16"|"1:1")=>void;
   capsule?:StudioProject["capsules"][number]; onExportOutcome?:(ok:boolean,details:string)=>void;
   onProceedToCapsules?:()=>void;
+  onCapsuleChange?:(id:string,patch:Partial<StudioProject["capsules"][number]>)=>void;
   selectedBackgroundUrl?:string;
   autoSyncEnabled?:boolean;
 }) {
@@ -57,7 +58,9 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     Object.values(offsets).some(value=>Math.abs(value)>0.001);
   const [suggestedCuts,setSuggestedCuts]=useState<Cut[]|null>(null);
   const [decorPreview,setDecorPreview]=useState(false);
+  const [previewCapsuleOnly,setPreviewCapsuleOnly]=useState(false);
   const [decorCamera,setDecorCamera]=useState<CameraKey>("main");
+  const [decorFollowEdit,setDecorFollowEdit]=useState(true);
   const decorCanvas=useRef<HTMLCanvasElement|null>(null);
   const [error,setError] = useState("");
   const [success,setSuccess] = useState("");
@@ -96,7 +99,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const realAudioSource = availableAudio.includes(audioSource) ? audioSource : availableAudio[0];
   const realFinalAudioSource=availableAudio.includes(finalAudioSource)?finalAudioSource:(availableAudio.includes("enhanced")?"enhanced":realAudioSource);
   const realCamera = videos.includes(selectedCamera) ? selectedCamera : videos[0];
-  const selected = activeCamera(cuts,playhead,realCamera);
+  const effectiveCuts=capsule?.cameraCuts?.length?capsule.cameraCuts:cuts;
+  const selected = activeCamera(effectiveCuts,playhead,realCamera);
   const effectiveCamera = videos.includes(selected) ? selected : realCamera;
 
   const seekAll=useCallback((time:number, offsetsValue=offsets,maxTime=duration)=>{
@@ -135,10 +139,10 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     seekAll(t);
     document.getElementById("studio-camera-preview")?.scrollIntoView({behavior:"smooth",block:"start"});
   }
-  const play=async()=>{
-    if(playing){pauseAll();return}
+  const play=async(from?:number)=>{
+    if(playing&&from===undefined){pauseAll();return}
     setError("");
-    seekAll(playhead);
+    seekAll(from??playhead);
     const active = Object.entries(elements.current) as Array<[SourceKey,HTMLMediaElement|null]>;
     try{
       // Start all streams at the same logical project position; local drift is
@@ -163,7 +167,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     if(!master)return;
     const t=Math.max(0,master.currentTime-offsets[realAudioSource]);
     setPlayhead(Math.min(duration,t));
-    if(t>=duration-.07){pauseAll();return}
+    if(t>=duration-.07||(previewCapsuleOnly&&capsule&&t>=capsule.end-.05)){pauseAll();setPreviewCapsuleOnly(false);return}
     // Soft drift correction: no full rebuffer if deviation is under ~250ms.
     (Object.entries(elements.current) as Array<[SourceKey,HTMLMediaElement|null]>)
       .forEach(([key,el])=>{
@@ -267,13 +271,16 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         last=now;
         const canvas=decorCanvas.current;
         const ctx=canvas?.getContext("2d",{alpha:false});
-        const camera=videos.includes(decorCamera)?decorCamera:videos[0];
+        const clock=elements.current[realAudioSource];
+        const t=clock&&Number.isFinite(clock.currentTime)?Math.max(0,clock.currentTime-offsets[realAudioSource]):playhead;
+        const camera=decorFollowEdit?activeCamera(effectiveCuts,t,realCamera):
+          (videos.includes(decorCamera)?decorCamera:videos[0]);
         const el=elements.current[camera] as HTMLVideoElement|undefined;
         if(ctx&&canvas){
           try{
-            drawStudioFrame(ctx,el,canvas.width,canvas.height,0,0,{
-              style:capsule.style,background:capsule.background,caption:"",
-              bubble:"",textPosition:capsule.textPosition,keying:capsule.keying,backgroundUrl:selectedBackgroundUrl,
+            drawStudioFrame(ctx,el,canvas.width,canvas.height,t,capsule.start,{
+              style:capsule.style,background:capsule.background,caption:capsule.caption,
+              bubble:capsule.bubble,textPosition:capsule.textPosition,keying:capsule.keying,backgroundUrl:selectedBackgroundUrl,
             });
           }catch{setDecorPreview(false);setError(fr?
             "Prévisualisation indisponible : la vidéo ne permet pas la lecture de pixels locale.":
@@ -284,7 +291,30 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     };
     raf=requestAnimationFrame(paint);
     return ()=>cancelAnimationFrame(raf);
-  },[decorPreview,decorCamera,capsule,fr,selectedBackgroundUrl,videos.join("|")]);
+  },[decorPreview,decorCamera,decorFollowEdit,capsule,fr,selectedBackgroundUrl,videos.join("|"),effectiveCuts,realAudioSource,realCamera,offsets,playhead]);
+  // Capsules created before media upload also get a saved starter edit when
+  // cameras finally become available. A manually edited plan is never replaced.
+  useEffect(()=>{
+    if(!capsule||capsule.cameraEditSource||capsule.cameraCuts?.length||
+       !onCapsuleChange||!videos.length||capsule.end<=capsule.start||
+       capsule.end>duration)return;
+    const plan=proposeMulticamCuts({
+      start:capsule.start,end:capsule.end,available:videos,
+      primary:videos.includes("main")?"main":videos[0],
+    });
+    if(plan.length)onCapsuleChange(capsule.id,{cameraCuts:plan,cameraEditSource:"automatic"});
+    // Recalculate only when the capsule identity, range or available cameras change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[capsule?.id,capsule?.start,capsule?.end,capsule?.cameraEditSource,
+    capsule?.cameraCuts?.length,videos.join("|"),duration,onCapsuleChange]);
+  function previewSelectedCapsule(){
+    if(!capsule||capsule.end<=capsule.start||!realCamera)return;
+    pauseAll();
+    setDecorFollowEdit(true);
+    setDecorPreview(true);
+    setPreviewCapsuleOnly(true);
+    void play(capsule.start);
+  }
   function proposeEdit(){
     pauseAll();
     const from=capsule?capsule.start:clipStart;
@@ -306,7 +336,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     const to=capsule?capsule.end:clipEnd;
     const retained=cuts.filter(c=>c.at<from||c.at>=to);
     const next=[...retained,...suggestedCuts].sort((a,b)=>a.at-b.at);
-    setCuts(next);
+    if(capsule)onCapsuleChange?.(capsule.id,{cameraCuts:next.filter(c=>c.at>=from&&c.at<to),cameraEditSource:"manual"});
+    else setCuts(next);
     setSuggestedCuts(null);
     pauseAll();seekAll(from);
     setSuccess(fr?
@@ -316,7 +347,10 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   function markCut(){
     if(!realCamera)return;
     const cut:Cut={id:crypto.randomUUID(),at:safeCutTime(playhead,duration),camera:realCamera};
-    setCuts(prev=>[...prev.filter(c=>Math.abs(c.at-cut.at)>.15),cut].sort((a,b)=>a.at-b.at));
+    if(capsule){
+      const next=[...(capsule.cameraCuts||[]).filter(c=>Math.abs(c.at-cut.at)>.15),cut].sort((a,b)=>a.at-b.at);
+      onCapsuleChange?.(capsule.id,{cameraCuts:next,cameraEditSource:"manual"});
+    }else setCuts(prev=>[...prev.filter(c=>Math.abs(c.at-cut.at)>.15),cut].sort((a,b)=>a.at-b.at));
     setSelectedCamera(realCamera);
   }
   async function exportMp4(){
@@ -333,7 +367,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     try{
       const blob=await renderLocalMp4({
         nodes:elements.current,offsets,audioSource:realAudioSource,finalAudioSource:realFinalAudioSource,
-        cuts,fallback:realCamera,duration,start:renderStart,end:renderEnd,format:capsule?.format||format||"16:9",
+        cuts:effectiveCuts,fallback:realCamera,duration,start:renderStart,end:renderEnd,format:capsule?.format||format||"16:9",
         visual:capsule?{style:capsule.style,background:capsule.background,caption:capsule.caption,bubble:capsule.bubble,textPosition:capsule.textPosition,keying:capsule.keying,backgroundUrl:selectedBackgroundUrl}:undefined,
         onProgress:setRenderPercent,
       });
@@ -354,7 +388,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   }
   function exportEdl(){
     const result=edl({
-      projectName:name,duration,offsets,cuts,
+      projectName:name,duration,offsets,cuts:effectiveCuts,
       sourceNames:Object.fromEntries(Object.keys(playbackUrls).map(key=>[key,sources[key as SourceKey]?.name||mediaMetadata?.[key as SourceKey]?.filename||""])),
       audioSource:realAudioSource,
     });
@@ -542,7 +576,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     <div className="studio-review-instructions">
       <strong>{fr?"ÉTAPE SUIVANTE : VÉRIFIER LES IMAGES":"NEXT: CHECK THE PICTURE"}</strong>
       <p>{fr?"Clique « Lire les 3 caméras ensemble » et regarde si le clap arrive au même instant dans chaque image. Reviens aussi au début et au milieu de la vidéo pour vérifier.":"Play all three cameras and check that hands clap together. Also test the start and middle."}</p>
-      <button type="button" className="analysis-primary studio-review-play" onClick={play}>
+      <button type="button" className="analysis-primary studio-review-play" onClick={()=>{setPreviewCapsuleOnly(false);void play()}}>
         {playing?(fr?"❚❚ METTRE LES 3 CAMÉRAS EN PAUSE":"❚❚ PAUSE ALL CAMERAS"):(fr?"▶ LIRE LES 3 CAMÉRAS ENSEMBLE":"▶ PLAY ALL 3 CAMERAS")}
       </button>
       <button type="button" className="analysis-secondary" onClick={()=>{pauseAll();seekAll(0)}}>{fr?"REVENIR AU DÉBUT":"GO TO START"}</button>
@@ -579,7 +613,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       src={playbackUrls.enhanced} preload="metadata"
       onTimeUpdate={realAudioSource==="enhanced"?onClock:undefined}/>}
     <div className="analysis-multi-playback studio-review-secondary-playback">
-      <button className="analysis-primary" type="button" onClick={play}>{playing?(fr?"❚❚ PAUSE":"❚❚ PAUSE"):(fr?"▶ LIRE LES CAMÉRAS":"▶ PLAY CAMERAS")}</button>
+      <button className="analysis-primary" type="button" onClick={()=>{setPreviewCapsuleOnly(false);void play()}}>{playing?(fr?"❚❚ PAUSE":"❚❚ PAUSE"):(fr?"▶ LIRE LES CAMÉRAS":"▶ PLAY CAMERAS")}</button>
       <button className="analysis-secondary" onClick={()=>{pauseAll();seekAll(0)}} type="button">{fr?"RETOUR DÉBUT":"REWIND"}</button>
     </div>
     <label className="analysis-multi-scrub">{fr?"POSITION DANS LE PROJET":"PROJECT POSITION"} · {timeCode(playhead)}
@@ -633,13 +667,16 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             </button>
           </div>
         </div>}
-        {cuts.length===0&&<p className="analysis-note">{fr?
+        {effectiveCuts.length===0&&<p className="analysis-note">{fr?
           "Aucun changement d’angle pour l’instant : sans plan de montage, le MP4 restera sur un seul angle.":
           "No camera switches yet: without an edit plan, the MP4 stays on one camera."}</p>}
       </div>
       <div className="analysis-multi-cuts">
-        {cuts.length? cuts.map(c=><div key={c.id}><strong>{timeCode(c.at)}</strong><span>{labels[c.camera]}</span>
-          <button type="button" onClick={()=>setCuts(prev=>prev.filter(x=>x.id!==c.id))}>{fr?"RETIRER":"REMOVE"}</button>
+        {effectiveCuts.length? effectiveCuts.map(c=><div key={c.id}><strong>{timeCode(c.at)}</strong><span>{labels[c.camera]}</span>
+          <button type="button" onClick={()=>{
+            if(capsule)onCapsuleChange?.(capsule.id,{cameraCuts:effectiveCuts.filter(x=>x.id!==c.id),cameraEditSource:"manual"});
+            else setCuts(prev=>prev.filter(x=>x.id!==c.id));
+          }}>{fr?"RETIRER":"REMOVE"}</button>
         </div>):<p>{fr?"Aucune coupe choisie.":"No cuts selected yet."}</p>}
       </div>
       <div className="analysis-multi-clip-range">
@@ -656,15 +693,24 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         <button type="button" className="analysis-secondary" onClick={()=>setClipEnd(playhead)}>{fr?"FIN = POSITION":"END = PLAYHEAD"}</button>
       </div>
       {capsule&&<p className="analysis-multi-highlight"><strong>{fr?"CAPSULE SÉLECTIONNÉE":"SELECTED CAPSULE"} : {capsule.title}</strong>
+        <br/>{fr?`Montage : ${effectiveCuts.length} décisions de caméra · ${capsule.cameraEditSource==="automatic"?"automatique":"modifiable"}`:`Edit: ${effectiveCuts.length} camera decisions` }
         <br/>{fr?"L’export utilise les timecodes, les textes, les bulles et le format propres à cette capsule.":"Export uses this capsule’s times, graphics, bubbles and format."}</p>}
       {capsule&&<div className="studio-decor-preview-panel">
-        <strong>{fr?"DÉTOURAGE ET DÉCOR · PRÉVISUALISATION":"KEYING & BACKDROP · LIVE PREVIEW"}</strong>
+        <strong>{fr?"APERÇU DU MONTAGE · VIDÉO + BULLES + DÉCOR":"EDIT PREVIEW · FOOTAGE + BUBBLES + BACKDROP"}</strong>
         <p>{fr
           ?"Les réglages de l’atelier des capsules sont appliqués à cet aperçu réel et au MP4. Teste séparément chaque caméra avant le rendu final."
           :"Capsule settings are applied to this actual footage preview and to the MP4. Check each camera before final export."}</p>
+        <button type="button" className="analysis-primary" onClick={previewSelectedCapsule}
+          disabled={rendering||capsule.end<=capsule.start}>
+          {fr?"▶ LIRE LA CAPSULE MONTÉE (AVEC SON)":"▶ PLAY EDITED CAPSULE (WITH AUDIO)"}
+        </button>
         <div className="studio-decor-preview-actions">
-          <label>{fr?"CAMÉRA À VÉRIFIER":"CAMERA TO PREVIEW"}
-            <select value={videos.includes(decorCamera)?decorCamera:videos[0]} onChange={e=>setDecorCamera(e.target.value as CameraKey)}>
+          <label>{fr?"ANGLE DANS L’APERÇU":"PREVIEW CAMERA"}
+            <select value={decorFollowEdit?"edit":decorCamera} onChange={e=>{
+              setDecorFollowEdit(e.target.value==="edit");
+              if(e.target.value!=="edit")setDecorCamera(e.target.value as CameraKey);
+            }}>
+              <option value="edit">{fr?"Montage automatique / en cours":"Current edit / automatic"}</option>
               {videos.map(k=><option key={k} value={k}>{labels[k]}</option>)}
             </select>
           </label>
@@ -672,15 +718,18 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             {decorPreview?(fr?"FERMER L’APERÇU":"CLOSE PREVIEW"):(fr?"▶ PRÉVISUALISER LE DÉTOURAGE":"▶ PREVIEW BACKGROUND REMOVAL")}
           </button>
         </div>
-        {decorPreview&&<canvas ref={decorCanvas} width={640} height={360} className="studio-decor-preview-canvas"
-          aria-label={fr?"Aperçu du détourage sur la vidéo réelle":"Live camera chroma-key preview"}/>}
+        {decorPreview&&<canvas ref={decorCanvas}
+          width={capsule.format==="9:16"?360:capsule.format==="1:1"?480:640}
+          height={capsule.format==="9:16"?640:capsule.format==="1:1"?480:360}
+          className="studio-decor-preview-canvas"
+          aria-label={fr?"Aperçu vidéo avec angles, textes, bulles et décor":"Video preview with edits and graphic overlays"}/>} 
         {capsule.keying.enabled&&<p className="analysis-note">{fr
           ?"Ce détourage par couleur peut supprimer des objets turquoises, y compris des vêtements. Vérifie les cheveux et les mains sur les trois angles; le rendu expérimental s’effectue localement dans ton navigateur."
           :"Color keying may remove turquoise clothing as well. Check hair and hands on all camera angles; beta rendering happens in your browser."}</p>}
       </div>}
       <div className="analysis-multi-actions">
         <label className="analysis-multi-render-format">{fr?"FORMAT DU CLIP":"CLIP FORMAT"}
-          <select value={format||"16:9"} onChange={e=>onFormatChange?.(e.target.value as "16:9"|"9:16"|"1:1")}>
+          <select value={capsule?.format||format||"16:9"} onChange={e=>capsule?onCapsuleChange?.(capsule.id,{format:e.target.value as "16:9"|"9:16"|"1:1"}):onFormatChange?.(e.target.value as "16:9"|"9:16"|"1:1")}>
             <option value="16:9">16:9 · YouTube</option><option value="9:16">9:16 · Reels / Shorts</option>
             <option value="1:1">1:1 · Square</option>
           </select>

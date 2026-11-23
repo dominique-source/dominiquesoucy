@@ -85,6 +85,14 @@ export function drawStudioFrame(
  grad.addColorStop(0,"#0a0a0a");grad.addColorStop(1,"#263412");
  ctx.fillStyle=bg==="lime"?"#ccff00":bg==="gradient"?grad:"#080808";
  ctx.fillRect(0,0,width,height);
+ if(bg==="signature"){
+  const image=visual?.backgroundUrl?backgroundCache.get(visual.backgroundUrl):undefined;
+  if(image?.complete&&image.naturalWidth>0){
+   const scale=Math.max(width/image.naturalWidth,height/image.naturalHeight);
+   const iw=image.naturalWidth*scale,ih=image.naturalHeight*scale;
+   ctx.drawImage(image,(width-iw)/2,(height-ih)/2,iw,ih);
+  }else drawSignatureWall(ctx,width,height);
+ }
  if(video&&video.readyState>=2&&video.videoWidth&&video.videoHeight){
   const inset=bg==="original"?0:Math.round(Math.min(width,height)*.075);
   const areaW=width-inset*2,areaH=height-inset*2;
