@@ -592,6 +592,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}
       format={project.format} onFormatChange={format=>modify({format})}
       capsule={project.capsules.find(c=>c.id===project.selectedCapsuleId)}
+      onCapsuleChange={(id,patch)=>modify({capsules:latest.current.capsules.map(c=>
+        c.id===id?{...c,...patch,status:"draft"}:c)})}
       selectedBackgroundUrl={resolveBackdrop(project.studioBackdrop,project.id,[project.name,project.transcript,project.capsules.find(c=>c.id===project.selectedCapsuleId)?.title||""].join(" ")).file}
       onProceedToCapsules={()=>{
         if(!project.capsules.length){
