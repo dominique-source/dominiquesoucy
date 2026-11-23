@@ -83,7 +83,6 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     return task;
   },[]);
   const [recoveryCandidate,setRecoveryCandidate]=useState<StudioProject|null>(null);
-  const [linksError,setLinksError]=useState(false);
   useEffect(()=>{latest.current=project},[project]);
   // Browser recovery contains project metadata and transcripts, never media bytes.
   const recoveryKey="ds-studio-project-recovery";
@@ -187,7 +186,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         const result=await saveProject(project);
         if(ticket!==revision.current)return;
         persisted.current=snapshot;setStatus("saved");setError("");setSaveFailure("");
-        setProjects(old=>[{id:project.id,name:project.name,season:project.season,episode:project.episode,stage:project.stage,recordingDate:project.recordingDate,capsuleCount:project.capsules.length,failedCount:project.events.filter(e=>e.status==="failure").length,mediaCount:Object.keys(project.media).length,hasTranscript:!!project.transcript,hasAnalysis:!!project.analysis,updatedAt:result.updatedAt},
+        setProjects(old=>[{id:project.id,name:project.name,season:project.season,episode:project.episode,stage:project.stage,recordingDate:project.recordingDate,capsuleCount:project.capsules.length,failedCount:project.events.filter(e=>e.status==="failure").length,mediaCount:Object.keys(project.localMedia||{}).length,hasTranscript:!!project.transcript,hasAnalysis:!!project.analysis,updatedAt:result.updatedAt},
           ...old.filter(p=>p.id!==project.id)].slice(0,100));
       }catch(err){
         if(ticket!==revision.current)return;
@@ -476,21 +475,21 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         </div>
       </div>}
       <p className="analysis-note">{fr
-        ?"Sauvegarde automatique de la transcription, de l’analyse et des coupes. Les médias doivent être enregistrés séparément avec « Sauvegarder le média ». Attends « Projet sauvegardé » avant de quitter."
-        :"Auto-save for transcript, analysis and edits. Media must be saved separately. Wait for Project Saved before leaving."}</p>
+        ?"Sauvegarde automatique du projet, de la transcription et des coupes. Les vidéos restent sur ton appareil ou dans Google Drive et doivent être resélectionnées après un rechargement."
+        :"Auto-saves the project, transcript and edit decisions. Videos stay on your device or in Google Drive and must be selected again after a reload."}</p>
       <button type="button" className="analysis-secondary"
         onClick={()=>download("dom-soucy-projet-sauvegarde.json",JSON.stringify(project,null,2))}>
         {fr?"TÉLÉCHARGER UNE COPIE DU PROJET (.JSON)":"DOWNLOAD PROJECT BACKUP (.JSON)"}
       </button>
     </>)}
-    {step(1,fr?"AUDIO PRINCIPAL":"MAIN AUDIO",project.media.audio?"✓ MÉDIA SAUVEGARDÉ":"M4A / MP3",<>
-      <p>{fr?"Dépose d’abord le son original de ta conférence. Tu peux ensuite ajouter une deuxième piste améliorée pour le montage final.":"Start with your original recording. Add a separate enhanced voice track for final editing."}</p>
+    {step(1,fr?"AUDIO PRINCIPAL":"MAIN AUDIO",files.audio?"✓ AUDIO LOCAL":"M4A / MP3",<>
+      <p>{fr?"Choisis l’audio original depuis ton ordinateur ou ton Google Drive synchronisé. Le fichier ne sera pas enregistré dans Vercel Blob.":"Select your original recording from this device or a synchronized Google Drive folder. Vercel Blob does not store it."}</p>
       {tile("audio")}
       <div className="studio-audio-optimized">
         <h3>{fr?"PISTE AUDIO FINALE — VOIX OPTIMISÉE":"FINAL AUDIO — ENHANCED VOICE"}</h3>
         <p>{fr
-          ?"Améliore ton audio original avec Adobe Podcast Enhance, puis ajoute ici le fichier optimisé. Le Studio conserve les deux fichiers séparément et sélectionne automatiquement l’audio optimisé comme son final après sa sauvegarde."
-          :"Enhance your original audio with Adobe Podcast, then upload the processed track here. The Studio keeps both and selects the enhanced audio as the final soundtrack after it is saved."}</p>
+          ?"Améliore ton audio avec Adobe Podcast, puis sélectionne ici le résultat. Le Studio utilise la piste optimisée pour le montage tant que cet onglet reste ouvert."
+          :"Enhance audio with Adobe Podcast, then select the result here. The optimized track is available for editing in this browser session."}</p>
         <a href="https://podcast.adobe.com/enhance-speech" target="_blank" rel="noopener noreferrer"
           className="analysis-secondary studio-enhance-cta">{fr?"✦ OPTIMISER L’AUDIO ↗":"✦ ENHANCE AUDIO ↗"}</a>
         {tile("enhanced")}
@@ -519,7 +518,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
             {fr?"COPIER LE CODE D'ERREUR":"COPY ERROR CODE"}</button>
         </div>
       </div>}
-      <p className="analysis-note">{fr?"Pour transcrire : 24 Mo maximum. Pour conserver l’original dans le projet, clique sur « Sauvegarder le média ».":"24 MB maximum for transcription. Save the original media separately."}</p>
+      {transcriptionProgress&&<p role="status" className="analysis-note">{transcriptionProgress}</p>}
+      <p className="analysis-note">{fr?"Transcription en segments de 90 secondes : pas de limite de 24 Mo sur le fichier original et aucune copie audio conservée sur Vercel Blob. Fichiers compatibles avec le décodeur du navigateur uniquement.":"90-second transcription chunks. No 24 MB original-file limit and no audio archived in Vercel Blob. Source must be decodable by the browser."}</p>
     </>)}
     {step(2,fr?"TRANSCRIPTION":"TRANSCRIPT",`${project.transcript.length} / 26 000`,<>
       <p>{fr?"Relis tes paroles. La transcription horodatée permet de découper automatiquement les capsules. Toute correction manuelle du texte invalide les anciens repères et nécessite une nouvelle transcription horodatée.":"Review the transcript. Word timestamps can create capsule cuts automatically. Editing the transcript invalidates previous timestamps and requires re-transcription."}</p>
@@ -579,27 +579,21 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       </>}
     </>)}
     {step(4,fr?"IMPORTER LES VIDÉOS":"UPLOAD VIDEO SOURCES",
-      `${["main","vertical","secondary"].filter(k=>!!project.media[k as SourceKey]).length} / 3`,<>
-      <p>{fr?"Choisis tes fichiers audio et vidéo, puis enregistre tous les médias sélectionnés en une seule opération. Les transferts utilisent le stockage privé.":"Select your audio and video files, then save all selected media in one operation to private storage."}</p>
+      `${["main","vertical","secondary"].filter(k=>!!files[k as SourceKey]).length} / 3`,<>
+      <p>{fr?"Sélectionne les fichiers depuis ton ordinateur ou un dossier Google Drive synchronisé. Aucune vidéo n’est téléversée vers Vercel. Si tu changes d’appareil ou recharges la page, resélectionne les originaux.":"Select files from your device or a synchronized Google Drive folder. No video is uploaded to Vercel. Reselect originals after switching devices or reloading."}</p>
       <div className="studio-video-grid">{(["main","vertical","secondary"] as SourceKey[]).map(k=><div key={k}>{tile(k)}</div>)}</div>
-      <button className="analysis-primary" type="button" onClick={saveAllMedia}
-        disabled={bulkBusy||uploading||!ready||!(["audio","enhanced","main","vertical","secondary"] as SourceKey[]).some(k=>!!files[k]&&(pendingMedia[k]||!project.media[k]))}>
-        {bulkBusy?(fr?"ENREGISTREMENT DES MÉDIAS…":"SAVING MEDIA…"):(fr?"ENREGISTRER TOUS LES MÉDIAS SÉLECTIONNÉS":"SAVE ALL SELECTED MEDIA")}
-      </button>
       <p className="analysis-note">{fr
-        ?"Les médias marqués « MÉDIA ENREGISTRÉ » appartiennent déjà au projet. Le montage peut reprendre avec ces fichiers; la bêta d’export MP4 exige encore les originaux locaux."
-        :"Media marked MEDIA SAVED already belongs to this project. Editing can resume with them; beta MP4 export still requires local originals."}</p>
+        ?"Le Studio conserve les réglages et références des fichiers, pas les vidéos elles-mêmes. Tes fichiers restent dans Google Drive ou sur ton ordinateur."
+        :"The Studio stores edit decisions and filenames, not video bytes. Originals remain in Google Drive or on your computer."}</p>
     </>)}
     <div hidden={activeSection!=="editing"&&activeSection!=="production"}
       className={`studio-phase5-editor ${activeSection==="production"?"is-production":""}`}>
-    <MultiCamEditor key={project.id+"-"+Object.values(project.media).map(m=>m?.pathname||"").join("|")}
-      autoSyncEnabled={ready&&!uploading&&!bulkBusy&&status!=="error"&&
-        !Object.values(uploads).some(u=>!!u?.error)&&
-        (["audio","enhanced","main","vertical","secondary"] as SourceKey[]).every(k=>!pendingMedia[k])}
+    <MultiCamEditor key={project.id}
+      autoSyncEnabled={ready&&!!files.audio&&(["main","vertical","secondary"] as SourceKey[]).some(k=>!!files[k])}
       projectId={project.id} capsules={project.capsules}
       backdrops={Object.fromEntries(project.capsules.map(c=>[c.id,
         resolveBackdrop(project.studioBackdrop,project.id,[project.name,project.transcript,c.title].join(" ")).file]))}
-      sources={files} remoteUrls={remoteUrls} mediaMetadata={project.media}
+      sources={files}
       name={project.name} lang={lang} highlight={project.analysis?.moments[project.selectedMoment]?.excerpt}
       savedTimeline={project.timeline} onTimelineChange={t=>modify({timeline:t})}
       format={project.format} onFormatChange={format=>modify({format})}
