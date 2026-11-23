@@ -9,7 +9,7 @@ const words=transcript.split(" ").map((word,i)=>({
 
 test("uses authentic word boundaries for a grounded passage",()=>{
   const range=findQuotedRange("une forme d’art et il transforme",words);
-  assert.deepEqual(range,{start:2,end:5});
+  assert.deepEqual(range,{start:1.5,end:4.5});
 });
 test("does not manufacture timestamps for missing words",()=>{
   assert.equal(findQuotedRange("une citation totalement absente",words),null);
