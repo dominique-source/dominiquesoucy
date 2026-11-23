@@ -45,6 +45,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const fr=lang==="fr";
   const [project,setProject]=useState<StudioProject>(()=>freshProject());
   const [activeSection,setActiveSection]=useState<"projects"|"import"|"analysis"|"editing"|"production"|"advanced">("projects");
+  const [showTechnicalMontage,setShowTechnicalMontage]=useState(false);
   const [projects,setProjects]=useState<ProjectRow[]>([]);
   const [files,setFiles]=useState<SourceFiles>({});
   const uploading=false;
@@ -394,6 +395,25 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     }finally{setCleanupBusy(false)}
   };
   const projectSaved=status==="saved";
+  const hasTranscript=project.transcript.trim().length>=100;
+  const hasAnalysis=!!project.analysis?.moments.length;
+  const hasCapsules=project.capsules.some(c=>c.end>c.start&&c.end<=project.timeline.duration);
+  const suggestedNext=!hasTranscript?"import":!hasAnalysis?"analysis":!hasCapsules?"editing":"production";
+  const quickNavigate=(tab:typeof activeSection)=>{
+    setActiveSection(tab);
+    window.setTimeout(()=>document.getElementById("studio-phase5-current")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
+  };
+  const mainSteps=[
+    {id:"import" as const,num:"01",icon:"↓",name:fr?"IMPORTER":"IMPORT",
+      detail:fr?"Audio + master Premiere":"Audio + Premiere master",ready:hasTranscript},
+    {id:"analysis" as const,num:"02",icon:"✦",name:fr?"ANALYSER":"ANALYZE",
+      detail:fr?"Transcription et meilleurs extraits":"Transcript and highlights",ready:hasAnalysis},
+    {id:"editing" as const,num:"03",icon:"◉",name:fr?"MES CAPSULES":"MY CAPSULES",
+      detail:fr?"Choisir les bulles et les extraits":"Choose bubbles and clips",ready:hasCapsules},
+    {id:"production" as const,num:"04",icon:"↗",name:fr?"EXPORT HD":"HD EXPORT",
+      detail:fr?"Préparer le rendu sur ton Mac":"Prepare rendering on your Mac",ready:false},
+  ];
+
   return <section className="analysis-studio studio-production">
     <div className="analysis-topline">
       <div className="analysis-logo">DOMINIQUE SOUCY <span>/ STUDIO PRODUCTION</span></div>
@@ -414,27 +434,51 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <span>{transcriptionFailure.code}</span>
       <button type="button" onClick={()=>setActiveSection("import")}>{fr?"VOIR L'ERREUR":"VIEW ERROR"}</button>
     </div>}
-    <div className="studio-phase5-flow" aria-label={fr?"Navigation de production":"Production navigation"}>
-      {([
-        ["projects",fr?"01 · PROJETS":"01 · PROJECTS"],
-        ["import",fr?"02 · IMPORT":"02 · IMPORT"],
-        ["analysis",fr?"03 · ANALYSE":"03 · ANALYSIS"],
-        ["editing",fr?"04 · MONTAGE":"04 · EDIT"],
-        ["production",fr?"05 · PRODUCTION":"05 · PRODUCTION"],
-        ["advanced",fr?"RÉGLAGES +":"SETTINGS +"],
-      ] as const).map(([tab,label])=><button type="button" key={tab}
-        aria-current={activeSection===tab?"step":undefined}
-        className={activeSection===tab?"is-active":""}
-        onClick={()=>{setActiveSection(tab);document.getElementById("studio-phase5-current")?.scrollIntoView({behavior:"smooth",block:"start"})}}>
-        {label}</button>)}
+    <div className="studio-simple-command">
+      <div className="studio-simple-heading">
+        <div>
+          <p className="analysis-kicker">PREMIERE PRO → DOM SOUCY STUDIO → HD</p>
+          <h2>{fr?"UNE ACTION À LA FOIS.":"ONE ACTION AT A TIME."}</h2>
+          <p>{fr?"Le montage multicaméra se fait dans Premiere. Ici, tu crées les capsules, les bulles et leur plan de production.":"Multicam editing belongs in Premiere. Here, build your capsules, graphics and production plans."}</p>
+        </div>
+        <div className="studio-simple-tools">
+          <button type="button" onClick={()=>quickNavigate("projects")}>{fr?"MES PROJETS":"MY PROJECTS"}</button>
+          <button type="button" onClick={()=>quickNavigate("advanced")}>{fr?"RÉGLAGES":"SETTINGS"}</button>
+        </div>
+      </div>
+      <nav className="studio-simple-steps" aria-label={fr?"Étapes de production":"Production steps"}>
+        {mainSteps.map(item=><button type="button" key={item.id}
+          className={activeSection===item.id?"studio-simple-tile active":"studio-simple-tile"}
+          aria-current={activeSection===item.id?"step":undefined}
+          onClick={()=>quickNavigate(item.id)}>
+          <span className="studio-simple-tile-top"><span>{item.num} / 04</span><span>{item.ready?"✓ "+(fr?"PRÊT":"DONE"):activeSection===item.id?(fr?"EN COURS":"CURRENT"):(fr?"À FAIRE":"NEXT")}</span></span>
+          <span className="studio-simple-tile-icon" aria-hidden="true">{item.icon}</span>
+          <strong>{item.name}</strong>
+          <small>{item.detail}</small>
+        </button>)}
+      </nav>
+      <div className="studio-simple-continue">
+        <span><strong>{fr?"PROCHAINE ACTION":"NEXT ACTION"}</strong>
+          {suggestedNext==="import"?(fr?"Choisir l'audio du master":"Choose master audio"):
+           suggestedNext==="analysis"?(fr?"Détecter les meilleurs moments":"Find the highlights"):
+           suggestedNext==="editing"?(fr?"Préparer les capsules et les bulles":"Prepare clips and bubbles"):
+           fr?"Préparer le rendu HD local":"Prepare the local HD render"}
+        </span>
+        <button type="button" className="studio-simple-go" onClick={()=>quickNavigate(suggestedNext)}>
+          {suggestedNext==="import"?(fr?"IMPORTER":"IMPORT"):
+           suggestedNext==="analysis"?(fr?"ANALYSER":"ANALYZE"):
+           suggestedNext==="editing"?(fr?"CRÉER MES CAPSULES":"CREATE MY CAPSULES"):
+           fr?"EXPORT HD":"HD EXPORT"} →
+        </button>
+      </div>
     </div>
     <div id="studio-phase5-current" className="studio-phase5-context" role="status">
       <span>{project.name} / {episodeCode(project.season,project.episode)}</span>
       <strong>{activeSection==="projects"?(fr?"BIBLIOTHÈQUE":"LIBRARY"):
         activeSection==="import"?(fr?"FICHIERS SOURCES":"SOURCE FILES"):
         activeSection==="analysis"?(fr?"TRANSCRIPTION & IA":"TRANSCRIPT & AI"):
-        activeSection==="editing"?(fr?"MONTAGE & BULLES":"EDIT & GRAPHICS"):
-        activeSection==="production"?(fr?"EXPORTS MP4":"MP4 EXPORTS"):
+        activeSection==="editing"?(fr?"CAPSULES & BULLES":"CAPSULES & GRAPHICS"):
+        activeSection==="production"?(fr?"RENDU HD LOCAL":"LOCAL HD RENDERER"):
         fr?"OUTILS AVANCÉS":"ADVANCED TOOLS"}</strong>
     </div>
     <div hidden={activeSection!=="projects"} className="studio-workspace-project-library">
@@ -512,9 +556,9 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       </button>
     </>)}
     {step(1,fr?"AUDIO PRINCIPAL":"MAIN AUDIO",files.audio?"✓ AUDIO LOCAL":"M4A / MP3",<>
-      <p>{fr?"Choisis l’audio original depuis ton ordinateur ou ton Google Drive synchronisé. Le fichier ne sera pas enregistré dans Vercel Blob.":"Select your original recording from this device or a synchronized Google Drive folder. Vercel Blob does not store it."}</p>
+      <p>{fr?"Après le montage multicaméra dans Premiere, sélectionne ici l’audio du master. Aucune vidéo n’est envoyée sur Vercel.":"After editing in Premiere, select the master audio here. No videos are uploaded to Vercel."}</p>
       {tile("audio")}
-      <div className="studio-audio-optimized">
+      <details className="studio-audio-optimized studio-simple-details"><summary>{fr?"OPTIONNEL — AMÉLIORER LA VOIX":"OPTIONAL — ENHANCE VOICE"}</summary>
         <h3>{fr?"PISTE AUDIO FINALE — VOIX OPTIMISÉE":"FINAL AUDIO — ENHANCED VOICE"}</h3>
         <p>{fr
           ?"Améliore ton audio avec Adobe Podcast, puis sélectionne ici le résultat. Le Studio utilise la piste optimisée pour le montage tant que cet onglet reste ouvert."
@@ -525,7 +569,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         <p className="analysis-note">{fr
           ?"Adobe Enhance n’est pas lancé automatiquement depuis ce bouton : aucun accès API public générique n’est disponible. Télécharge d’abord le résultat d’Adobe, puis importe-le ici."
           :"Adobe Enhance does not run inside this Studio. Download the processed audio from Adobe first, then import it here."}</p>
-      </div>
+      </details>
       <label className="analysis-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>
         <span>{fr?"J’autorise la transcription et l’analyse privées de ma conférence par l’IA.":"I authorize private AI transcription and analysis."}</span>
       </label>
@@ -566,7 +610,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <button type="button" className="analysis-primary" disabled={!consent||project.transcript.trim().length<100||!!busy} onClick={analyze}>
         {busy==="analyze"?"ANALYSE EN COURS…":fr?"ANALYSER LA SÉANCE":"ANALYZE SESSION"}
       </button>
-      <div className="studio-reconstructed">
+      <details className="studio-reconstructed studio-simple-details"><summary>{fr?"OPTIONNEL — RECONSTRUIRE LES QUESTIONS DES JOURNALISTES":"OPTIONAL — RECONSTRUCT JOURNALIST QUESTIONS"}</summary>
         <h3>{fr?"RECRÉER LES QUESTIONS MANQUANTES POUR LES BULLES":"REBUILD MISSING QUESTIONS FOR BUBBLES"}</h3>
         <p>{fr
           ?"Si tu n’as plus l’audio des journalistes, l’IA peut proposer des questions plausibles à partir des réponses réellement filmées. Ce sont des propositions de montage, pas les paroles originales des journalistes."
@@ -596,7 +640,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
             }}>{fr?"UTILISER CETTE BULLE DANS UNE CAPSULE":"USE THIS BUBBLE IN A CAPSULE"}</button>
           </div>)}
         </div>}
-      </div>
+      </details>
       {project.analysis&&<><div className="studio-auto-edit-panel">
         <strong>{fr?"ANALYSE TERMINÉE — PROCHAINE ÉTAPE":"ANALYSIS COMPLETE — NEXT STEP"}</strong>
         <p>{fr?
@@ -622,16 +666,46 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         </button>
       </>}
     </>)}
-    {step(4,fr?"IMPORTER LES VIDÉOS":"UPLOAD VIDEO SOURCES",
-      `${["main","vertical","secondary"].filter(k=>!!files[k as SourceKey]).length} / 3`,<>
-      <p>{fr?"Sélectionne les fichiers depuis ton ordinateur ou un dossier Google Drive synchronisé. Aucune vidéo n’est téléversée vers Vercel. Si tu changes d’appareil ou recharges la page, resélectionne les originaux.":"Select files from your device or a synchronized Google Drive folder. No video is uploaded to Vercel. Reselect originals after switching devices or reloading."}</p>
-      <div className="studio-video-grid">{(["main","vertical","secondary"] as SourceKey[]).map(k=><div key={k}>{tile(k)}</div>)}</div>
+    {step(4,fr?"MASTER PREMIERE":"PREMIERE MASTER",files.main?(fr?"✓ MASTER PRÊT":"✓ MASTER READY"):(fr?"FACULTATIF":"OPTIONAL"),<>
+      <p>{fr?"Choisis ton master déjà monté et synchronisé dans Adobe Premiere Pro. Les trois caméras n’ont plus besoin d’être importées ici.":"Choose the edited and synchronized master from Adobe Premiere Pro. You no longer need to import each camera here."}</p>
+      {tile("main")}
+      <details className="studio-simple-details"><summary>{fr?"AVANCÉ — IMPORTER D’AUTRES ANGLES (OPTIONNEL)":"ADVANCED — IMPORT OTHER CAMERAS (OPTIONAL)"}</summary>
+        <div className="studio-video-grid">{(["vertical","secondary"] as SourceKey[]).map(k=><div key={k}>{tile(k)}</div>)}</div>
+      </details>
       <p className="analysis-note">{fr
         ?"Le Studio conserve les réglages et références des fichiers, pas les vidéos elles-mêmes. Tes fichiers restent dans Google Drive ou sur ton ordinateur."
         :"The Studio stores edit decisions and filenames, not video bytes. Originals remain in Google Drive or on your computer."}</p>
     </>)}
-    <div hidden={activeSection!=="editing"&&activeSection!=="production"}
-      className={`studio-phase5-editor ${activeSection==="production"?"is-production":""}`}>
+    <div hidden={activeSection!=="editing"} className="studio-phase5-capsules">
+      <CapsuleWorkshop lang={lang} project={project}
+        onChange={patch=>modify(patch)} onEvent={record}/>
+    </div>
+
+    <div hidden={activeSection!=="editing"} className="studio-simple-technical">
+      <button type="button" className="analysis-secondary" onClick={()=>setShowTechnicalMontage(v=>!v)}>
+        {showTechnicalMontage?(fr?"MASQUER L’ANCIEN ÉDITEUR TECHNIQUE":"HIDE LEGACY TECHNICAL EDITOR"):
+          fr?"OPTIONS AVANCÉES — ANCIEN ÉDITEUR VIDÉO":"ADVANCED — LEGACY VIDEO EDITOR"}
+      </button>
+      <p className="analysis-note">{fr?"Les caméras et le montage multicaméra se font désormais dans Premiere. L’ancien éditeur navigateur reste disponible pour les anciens projets, sans remplacer le rendu HD.":"Multicam editing now happens in Premiere. The old browser editor remains for legacy projects and is not the HD renderer."}</p>
+    </div>
+    <section hidden={activeSection!=="production"} className="analysis-panel studio-step studio-simple-production">
+      <div className="analysis-panel-head"><h2>{fr?"04 / PRODUIRE EN HD":"04 / PRODUCE IN HD"}</h2><span>PREMIERE + STUDIO + MAC</span></div>
+      <p>{fr?"Les bulles se règlent dans le Studio. Elles sont placées automatiquement dans le MP4 par notre moteur HD local. Tu n’as pas besoin de les positionner dans Premiere.":"Set the bubbles in Studio. The local HD renderer automatically positions them in the MP4; you do not need to place them in Premiere."}</p>
+      <div className="studio-simple-production-steps">
+        <div><strong>01</strong><span>{fr?"EXPORTER master.mp4 DEPUIS PREMIERE":"EXPORT master.mp4 FROM PREMIERE"}</span></div>
+        <div><strong>02</strong><span>{fr?"CHOISIR LA CAPSULE ET TÉLÉCHARGER SON JSON":"CHOOSE THE CAPSULE AND DOWNLOAD ITS JSON"}</span></div>
+        <div><strong>03</strong><span>{fr?"LANCER LE MOTEUR HD SUR LE MAC":"RUN THE HD RENDERER ON YOUR MAC"}</span></div>
+      </div>
+      <button className="analysis-primary studio-simple-primary" type="button" onClick={()=>quickNavigate("editing")}>
+        {fr?"CHOISIR MA CAPSULE ET MES BULLES →":"CHOOSE MY CAPSULE AND BUBBLES →"}
+      </button>
+      <a className="analysis-secondary" target="_blank" rel="noopener noreferrer"
+        href="https://github.com/dominique-source/dominiquesoucy/tree/main/render-engine">
+        {fr?"OUVRIR LE MOTEUR HD ET LES INSTRUCTIONS ↗":"OPEN THE HD RENDERER AND INSTRUCTIONS ↗"}
+      </a>
+      <p className="analysis-note">{fr?"Aujourd’hui, le Studio fournit un manifeste JSON par capsule. L’export HD en un clic directement sur le site reste à développer; aucun rendu n’est lancé ici automatiquement.":"Currently Studio downloads a JSON manifest for each capsule. One-click HD rendering from this page is not implemented; no render starts here automatically."}</p>
+    </section>
+    {showTechnicalMontage&&activeSection==="editing"&&<div className="studio-phase5-editor">
     <MultiCamEditor key={project.id}
       autoSyncEnabled={ready&&!!files.audio&&(["main","vertical","secondary"] as SourceKey[]).some(k=>!!files[k])}
       projectId={project.id} capsules={project.capsules}
@@ -663,12 +737,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         const id=project.selectedCapsuleId;
         if(id)modify({capsules:project.capsules.map(c=>c.id===id?{...c,status:ok?"rendered":"failed"}:c)});
       }}/>
-    </div>
-    <div hidden={activeSection!=="editing"} className="studio-phase5-capsules">
-      <CapsuleWorkshop lang={lang} project={project}
-        onChange={patch=>modify(patch)} onEvent={record}/>
-    </div>
-
+    </div>}
     {step(9,fr?"HISTORIQUE ET INCIDENTS":"HISTORY & ISSUES",`${project.events.length} LOGS`,<>
       <div className="studio-auto-edit-panel">
         <strong>{fr?"NETTOYAGE DES ANCIENNES COPIES VERCEL":"LEGACY VERCEL MEDIA CLEANUP"}</strong>

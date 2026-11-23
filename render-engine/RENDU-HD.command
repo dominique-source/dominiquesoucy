@@ -16,8 +16,8 @@ if [ ! -d node_modules ]; then
 fi
 mkdir -p public out
 if [ ! -f public/master.mp4 ]; then
-  echo "Choisis le MASTER 16:9 exporté par DaVinci Resolve."
-  MASTER="$(osascript -e 'POSIX path of (choose file with prompt "Choisis master.mp4 exporté depuis DaVinci Resolve")')" || exit 1
+  echo "Choisis le MASTER 16:9 exporté par Adobe Premiere Pro."
+  MASTER="$(osascript -e 'POSIX path of (choose file with prompt "Choisis master.mp4 exporté depuis Adobe Premiere Pro")')" || exit 1
   if [ -z "$MASTER" ] || [ ! -f "$MASTER" ]; then echo "Aucun fichier sélectionné"; exit 1; fi
   ln -s "$MASTER" public/master.mp4
 fi

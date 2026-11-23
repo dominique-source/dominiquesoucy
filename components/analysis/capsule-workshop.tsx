@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { buildHdRenderManifest,hdManifestFilename } from "@/lib/analysis/hd-render-manifest";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
+import { buildPremiereCutCsv,buildPremiereEditBrief } from "@/lib/analysis/premiere-handoff";
 import { episodeCode, type StudioProject } from "@/lib/analysis/project";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
@@ -71,6 +72,12 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
    setManifestNotice(fr?"Vérifie les secondes Début / Fin (maximum 10 minutes pour ce pilote).":"Check Start / End seconds (10-minute max for this pilot).");
   }
  }
+ function downloadReference(filename:string,body:string,mime="text/plain"){
+   const url=URL.createObjectURL(new Blob([body],{type:mime}));
+   const a=document.createElement("a");a.href=url;a.download=filename;
+   document.body.appendChild(a);a.click();a.remove();
+   window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+ }
  function remove(id:string){
   onChange({capsules:capsules.filter(c=>c.id!==id),
    selectedCapsuleId:chosen?.id===id?(capsules.find(c=>c.id!==id)?.id||""):project.selectedCapsuleId});
@@ -79,7 +86,21 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
  return <section id="studio-capsule-workshop" className="analysis-panel studio-step studio-workshop">
   <div className="analysis-panel-head"><h2>07B / {fr?"ATELIER DES CAPSULES":"CAPSULE WORKSHOP"}</h2>
    <span>{capsules.length} / 40 {fr?"PROJETS DE CAPSULES":"CAPSULE DRAFTS"}</span></div>
-  <p>{fr?"Un seul épisode peut produire une série de capsules. Prépare les textes, les bulles, les couleurs et les versions. Chaque capsule garde ses propres réglages.":"One episode can produce multiple capsule versions. Each saves its own text, bubbles and graphics."}</p>
+  <p>{fr?"L’IA propose les extraits et les textes. Tu choisis la bulle. Notre moteur HD local la place et l’anime automatiquement sur ton master Premiere.":"AI proposes clips and text. You choose a graphic; the local HD renderer positions and animates it automatically on your Premiere master."}</p>
+  <details className="studio-simple-details">
+    <summary>{fr?"EXPORTER LES REPÈRES POUR PREMIERE (OPTIONNEL)":"EXPORT PREMIERE CUT REFERENCES (OPTIONAL)"}</summary>
+    <p className="analysis-note">{fr?"Ces fichiers sont des indications de montage et non une séquence Premiere importable. Les secondes sont calculées depuis le début du master sans coupes supplémentaires.":"These are editing references, not an importable Premiere sequence. Timecodes refer to the beginning of the uninterrupted master."}</p>
+    <div className="studio-workshop-actions">
+      <button type="button" className="analysis-secondary" disabled={!capsules.length}
+        onClick={()=>downloadReference("dom-soucy-reperes-premiere.csv",buildPremiereCutCsv(project),"text/csv;charset=utf-8")}>
+        {fr?"↓ LISTE DES EXTRAITS (.CSV)":"↓ CUT LIST (.CSV)"}
+      </button>
+      <button type="button" className="analysis-secondary"
+        onClick={()=>downloadReference("dom-soucy-brief-premiere.txt",buildPremiereEditBrief(project,lang))}>
+        {fr?"↓ BRIEF PREMIERE (.TXT)":"↓ PREMIERE BRIEF (.TXT)"}
+      </button>
+    </div>
+  </details>
   <div className="studio-workshop-wall-summary">
     <strong>{fr?"DÉCOR DE L’ÉMISSION":"EPISODE BACKDROP"} : {resolveBackdrop(project.studioBackdrop,project.id,[project.name,project.transcript].join(" ")).label}</strong>
     <button type="button" className="analysis-secondary" onClick={()=>
@@ -123,6 +144,22 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
     {chosen.cameraCuts?.length?<p className="analysis-note">{fr?`Montage préparé : ${chosen.cameraCuts.length} décisions de caméra · ${chosen.cameraEditSource==="automatic"?"proposition automatique":"ajustements manuels"}.`:`Edit prepared: ${chosen.cameraCuts.length} camera decisions.`}</p>:null}
     {chosen.timingSource==="automatic"&&<p className="analysis-note">{fr?"Découpage proposé à partir de l’audio original horodaté. Vérifie la synchronisation de la caméra avant l’export.":"Cut based on timestamps in the original audio. Confirm the camera is synchronized before exporting."}</p>}
     {!validRange&&<p className="studio-capsule-warning">{fr?"Choisis un début et une fin valides avant l’export.":"Set valid start and end times before exporting."}</p>}
+    <div className="studio-bubble-chooser">
+      <strong>{fr?"CHOISIR MA BULLE — PLACEMENT AUTOMATIQUE EN HD":"CHOOSE A BUBBLE — AUTOMATIC HD PLACEMENT"}</strong>
+      <div className="studio-bubble-tiles">
+        {([
+          ["conversation","◉",fr?"JOURNALISTE":"JOURNALIST"],
+          ["quote","❝",fr?"CITATION":"QUOTE"],
+          ["rafale","≡",fr?"RAFALE":"QUESTION BURST"],
+        ] as const).map(([style,icon,label])=><button type="button" key={style}
+          className={chosen.style===style?"studio-bubble-tile active":"studio-bubble-tile"}
+          aria-pressed={chosen.style===style} onClick={()=>change(chosen.id,{style})}>
+          <span aria-hidden="true">{icon}</span><strong>{label}</strong>
+          <small>{chosen.style===style?(fr?"✓ SÉLECTIONNÉ":"✓ SELECTED"):(fr?"CHOISIR":"CHOOSE")}</small>
+        </button>)}
+      </div>
+      <p className="analysis-note">{fr?"Tu ne places pas la bulle dans Premiere : le moteur vidéo appliquera notre modèle aux dimensions du format choisi. L’aperçu animé fidèle aux maquettes reste à développer.":"You do not place bubbles in Premiere: the video renderer applies our template to the chosen format. Exact animated preview fidelity is still in progress."}</p>
+    </div>
     <div className="studio-capsule-2col">
      <label>{fr?"STYLE":"STYLE"}<select value={chosen.style} onChange={e=>change(chosen.id,{style:e.target.value as Capsule["style"]})}>
        {(Object.keys(variants) as Capsule["style"][]).map(v=><option key={v} value={v}>{variants[v]}</option>)}</select></label>

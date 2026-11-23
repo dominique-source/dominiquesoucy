@@ -1380,3 +1380,55 @@ a:hover {
     transform: none;
   }
 }
+
+
+/* DOM SOUCY MEDIA · straightforward Premiere-first production cockpit */
+.studio-simple-command{max-width:1320px;margin:24px auto 28px;color:#f4f4ef}
+.studio-simple-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:20px}
+.studio-simple-heading h2{font-family:var(--font-barlow-condensed),Impact,"Arial Narrow",sans-serif;font-style:italic;letter-spacing:-.02em;font-weight:900;font-size:clamp(28px,3.4vw,48px);line-height:1;margin:8px 0}
+.studio-simple-heading p{max-width:750px;color:#acb0ac;font-size:clamp(14px,1.1vw,17px);line-height:1.5}
+.studio-simple-tools{display:flex;flex-wrap:wrap;gap:10px}
+.studio-simple-tools button{border:1px solid #4f514d;background:#151615;color:#eee;padding:13px 18px;min-height:44px;border-radius:10px;cursor:pointer;font-size:12px;letter-spacing:.08em;font-weight:850}
+.studio-simple-tools button:hover,.studio-simple-tools button:focus-visible{border-color:#ccff00;color:#ccff00}
+.studio-simple-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.studio-simple-tile{min-height:215px;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;padding:20px 19px;border:1px solid #454644;background:#161716;border-radius:14px;color:#f4f4ef;cursor:pointer;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.studio-simple-tile:hover,.studio-simple-tile:focus-visible{border-color:#ccff00;transform:translateY(-3px)}
+.studio-simple-tile.active{border:2px solid #ccff00;background:#22271a;box-shadow:0 0 0 1px #ccff0033}
+.studio-simple-tile-top{display:flex;justify-content:space-between;gap:8px;width:100%;font-size:11px;font-weight:800;letter-spacing:.045em;color:#a6aca1}
+.studio-simple-tile.active .studio-simple-tile-top{color:#ccff00}
+.studio-simple-tile-icon{color:#ccff00;font-size:33px;line-height:1.1;margin-top:12px}
+.studio-simple-tile strong{font-family:var(--font-barlow-condensed),Impact,"Arial Narrow",sans-serif;font-weight:950;font-style:italic;font-size:clamp(25px,2.3vw,36px);line-height:1;text-transform:uppercase}
+.studio-simple-tile small{color:#d1d3cc;line-height:1.3;font-size:13px}
+.studio-simple-continue{margin-top:15px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:17px 19px;background:#202220;border:1px solid #515650;border-radius:12px}
+.studio-simple-continue>span{display:flex;flex-direction:column;gap:5px;color:#eee;font-size:15px}
+.studio-simple-continue>span strong{font-size:11px;letter-spacing:.1em;color:#c6cbc0}
+.studio-simple-go{background:#ccff00;color:#10130a;border:0;border-radius:9px;padding:16px 22px;min-height:52px;font-weight:950;cursor:pointer;font-size:15px;letter-spacing:.025em;white-space:nowrap}
+.studio-simple-go:hover,.studio-simple-go:focus-visible{background:#e2ff8b}
+.studio-simple-details{margin:16px 0;padding:15px;border:1px solid #444844;border-radius:10px}
+.studio-simple-details>summary{list-style:none;cursor:pointer;font-size:14px;font-weight:850;letter-spacing:.06em;color:#d8dfd0}
+.studio-simple-details>summary::-webkit-details-marker{display:none}
+.studio-simple-details>summary:before{content:"＋";margin-right:10px;color:#ccff00}
+.studio-simple-details[open]>summary:before{content:"−"}
+.studio-simple-primary{min-height:60px!important;font-size:18px!important;margin-top:12px}
+.studio-simple-production-steps{display:grid;gap:10px;margin:20px 0}
+.studio-simple-production-steps>div{display:flex;gap:18px;align-items:center;padding:17px 20px;background:#191c19;border:1px solid #383d38;border-radius:10px}
+.studio-simple-production-steps strong{font-size:25px;color:#ccff00;font-weight:950}
+.studio-simple-production-steps span{font-size:16px;font-weight:760}
+.studio-simple-technical{margin-top:22px;padding:12px 0}
+@media(max-width:1050px){.studio-simple-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.studio-simple-heading{flex-wrap:wrap}}
+@media(max-width:600px){.studio-simple-steps{grid-template-columns:1fr 1fr;gap:8px}.studio-simple-tile{min-height:180px;padding:14px}.studio-simple-tile strong{font-size:25px}.studio-simple-tile-icon{font-size:27px;margin-top:6px}.studio-simple-continue{flex-direction:column;align-items:stretch}.studio-simple-go{width:100%}.studio-simple-tools button{font-size:11px;padding:10px 12px}}
+@media(max-width:380px){.studio-simple-steps{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.studio-simple-tile{transition:none}.studio-simple-tile:hover{transform:none}}
+
+
+/* Three large, reusable graphic selections for approved DOM SOUCY capsules */
+.studio-bubble-chooser{margin:24px 0 18px;padding:20px;border:1px solid #495044;border-radius:13px;background:#151715}
+.studio-bubble-chooser>strong{display:block;font-size:13px;font-weight:900;letter-spacing:.075em;color:#f4f4ef;margin-bottom:12px}
+.studio-bubble-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.studio-bubble-tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;gap:9px;min-height:120px;padding:17px 16px;background:#222522;color:#eee;border:1px solid #575c55;border-radius:11px;cursor:pointer}
+.studio-bubble-tile:hover,.studio-bubble-tile:focus-visible{border-color:#ccff00}
+.studio-bubble-tile.active{background:#29331b;border:2px solid #ccff00}
+.studio-bubble-tile>span{font-size:30px;line-height:1;color:#ccff00}
+.studio-bubble-tile strong{font-size:18px;font-weight:950;letter-spacing:.02em}
+.studio-bubble-tile small{font-size:11px;font-weight:750;color:#d0d7c7;letter-spacing:.08em}
+@media(max-width:620px){.studio-bubble-tiles{grid-template-columns:1fr}.studio-bubble-tile{min-height:84px;flex-direction:row;align-items:center;justify-content:flex-start}.studio-bubble-tile small{margin-left:auto}}
