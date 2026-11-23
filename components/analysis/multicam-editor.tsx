@@ -15,7 +15,7 @@ const initialClaps: Record<SourceKey, number> = { audio:0, enhanced:0, main:0, v
 
 type Timeline={ duration:number; clipStart:number; clipEnd:number; audioSource:SourceKey; finalAudioSource:SourceKey; alignmentApproved:boolean; visualClaps:Record<CameraKey,number|null>; offsets:Record<SourceKey,number>; claps:Record<SourceKey,number>; cuts:Cut[] };
 type MediaInfo={filename:string;bytes:number;pathname:string;contentType:string};
-export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules, selectedBackgroundUrl, autoSyncEnabled=false }: {
+export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang, highlight, savedTimeline, onTimelineChange, format, onFormatChange, capsule, onExportOutcome, onProceedToCapsules, selectedBackgroundUrl, autoSyncEnabled=false, onCapsuleChange }: {
   sources: SourceFiles; remoteUrls?:Partial<Record<SourceKey,string>>;
   mediaMetadata?:Partial<Record<SourceKey,MediaInfo>>;
   name: string; lang: "fr"|"en"; highlight?: string;
@@ -23,6 +23,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   format?:"16:9"|"9:16"|"1:1"; onFormatChange?:(format:"16:9"|"9:16"|"1:1")=>void;
   capsule?:StudioProject["capsules"][number]; onExportOutcome?:(ok:boolean,details:string)=>void;
   onProceedToCapsules?:()=>void;
+  onCapsuleChange?:(id:string,patch:Partial<StudioProject["capsules"][number]>)=>void;
   selectedBackgroundUrl?:string;
   autoSyncEnabled?:boolean;
 }) {
@@ -96,7 +97,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const realAudioSource = availableAudio.includes(audioSource) ? audioSource : availableAudio[0];
   const realFinalAudioSource=availableAudio.includes(finalAudioSource)?finalAudioSource:(availableAudio.includes("enhanced")?"enhanced":realAudioSource);
   const realCamera = videos.includes(selectedCamera) ? selectedCamera : videos[0];
-  const selected = activeCamera(cuts,playhead,realCamera);
+  const effectiveCuts=capsule?.cameraCuts?.length?capsule.cameraCuts:cuts;
+  const selected = activeCamera(effectiveCuts,playhead,realCamera);
   const effectiveCamera = videos.includes(selected) ? selected : realCamera;
 
   const seekAll=useCallback((time:number, offsetsValue=offsets,maxTime=duration)=>{
@@ -306,7 +308,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     const to=capsule?capsule.end:clipEnd;
     const retained=cuts.filter(c=>c.at<from||c.at>=to);
     const next=[...retained,...suggestedCuts].sort((a,b)=>a.at-b.at);
-    setCuts(next);
+    if(capsule)onCapsuleChange?.(capsule.id,{cameraCuts:next.filter(c=>c.at>=from&&c.at<to),cameraEditSource:"manual"});
+    else setCuts(next);
     setSuggestedCuts(null);
     pauseAll();seekAll(from);
     setSuccess(fr?
@@ -316,7 +319,10 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   function markCut(){
     if(!realCamera)return;
     const cut:Cut={id:crypto.randomUUID(),at:safeCutTime(playhead,duration),camera:realCamera};
-    setCuts(prev=>[...prev.filter(c=>Math.abs(c.at-cut.at)>.15),cut].sort((a,b)=>a.at-b.at));
+    if(capsule){
+      const next=[...(capsule.cameraCuts||[]).filter(c=>Math.abs(c.at-cut.at)>.15),cut].sort((a,b)=>a.at-b.at);
+      onCapsuleChange?.(capsule.id,{cameraCuts:next,cameraEditSource:"manual"});
+    }else setCuts(prev=>[...prev.filter(c=>Math.abs(c.at-cut.at)>.15),cut].sort((a,b)=>a.at-b.at));
     setSelectedCamera(realCamera);
   }
   async function exportMp4(){
@@ -333,7 +339,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     try{
       const blob=await renderLocalMp4({
         nodes:elements.current,offsets,audioSource:realAudioSource,finalAudioSource:realFinalAudioSource,
-        cuts,fallback:realCamera,duration,start:renderStart,end:renderEnd,format:capsule?.format||format||"16:9",
+        cuts:effectiveCuts,fallback:realCamera,duration,start:renderStart,end:renderEnd,format:capsule?.format||format||"16:9",
         visual:capsule?{style:capsule.style,background:capsule.background,caption:capsule.caption,bubble:capsule.bubble,textPosition:capsule.textPosition,keying:capsule.keying,backgroundUrl:selectedBackgroundUrl}:undefined,
         onProgress:setRenderPercent,
       });
@@ -354,7 +360,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   }
   function exportEdl(){
     const result=edl({
-      projectName:name,duration,offsets,cuts,
+      projectName:name,duration,offsets,cuts:effectiveCuts,
       sourceNames:Object.fromEntries(Object.keys(playbackUrls).map(key=>[key,sources[key as SourceKey]?.name||mediaMetadata?.[key as SourceKey]?.filename||""])),
       audioSource:realAudioSource,
     });
@@ -633,13 +639,16 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             </button>
           </div>
         </div>}
-        {cuts.length===0&&<p className="analysis-note">{fr?
+        {effectiveCuts.length===0&&<p className="analysis-note">{fr?
           "Aucun changement d’angle pour l’instant : sans plan de montage, le MP4 restera sur un seul angle.":
           "No camera switches yet: without an edit plan, the MP4 stays on one camera."}</p>}
       </div>
       <div className="analysis-multi-cuts">
-        {cuts.length? cuts.map(c=><div key={c.id}><strong>{timeCode(c.at)}</strong><span>{labels[c.camera]}</span>
-          <button type="button" onClick={()=>setCuts(prev=>prev.filter(x=>x.id!==c.id))}>{fr?"RETIRER":"REMOVE"}</button>
+        {effectiveCuts.length? effectiveCuts.map(c=><div key={c.id}><strong>{timeCode(c.at)}</strong><span>{labels[c.camera]}</span>
+          <button type="button" onClick={()=>{
+            if(capsule)onCapsuleChange?.(capsule.id,{cameraCuts:effectiveCuts.filter(x=>x.id!==c.id),cameraEditSource:"manual"});
+            else setCuts(prev=>prev.filter(x=>x.id!==c.id));
+          }}>{fr?"RETIRER":"REMOVE"}</button>
         </div>):<p>{fr?"Aucune coupe choisie.":"No cuts selected yet."}</p>}
       </div>
       <div className="analysis-multi-clip-range">
@@ -656,6 +665,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         <button type="button" className="analysis-secondary" onClick={()=>setClipEnd(playhead)}>{fr?"FIN = POSITION":"END = PLAYHEAD"}</button>
       </div>
       {capsule&&<p className="analysis-multi-highlight"><strong>{fr?"CAPSULE SÉLECTIONNÉE":"SELECTED CAPSULE"} : {capsule.title}</strong>
+        <br/>{fr?`Montage : ${effectiveCuts.length} décisions de caméra · ${capsule.cameraEditSource==="automatic"?"automatique":"modifiable"}`:`Edit: ${effectiveCuts.length} camera decisions` }
         <br/>{fr?"L’export utilise les timecodes, les textes, les bulles et le format propres à cette capsule.":"Export uses this capsule’s times, graphics, bubbles and format."}</p>}
       {capsule&&<div className="studio-decor-preview-panel">
         <strong>{fr?"DÉTOURAGE ET DÉCOR · PRÉVISUALISATION":"KEYING & BACKDROP · LIVE PREVIEW"}</strong>
@@ -680,7 +690,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       </div>}
       <div className="analysis-multi-actions">
         <label className="analysis-multi-render-format">{fr?"FORMAT DU CLIP":"CLIP FORMAT"}
-          <select value={format||"16:9"} onChange={e=>onFormatChange?.(e.target.value as "16:9"|"9:16"|"1:1")}>
+          <select value={capsule?.format||format||"16:9"} onChange={e=>capsule?onCapsuleChange?.(capsule.id,{format:e.target.value as "16:9"|"9:16"|"1:1"}):onFormatChange?.(e.target.value as "16:9"|"9:16"|"1:1")}>
             <option value="16:9">16:9 · YouTube</option><option value="9:16">9:16 · Reels / Shorts</option>
             <option value="1:1">1:1 · Square</option>
           </select>
