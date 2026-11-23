@@ -58,6 +58,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     Object.values(offsets).some(value=>Math.abs(value)>0.001);
   const [suggestedCuts,setSuggestedCuts]=useState<Cut[]|null>(null);
   const [decorPreview,setDecorPreview]=useState(false);
+  const [previewCapsuleOnly,setPreviewCapsuleOnly]=useState(false);
   const [decorCamera,setDecorCamera]=useState<CameraKey>("main");
   const [decorFollowEdit,setDecorFollowEdit]=useState(true);
   const decorCanvas=useRef<HTMLCanvasElement|null>(null);
@@ -138,10 +139,10 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     seekAll(t);
     document.getElementById("studio-camera-preview")?.scrollIntoView({behavior:"smooth",block:"start"});
   }
-  const play=async()=>{
+  const play=async(from?:number)=>{
     if(playing){pauseAll();return}
     setError("");
-    seekAll(playhead);
+    seekAll(from??playhead);
     const active = Object.entries(elements.current) as Array<[SourceKey,HTMLMediaElement|null]>;
     try{
       // Start all streams at the same logical project position; local drift is
@@ -166,7 +167,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     if(!master)return;
     const t=Math.max(0,master.currentTime-offsets[realAudioSource]);
     setPlayhead(Math.min(duration,t));
-    if(t>=duration-.07){pauseAll();return}
+    if(t>=duration-.07||(previewCapsuleOnly&&capsule&&t>=capsule.end-.05)){pauseAll();setPreviewCapsuleOnly(false);return}
     // Soft drift correction: no full rebuffer if deviation is under ~250ms.
     (Object.entries(elements.current) as Array<[SourceKey,HTMLMediaElement|null]>)
       .forEach(([key,el])=>{
@@ -306,6 +307,14 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[capsule?.id,capsule?.start,capsule?.end,capsule?.cameraEditSource,
     capsule?.cameraCuts?.length,videos.join("|"),duration,onCapsuleChange]);
+  function previewSelectedCapsule(){
+    if(!capsule||capsule.end<=capsule.start||!realCamera)return;
+    pauseAll();
+    setDecorFollowEdit(true);
+    setDecorPreview(true);
+    setPreviewCapsuleOnly(true);
+    void play(capsule.start);
+  }
   function proposeEdit(){
     pauseAll();
     const from=capsule?capsule.start:clipStart;
@@ -567,7 +576,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     <div className="studio-review-instructions">
       <strong>{fr?"ÉTAPE SUIVANTE : VÉRIFIER LES IMAGES":"NEXT: CHECK THE PICTURE"}</strong>
       <p>{fr?"Clique « Lire les 3 caméras ensemble » et regarde si le clap arrive au même instant dans chaque image. Reviens aussi au début et au milieu de la vidéo pour vérifier.":"Play all three cameras and check that hands clap together. Also test the start and middle."}</p>
-      <button type="button" className="analysis-primary studio-review-play" onClick={play}>
+      <button type="button" className="analysis-primary studio-review-play" onClick={()=>{setPreviewCapsuleOnly(false);void play()}}>
         {playing?(fr?"❚❚ METTRE LES 3 CAMÉRAS EN PAUSE":"❚❚ PAUSE ALL CAMERAS"):(fr?"▶ LIRE LES 3 CAMÉRAS ENSEMBLE":"▶ PLAY ALL 3 CAMERAS")}
       </button>
       <button type="button" className="analysis-secondary" onClick={()=>{pauseAll();seekAll(0)}}>{fr?"REVENIR AU DÉBUT":"GO TO START"}</button>
@@ -604,7 +613,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
       src={playbackUrls.enhanced} preload="metadata"
       onTimeUpdate={realAudioSource==="enhanced"?onClock:undefined}/>}
     <div className="analysis-multi-playback studio-review-secondary-playback">
-      <button className="analysis-primary" type="button" onClick={play}>{playing?(fr?"❚❚ PAUSE":"❚❚ PAUSE"):(fr?"▶ LIRE LES CAMÉRAS":"▶ PLAY CAMERAS")}</button>
+      <button className="analysis-primary" type="button" onClick={()=>{setPreviewCapsuleOnly(false);void play()}}>{playing?(fr?"❚❚ PAUSE":"❚❚ PAUSE"):(fr?"▶ LIRE LES CAMÉRAS":"▶ PLAY CAMERAS")}</button>
       <button className="analysis-secondary" onClick={()=>{pauseAll();seekAll(0)}} type="button">{fr?"RETOUR DÉBUT":"REWIND"}</button>
     </div>
     <label className="analysis-multi-scrub">{fr?"POSITION DANS LE PROJET":"PROJECT POSITION"} · {timeCode(playhead)}
@@ -691,6 +700,10 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         <p>{fr
           ?"Les réglages de l’atelier des capsules sont appliqués à cet aperçu réel et au MP4. Teste séparément chaque caméra avant le rendu final."
           :"Capsule settings are applied to this actual footage preview and to the MP4. Check each camera before final export."}</p>
+        <button type="button" className="analysis-primary" onClick={previewSelectedCapsule}
+          disabled={rendering||capsule.end<=capsule.start}>
+          {fr?"▶ LIRE LA CAPSULE MONTÉE (AVEC SON)":"▶ PLAY EDITED CAPSULE (WITH AUDIO)"}
+        </button>
         <div className="studio-decor-preview-actions">
           <label>{fr?"ANGLE DANS L’APERÇU":"PREVIEW CAMERA"}
             <select value={decorFollowEdit?"edit":decorCamera} onChange={e=>{
