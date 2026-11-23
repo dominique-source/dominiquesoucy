@@ -43,6 +43,24 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const revision=useRef(0);
   const latest=useRef(project);
   const persisted=useRef("");
+  // Serialize uploads and autosaves: older requests must never overwrite newer media references.
+  const saveQueue=useRef<Promise<void>>(Promise.resolve());
+  const saveProject=useCallback((value:StudioProject):Promise<{updatedAt:number}>=>{
+    const task=saveQueue.current.catch(()=>undefined).then(async()=>{
+      const response=await fetch("/api/analysis/projects",{
+        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(value),
+      });
+      if(!response.ok){
+        const data=await response.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string};
+        throw Error(`${response.status}:${data.error||"SAVE_FAILED"}`);
+      }
+      return response.json() as Promise<{updatedAt:number}>;
+    });
+    saveQueue.current=task.then(()=>undefined,()=>undefined);
+    return task;
+  },[]);
+  const [recoveryCandidate,setRecoveryCandidate]=useState<StudioProject|null>(null);
+  const [linksError,setLinksError]=useState(false);
   useEffect(()=>{latest.current=project},[project]);
   // Browser recovery contains project metadata and transcripts, never media bytes.
   const recoveryKey="ds-studio-project-recovery";
@@ -51,11 +69,18 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       const raw=localStorage.getItem(recoveryKey);
       if(!raw)return;
       const p=JSON.parse(raw) as StudioProject;
-      if(p?.id && p?.timeline?.visualClaps)setLocalBackup(p);
+      if(p?.id && p?.timeline?.visualClaps){
+        setLocalBackup(p);
+        setRecoveryCandidate(p);
+      }
     }catch{}
   },[]);
   useEffect(()=>{
     if(!ready)return;
+    // Never replace a potentially newer recovery copy on initial load.
+    if(recoveryCandidate && (recoveryCandidate.id!==project.id ||
+      JSON.stringify({...recoveryCandidate,updatedAt:undefined})!==
+      JSON.stringify({...project,updatedAt:undefined})))return;
     try{
       localStorage.setItem(recoveryKey,JSON.stringify(project));
       setLocalBackupError("");
@@ -64,13 +89,21 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         "Copie locale non disponible : télécharge une copie JSON du projet.":
         "Local recovery is unavailable: download the project JSON.");
     }
-  },[project,ready,fr]);
+  },[project,ready,fr,recoveryCandidate]);
   const modify=useCallback((patch:Partial<StudioProject>)=>{
-    setProject(prev=>({...prev,...patch}));
+    setProject(prev=>{
+      const next={...prev,...patch};
+      latest.current=next;
+      return next;
+    });
     setStatus("pending");
   },[]);
   const record=useCallback((kind:StudioProject["events"][number]["type"],note:string,outcome:StudioProject["events"][number]["status"]="info")=>{
-    setProject(prev=>({...prev,events:[eventFor(kind,note,outcome),...prev.events].slice(0,100)}));
+    setProject(prev=>{
+      const next={...prev,events:[eventFor(kind,note,outcome),...prev.events].slice(0,100)};
+      latest.current=next;
+      return next;
+    });
     setStatus("pending");
   },[]);
   const list=useCallback(async()=>{
@@ -99,12 +132,12 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         }catch{ /* storage disabled */ }
         if(pendingLive){
           const incoming={...freshProject(),transcript:pendingLive.slice(0,26000)};
-          setProject(incoming);setStatus("pending");
+          latest.current=incoming;setProject(incoming);setStatus("pending");
           try{sessionStorage.removeItem("ds-studio-pending-analysis")}catch{}
         }else if(available.length){
           const p=await load(available[0].id);
           if(cancelled)return;
-          setProject(p);persisted.current=JSON.stringify({...p,updatedAt:undefined});setStatus("saved");
+          latest.current=p;setProject(p);persisted.current=JSON.stringify({...p,updatedAt:undefined});setStatus("saved");
         }else setStatus("pending");
       }catch{
         if(!cancelled){setStatus("error");setError(fr?"Stockage du Studio indisponible. Ne ferme pas la page.":"Studio storage unavailable. Do not close the page.");}
@@ -122,14 +155,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       if(ticket!==revision.current)return;
       setStatus("saving");
       try{
-        const r=await fetch("/api/analysis/projects",{
-          method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(project),
-        });
-        if(!r.ok){
-          const data=await r.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string};
-          throw Error(`${r.status}:${data.error||"SAVE_FAILED"}`);
-        }
-        const result=await r.json() as {updatedAt:number};
+        const result=await saveProject(project);
         if(ticket!==revision.current)return;
         persisted.current=snapshot;setStatus("saved");setError("");setSaveFailure("");
         setProjects(old=>[{id:project.id,name:project.name,season:project.season,episode:project.episode,stage:project.stage,recordingDate:project.recordingDate,capsuleCount:project.capsules.length,failedCount:project.events.filter(e=>e.status==="failure").length,mediaCount:Object.keys(project.media).length,hasTranscript:!!project.transcript,hasAnalysis:!!project.analysis,updatedAt:result.updatedAt},
@@ -151,13 +177,15 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       }
     },1000);
     return()=>clearTimeout(timeout);
-  },[project,ready,fr,uploading,retryKey]);
+  },[project,ready,fr,uploading,retryKey,saveProject]);
   useEffect(()=>{
     if(!ready)return;
     const controller=new AbortController();
-    const media=project.media;
-    (async()=>{
-      const links=await Promise.all((Object.keys(media) as SourceKey[]).map(async key=>{
+    const refreshLinks=async()=>{
+      const media=project.media;
+      const sources=Object.keys(media) as SourceKey[];
+      if(!sources.length){setRemoteUrls({});setLinksError(false);return}
+      const links=await Promise.all(sources.map(async key=>{
         try{
           const r=await fetch(`/api/analysis/project-media-link?id=${project.id}&source=${key}`,{
             signal:controller.signal,cache:"no-store",
@@ -167,9 +195,14 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           return [key,data.url] as const;
         }catch{return [key,""] as const}
       }));
-      if(!controller.signal.aborted)setRemoteUrls(Object.fromEntries(links.filter(x=>x[1])));
-    })();
-    return()=>controller.abort();
+      if(controller.signal.aborted)return;
+      setLinksError(links.some(x=>!x[1]));
+      setRemoteUrls(Object.fromEntries(links.filter(x=>x[1])));
+    };
+    void refreshLinks();
+    // Private signed links expire after 15 minutes.
+    const timer=window.setInterval(()=>{void refreshLinks()},12*60*1000);
+    return()=>{controller.abort();window.clearInterval(timer)};
   },[project.id,project.media,ready]);
   useEffect(()=>{
     const before=(e:BeforeUnloadEvent)=>{
@@ -212,14 +245,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       // original remains available for transcription and camera sync.
       const next={...current,media:{...current.media,[key]:info},
         timeline:key==="enhanced"?{...current.timeline,finalAudioSource:"enhanced" as const}:current.timeline};
-      const r=await fetch("/api/analysis/projects",{
-        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(next),
-      });
-      if(!r.ok){
-        const data=await r.json().catch(()=>({error:"SAVE_FAILED"})) as {error?:string};
-        throw Error(`${r.status}:${data.error||"SAVE_FAILED"}`);
-      }
+      // Keep metadata in browser recovery even if the server request fails.
+      latest.current=next;
       setProject(next);
+      setStatus("pending");
+      await saveProject(next);
       setUploads(p=>({...p,[key]:{busy:false,progress:100}}));
       setMessage(fr?`${file.name} enregistré dans le stockage privé.`:`${file.name} saved privately.`);
       record("upload",`${key} : fichier privé enregistré`,"success");
@@ -305,14 +335,15 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     try{
       const p=await load(id);setFiles({});setUploads({});setRemoteUrls({});
       persisted.current=JSON.stringify({...p,updatedAt:undefined});
-      setProject(p);setStatus("saved");setError("");
+      latest.current=p;setProject(p);setStatus("saved");setError("");
     }catch{setError(fr?"Impossible d’ouvrir ce projet.":"Cannot open this project.")}
   };
   const newProject=()=>{
     if(uploading||status==="pending"||status==="saving")return;
     const last=[project,...projects].reduce((n,item)=>item.season===project.season?Math.max(n,item.episode):n,0);
     const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});setUploads({});setRemoteUrls({});
-    setProject(p);setStatus("pending");setError("");setMessage("");
+    latest.current=p;setProject(p);setStatus("pending");setError("");setMessage("");
+    setRecoveryCandidate(null);
   };
   const step=(n:number,title:string,meta:string,children:React.ReactNode)=><section className="analysis-panel studio-step">
     <div className="analysis-panel-head"><h2>{String(n).padStart(2,"0")} / {title}</h2><span>{meta}</span></div>{children}
@@ -398,13 +429,23 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         </div>
       </div>}
       {localBackupError&&<p className="analysis-error">{localBackupError}</p>}
-      {localBackup&&localBackup.id!==project.id&&<div className="studio-recovery-available">
+      {recoveryCandidate && (recoveryCandidate.id!==project.id ||
+        JSON.stringify({...recoveryCandidate,updatedAt:undefined}) !==
+        JSON.stringify({...project,updatedAt:undefined})) &&
+        <div className="studio-recovery-available">
         <strong>{fr?"COPIE LOCALE D’UN AUTRE PROJET":"LOCAL BACKUP OF ANOTHER PROJECT"}</strong>
-        <p>{localBackup.name}</p>
-        <button type="button" className="analysis-secondary" onClick={()=>{
-          if(status==="saving"||uploading)return;
-          setProject(localBackup);setStatus("pending");setRetryKey(n=>n+1);
-        }}>{fr?"RESTAURER LA COPIE LOCALE":"RESTORE LOCAL BACKUP"}</button>
+        <p>{recoveryCandidate.name} — {fr?"copie locale différente du serveur":"local copy differs from server"}</p>
+        <div className="studio-recovery-actions">
+          <button type="button" className="analysis-primary" onClick={()=>{
+            if(status==="saving"||uploading)return;
+            latest.current=recoveryCandidate;
+            setProject(recoveryCandidate);
+            setRecoveryCandidate(null);setStatus("pending");setRetryKey(n=>n+1);
+          }}>{fr?"RESTAURER LA COPIE LOCALE":"RESTORE LOCAL BACKUP"}</button>
+          <button type="button" className="analysis-secondary" onClick={()=>setRecoveryCandidate(null)}>
+            {fr?"GARDER LA VERSION SERVEUR":"KEEP SERVER VERSION"}
+          </button>
+        </div>
       </div>}
       <p className="analysis-note">{fr
         ?"Sauvegarde automatique de la transcription, de l’analyse et des coupes. Les médias doivent être enregistrés séparément avec « Sauvegarder le média ». Attends « Projet sauvegardé » avant de quitter."
@@ -497,6 +538,12 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       `${["main","vertical","secondary"].filter(k=>!!project.media[k as SourceKey]).length} / 3`,<>
       <p>{fr?"Importe tes trois caméras, une par une, puis clique sur « Sauvegarder le média » pour chacune. Les fichiers volumineux sont transférés directement dans un stockage privé.":"Upload your three cameras one by one and save each to private storage."}</p>
       <div className="studio-video-grid">{(["main","vertical","secondary"] as SourceKey[]).map(k=><div key={k}>{tile(k)}</div>)}</div>
+      {linksError&&<p className="analysis-error" role="alert">{fr
+        ?"Certaines vidéos sont enregistrées, mais leur accès privé n’a pas pu être restauré. Vérifie ta session avant de refaire le clap."
+        :"Some saved videos could not be reopened privately. Check your session before recalibrating."}</p>}
+      <p className="analysis-note">{fr
+        ?"Les médias marqués « MÉDIA ENREGISTRÉ » appartiennent déjà au projet. Le montage peut reprendre avec ces fichiers; la bêta d’export MP4 exige encore les originaux locaux."
+        :"Media marked MEDIA SAVED already belongs to this project. Editing can resume with them; beta MP4 export still requires local originals."}</p>
     </>)}
     <MultiCamEditor key={project.id} sources={files} remoteUrls={remoteUrls} mediaMetadata={project.media}
       name={project.name} lang={lang} highlight={project.analysis?.moments[project.selectedMoment]?.excerpt}
