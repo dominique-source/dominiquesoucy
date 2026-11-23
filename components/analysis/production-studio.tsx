@@ -45,6 +45,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const fr=lang==="fr";
   const [project,setProject]=useState<StudioProject>(()=>freshProject());
   const [activeSection,setActiveSection]=useState<"projects"|"import"|"analysis"|"editing"|"production"|"advanced">("projects");
+  const [showTechnicalMontage,setShowTechnicalMontage]=useState(false);
   const [projects,setProjects]=useState<ProjectRow[]>([]);
   const [files,setFiles]=useState<SourceFiles>({});
   const uploading=false;
@@ -394,6 +395,25 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     }finally{setCleanupBusy(false)}
   };
   const projectSaved=status==="saved";
+  const hasTranscript=project.transcript.trim().length>=100;
+  const hasAnalysis=!!project.analysis?.moments.length;
+  const hasCapsules=project.capsules.some(c=>c.end>c.start&&c.end<=project.timeline.duration);
+  const suggestedNext=!hasTranscript?"import":!hasAnalysis?"analysis":!hasCapsules?"editing":"production";
+  const quickNavigate=(tab:typeof activeSection)=>{
+    setActiveSection(tab);
+    window.setTimeout(()=>document.getElementById("studio-phase5-current")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
+  };
+  const mainSteps=[
+    {id:"import" as const,num:"01",icon:"↓",name:fr?"IMPORTER":"IMPORT",
+      detail:fr?"Audio + master Premiere":"Audio + Premiere master",ready:hasTranscript},
+    {id:"analysis" as const,num:"02",icon:"✦",name:fr?"ANALYSER":"ANALYZE",
+      detail:fr?"Transcription et meilleurs extraits":"Transcript and highlights",ready:hasAnalysis},
+    {id:"editing" as const,num:"03",icon:"◉",name:fr?"MES CAPSULES":"MY CAPSULES",
+      detail:fr?"Choisir les bulles et les extraits":"Choose bubbles and clips",ready:hasCapsules},
+    {id:"production" as const,num:"04",icon:"↗",name:fr?"EXPORT HD":"HD EXPORT",
+      detail:fr?"Préparer le rendu sur ton Mac":"Prepare rendering on your Mac",ready:false},
+  ];
+
   return <section className="analysis-studio studio-production">
     <div className="analysis-topline">
       <div className="analysis-logo">DOMINIQUE SOUCY <span>/ STUDIO PRODUCTION</span></div>
@@ -414,27 +434,51 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <span>{transcriptionFailure.code}</span>
       <button type="button" onClick={()=>setActiveSection("import")}>{fr?"VOIR L'ERREUR":"VIEW ERROR"}</button>
     </div>}
-    <div className="studio-phase5-flow" aria-label={fr?"Navigation de production":"Production navigation"}>
-      {([
-        ["projects",fr?"01 · PROJETS":"01 · PROJECTS"],
-        ["import",fr?"02 · IMPORT":"02 · IMPORT"],
-        ["analysis",fr?"03 · ANALYSE":"03 · ANALYSIS"],
-        ["editing",fr?"04 · MONTAGE":"04 · EDIT"],
-        ["production",fr?"05 · PRODUCTION":"05 · PRODUCTION"],
-        ["advanced",fr?"RÉGLAGES +":"SETTINGS +"],
-      ] as const).map(([tab,label])=><button type="button" key={tab}
-        aria-current={activeSection===tab?"step":undefined}
-        className={activeSection===tab?"is-active":""}
-        onClick={()=>{setActiveSection(tab);document.getElementById("studio-phase5-current")?.scrollIntoView({behavior:"smooth",block:"start"})}}>
-        {label}</button>)}
+    <div className="studio-simple-command">
+      <div className="studio-simple-heading">
+        <div>
+          <p className="analysis-kicker">PREMIERE PRO → DOM SOUCY STUDIO → HD</p>
+          <h2>{fr?"UNE ACTION À LA FOIS.":"ONE ACTION AT A TIME."}</h2>
+          <p>{fr?"Le montage multicaméra se fait dans Premiere. Ici, tu crées les capsules, les bulles et leur plan de production.":"Multicam editing belongs in Premiere. Here, build your capsules, graphics and production plans."}</p>
+        </div>
+        <div className="studio-simple-tools">
+          <button type="button" onClick={()=>quickNavigate("projects")}>{fr?"MES PROJETS":"MY PROJECTS"}</button>
+          <button type="button" onClick={()=>quickNavigate("advanced")}>{fr?"RÉGLAGES":"SETTINGS"}</button>
+        </div>
+      </div>
+      <nav className="studio-simple-steps" aria-label={fr?"Étapes de production":"Production steps"}>
+        {mainSteps.map(item=><button type="button" key={item.id}
+          className={activeSection===item.id?"studio-simple-tile active":"studio-simple-tile"}
+          aria-current={activeSection===item.id?"step":undefined}
+          onClick={()=>quickNavigate(item.id)}>
+          <span className="studio-simple-tile-top"><span>{item.num} / 04</span><span>{item.ready?"✓ "+(fr?"PRÊT":"DONE"):activeSection===item.id?(fr?"EN COURS":"CURRENT"):(fr?"À FAIRE":"NEXT")}</span></span>
+          <span className="studio-simple-tile-icon" aria-hidden="true">{item.icon}</span>
+          <strong>{item.name}</strong>
+          <small>{item.detail}</small>
+        </button>)}
+      </nav>
+      <div className="studio-simple-continue">
+        <span><strong>{fr?"PROCHAINE ACTION":"NEXT ACTION"}</strong>
+          {suggestedNext==="import"?(fr?"Choisir l'audio du master":"Choose master audio"):
+           suggestedNext==="analysis"?(fr?"Détecter les meilleurs moments":"Find the highlights"):
+           suggestedNext==="editing"?(fr?"Préparer les capsules et les bulles":"Prepare clips and bubbles"):
+           fr?"Préparer le rendu HD local":"Prepare the local HD render"}
+        </span>
+        <button type="button" className="studio-simple-go" onClick={()=>quickNavigate(suggestedNext)}>
+          {suggestedNext==="import"?(fr?"IMPORTER":"IMPORT"):
+           suggestedNext==="analysis"?(fr?"ANALYSER":"ANALYZE"):
+           suggestedNext==="editing"?(fr?"CRÉER MES CAPSULES":"CREATE MY CAPSULES"):
+           fr?"EXPORT HD":"HD EXPORT"} →
+        </button>
+      </div>
     </div>
     <div id="studio-phase5-current" className="studio-phase5-context" role="status">
       <span>{project.name} / {episodeCode(project.season,project.episode)}</span>
       <strong>{activeSection==="projects"?(fr?"BIBLIOTHÈQUE":"LIBRARY"):
         activeSection==="import"?(fr?"FICHIERS SOURCES":"SOURCE FILES"):
         activeSection==="analysis"?(fr?"TRANSCRIPTION & IA":"TRANSCRIPT & AI"):
-        activeSection==="editing"?(fr?"MONTAGE & BULLES":"EDIT & GRAPHICS"):
-        activeSection==="production"?(fr?"EXPORTS MP4":"MP4 EXPORTS"):
+        activeSection==="editing"?(fr?"CAPSULES & BULLES":"CAPSULES & GRAPHICS"):
+        activeSection==="production"?(fr?"RENDU HD LOCAL":"LOCAL HD RENDERER"):
         fr?"OUTILS AVANCÉS":"ADVANCED TOOLS"}</strong>
     </div>
     <div hidden={activeSection!=="projects"} className="studio-workspace-project-library">
