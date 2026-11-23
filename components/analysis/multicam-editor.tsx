@@ -31,7 +31,14 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [audioSource, setAudioSource] = useState<SourceKey>(savedTimeline?.audioSource || "audio");
   const [finalAudioSource,setFinalAudioSource]=useState<SourceKey>(savedTimeline?.finalAudioSource || "audio");
   const [visualClaps,setVisualClaps]=useState<Record<CameraKey,number|null>>(savedTimeline?.visualClaps || {main:null,vertical:null,secondary:null});
-  const [visualAligned,setVisualAligned]=useState<{anchor:CameraKey;projectClap:number;offsets:Record<SourceKey,number>;count:number}|null>(null);
+  const [visualAligned,setVisualAligned]=useState<{anchor:CameraKey;projectClap:number;offsets:Record<SourceKey,number>;count:number}|null>(()=>{
+    if(!savedTimeline?.alignmentApproved)return null;
+    const keys=cameraKeys.filter(key=>savedTimeline.visualClaps?.[key]!=null);
+    if(keys.length<2)return null;
+    const anchor=keys.includes("main")?"main":keys[0];
+    return {anchor,count:keys.length,offsets:savedTimeline.offsets,
+      projectClap:Math.max(0,(savedTimeline.visualClaps[anchor]||0)-savedTimeline.offsets[anchor])};
+  });
   const [alignmentReviewed,setAlignmentReviewed]=useState(savedTimeline?.alignmentApproved||false);
   const [expandedReview,setExpandedReview]=useState(true);
 
@@ -44,6 +51,9 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [playhead,setPlayhead] = useState(0);
   const [playing,setPlaying] = useState(false);
   const [cuts,setCuts] = useState<Cut[]>(savedTimeline?.cuts || []);
+  const savedMarkers=cameraKeys.filter(key=>visualClaps[key]!==null);
+  const hasSavedAlignment=alignmentReviewed || savedMarkers.length>=2 ||
+    Object.values(offsets).some(value=>Math.abs(value)>0.001);
   const [suggestedCuts,setSuggestedCuts]=useState<Cut[]|null>(null);
   const [decorPreview,setDecorPreview]=useState(false);
   const [decorCamera,setDecorCamera]=useState<CameraKey>("main");
@@ -357,10 +367,25 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     </div>
 
     <div className="analysis-multi-claps">
+      {hasSavedAlignment&&<div className="studio-clap-confirmation" role="status">
+        <strong>✓ {fr?"REPÈRES DE SYNCHRONISATION RESTAURÉS":"SYNCHRONIZATION SETTINGS RESTORED"}</strong>
+        <p>{alignmentReviewed
+          ? (fr?"Les angles sont déjà validés dans ce projet. Reprends le montage sans refaire le clap.":"Camera angles were previously approved. Continue editing without repeating the clap.")
+          : (fr?"Les points et décalages sauvegardés ont été récupérés. Vérifie les images avant de modifier les réglages.":"Saved markers and offsets were recovered. Review cameras before changing them.")}</p>
+        <div className="studio-clap-offsets">
+          {videos.map(key=><div key={key}><span>{labels[key]}</span>
+            <strong>{offsets[key]>=0?"+":""}{offsets[key].toFixed(2)} s</strong>
+            {visualClaps[key]!==null&&<small>CLAP {visualClaps[key]?.toFixed(2)} s</small>}
+          </div>)}
+        </div>
+        <button type="button" className="analysis-primary studio-view-sync" onClick={openSynchronizedPreview}>
+          {fr?"▶ REPRENDRE AVEC CES RÉGLAGES ↓":"▶ RESUME WITH SAVED SETTINGS ↓"}
+        </button>
+      </div>}
       <strong>{fr?"05 · ALIGNEMENT AUTOMATIQUE PAR LE SON":"05 · AUTOMATIC AUDIO ALIGNMENT"}</strong>
       <p>{fr
-        ?"Clique une seule fois. Le Studio compare un court extrait sonore de chaque caméra avec l’audio de référence et calcule le décalage. Aucun clap ni réglage de secondes requis si le son est suffisamment clair."
-        :"One click compares a short sound sample from each camera with the reference audio and estimates offsets. No manual clap needed when the audio is clear."}</p>
+        ?"Cette étape est facultative si les décalages sont déjà enregistrés. Sinon, le Studio compare le son des caméras pour calculer leur décalage."
+        :"Skip this step if offsets are already saved. Otherwise, compare camera audio to estimate their timing."}</p>
       <button className="analysis-primary analysis-auto-sync-button" type="button" disabled={autoSyncBusy||rendering||!realAudioSource}
         onClick={synchronizeAutomatically}>
         {autoSyncBusy?(fr?"◉ ALIGNEMENT EN COURS…":"◉ SYNCING…"):(fr?"✦ ALIGNER AUTOMATIQUEMENT LES CAMÉRAS":"✦ AUTO-SYNC CAMERAS")}
@@ -396,8 +421,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     <div className="analysis-multi-claps">
       <strong>{fr?"ALIGNEMENT PAR CLAP VISUEL EN FIN D’ENREGISTREMENT":"VISUAL END-OF-RECORDING CLAP"}</strong>
       <p>{fr
-        ?"Si le micro Canon est mauvais : utilise la barre de lecture de chaque vidéo à l’étape 06 pour trouver l’image exacte où tes mains se touchent à la fin, puis clique ici sur « Marquer l’image actuelle » pour chaque caméra. Aucun son Canon n’est nécessaire."
-        :"If a camera microphone is poor, use each camera video’s controls in step 06 to find the exact frame where hands touch at the end, then mark that frame here. No camera audio needed."}</p>
+        ?"Uniquement lors du premier alignement ou après le remplacement d’une vidéo : trouve l’image où tes mains se touchent, puis marque chaque caméra."
+        :"Only for first-time alignment or after replacing a video: find the frame where your hands meet, and mark each camera."}</p>
       <div className="analysis-multi-visual-claps">
         {videos.map(key=><div key={key}>
           <strong>{labels[key]}</strong><span>{visualClaps[key]===null?"—":`${visualClaps[key]?.toFixed(2)} s`}</span>
