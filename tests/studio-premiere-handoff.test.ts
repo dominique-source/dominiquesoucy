@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {freshProject} from "../lib/analysis/project";
+import {defaultChroma} from "../lib/analysis/chroma-key";
 import {clockFromSeconds,buildPremiereCutRows,buildPremiereCutCsv,buildPremiereEditBrief} from "../lib/analysis/premiere-handoff";
 
 test("Premiere reference clocks are elapsed milliseconds, not guessed 29.97fps frame timecode",()=>{
@@ -15,10 +16,10 @@ test("Premiere cut list clearly marks missing timestamps and escapes spreadsheet
   p.capsules=[
     {id:"11111111-2222-4333-8444-555555555555",title:"=2+2",
      start:4.1,end:24.7,format:"16:9",style:"conversation",caption:"A",bubble:"B",
-     background:"dark",textPosition:"bottom",status:"draft"},
+     background:"dark",keying:{...defaultChroma},textPosition:"bottom",status:"draft"},
     {id:"21111111-2222-4333-8444-555555555555",title:"Unmatched",
      start:0,end:0,format:"9:16",style:"quote",caption:"",bubble:"",
-     background:"dark",textPosition:"bottom",status:"draft",timingSource:"unmatched"},
+     background:"dark",keying:{...defaultChroma},textPosition:"bottom",status:"draft",timingSource:"unmatched"},
   ];
   const rows=buildPremiereCutRows(p);
   assert.equal(rows[0].startClock,"00:00:04.100");
