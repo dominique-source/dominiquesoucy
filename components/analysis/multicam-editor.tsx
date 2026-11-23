@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderLocalMp4 } from "./local-mp4";
 import { drawStudioFrame,preloadStudioBackground } from "./canvas-overlays";
 import type { StudioProject } from "@/lib/analysis/project";
-import { alignCameraAudio, type CameraSyncResult } from "@/lib/analysis/browser-audio-fingerprint";
+import { alignCameraAudio, type CameraSyncResult, type ScanRegion } from "@/lib/analysis/browser-audio-fingerprint";
 import {
   activeCamera, cameraKeys, edl, labels, offsetFromClap,
   safeCutTime, sourceTime, timeCode, proposeMulticamCuts,
@@ -66,6 +66,8 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   const [autoSyncBusy,setAutoSyncBusy]=useState(false);
   const [autoSyncProgress,setAutoSyncProgress]=useState("");
   const [autoSyncResults,setAutoSyncResults]=useState<CameraSyncResult[]>([]);
+  const [syncRegion,setSyncRegion]=useState<ScanRegion>("start");
+  const [syncNeedsHelp,setSyncNeedsHelp]=useState(false);
   const autoSyncController=useRef<AbortController|null>(null);
   useEffect(()=>()=>autoSyncController.current?.abort(),[]);
   const elements=useRef<Partial<Record<SourceKey,HTMLMediaElement|null>>>({});
@@ -180,7 +182,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     setAutoSyncProgress(fr?"Préparation de l’audio de référence…":"Preparing reference audio…");
     try{
       const results=await alignCameraAudio({
-        urls:playbackUrls,master:realAudioSource,sources:videos,
+        urls:playbackUrls,master:realAudioSource,sources:videos,region:syncRegion,
         signal:controller.signal,
         onProgress:key=>setAutoSyncProgress(
           key==="REFERENCE"?(fr?"Lecture de l’audio de référence…":"Scanning reference audio…"):
@@ -196,6 +198,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         synchronize(next);
       }
       const failed=results.length-accepted.length;
+      setSyncNeedsHelp(failed>0);
       setSuccess(accepted.length
         ? fr?`${accepted.length} caméra(s) alignée(s) automatiquement et sauvegardée(s). ${failed? `${failed} à vérifier manuellement.`:"Vérifie le résultat à l’écoute."}`:
           `${accepted.length} camera(s) aligned and saved. ${failed? `${failed} require manual review.`:"Verify by listening."}`
@@ -203,7 +206,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     }catch(e){
       if(controller.signal.aborted)return;
       const code=e instanceof Error?e.message:"UNKNOWN";
-      onExportOutcome?.(false,`Échec MP4 : ${code}`);
+      setSyncNeedsHelp(true);
       setError(fr?`Synchronisation automatique indisponible (${code}). Essaie les repères manuels ou un MP4 H.264 avec audio.`:
         `Automatic sync unavailable (${code}). Try manual markers or an H.264 MP4 with audio.`);
     }finally{
@@ -400,6 +403,20 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
             r.match.confidence==="unreliable"?(fr?"À vérifier — pas de correspondance fiable":"Needs review — weak match"):
             `${r.match.lagSeconds>=0?"+":""}${r.match.lagSeconds.toFixed(2)} s · ${r.match.confidence==="strong"?(fr?"CONFIANCE ÉLEVÉE":"HIGH CONFIDENCE"):(fr?"À VÉRIFIER":"REVIEW")}`}</span>
         </div>)}
+      </div>}
+      {syncNeedsHelp&&<div className="analysis-multi-manual" role="group" aria-label={fr?"Recherche du clap":"Clap search"}>
+        <strong>{fr?"RECHERCHER LE CLAP À UN AUTRE ENDROIT":"SEARCH FOR THE CLAP ELSEWHERE"}</strong>
+        <p>{fr?"La première recherche n’a pas aligné toutes les caméras. Choisis la zone contenant le clap et relance l’analyse.":"The first scan did not align all cameras. Choose the region containing the clap and scan again."}</p>
+        <label>{fr?"POSITION DU CLAP":"CLAP POSITION"}
+          <select value={syncRegion} onChange={e=>setSyncRegion(e.target.value as ScanRegion)}>
+            <option value="start">{fr?"Au début":"At the start"}</option>
+            <option value="middle">{fr?"Au milieu":"In the middle"}</option>
+            <option value="end">{fr?"À la fin":"At the end"}</option>
+          </select>
+        </label>
+        <button type="button" className="analysis-secondary" disabled={autoSyncBusy} onClick={synchronizeAutomatically}>
+          {fr?"RECHERCHER À CET ENDROIT":"SEARCH THIS REGION"}
+        </button>
       </div>}
       <details className="analysis-multi-manual">
         <summary>{fr?"AJUSTEMENT MANUEL (SI NÉCESSAIRE)":"MANUAL ALIGNMENT (IF NEEDED)"}</summary>
