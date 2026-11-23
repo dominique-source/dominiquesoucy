@@ -5,6 +5,26 @@ en 1920×1080 (16:9), 1080×1920 (9:16) ou 1080×1080 (1:1), avec l'habillage
 de référence des bulles journaliste/rafale/réponse. Le rendu se fait **sur le Mac**,
 pas sur Vercel. Le code est expérimental : valider 1 capsule avant de lancer un lot.
 
+## Démarrage simplifié sur Mac
+
+Une fois le dépôt téléchargé et Node.js 22+ installé, ouvre Terminal dans
+`render-engine` et exécute :
+
+```bash
+bash RENDU-HD.command
+```
+
+L'assistant demande le `master.mp4` exporté par DaVinci et le manifeste JSON
+exporté par DOM SOUCY STUDIO, installe les dépendances si nécessaire et ouvre
+le dossier `out/` après le rendu. Il crée un **lien symbolique local** vers le
+master pour éviter d'en copier plusieurs gigaoctets. Le premier essai doit
+utiliser le master standard avec son intégré, sans `foreground.mov`.
+
+Pour changer d'émission, supprime le lien `public/master.mp4` avant de
+relancer. Le bouton du Studio qui produit le manifeste nécessite que
+la nouvelle version du site soit déployée; avant cela, on peut modifier
+`sample-manifest.json` en renseignant les vrais timecodes et les textes.
+
 ## Phase 1 — DaVinci Resolve
 
 - Synchroniser le son et l'image **une seule fois** pour l'épisode, vérifier la bouche.
