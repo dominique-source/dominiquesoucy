@@ -56,6 +56,7 @@ export const capsuleSchema=z.object({
   keying:z.object({enabled:z.boolean(),color:z.string().regex(/^#[0-9a-fA-F]{6}$/),tolerance:z.number().finite().min(0.03).max(0.45),softness:z.number().finite().min(0.01).max(0.35),spill:z.number().finite().min(0).max(1)}).strict().default({enabled:false,color:"#30b7b0",tolerance:0.16,softness:0.12,spill:0.45}),
   textPosition:z.enum(["top","center","bottom"]).default("bottom"),
   status:z.enum(["draft","rendered","failed"]).default("draft"),
+  timingSource:z.enum(["automatic","manual","unmatched"]).optional(),
 }).strict();
 export const timedWordSchema=z.object({
  word:z.string().min(1).max(100),
@@ -84,7 +85,7 @@ export const projectSchema = z.object({
   name:z.string().trim().min(1).max(100),
   transcript:z.string().max(26000),
   analysis:analysisResult.nullable(),
-  selectedMoment:z.number().int().min(0).max(7),
+  selectedMoment:z.number().int().min(0).max(14),
   format:z.enum(["16:9","9:16","1:1"]),
   media:z.object({
     audio:mediaInfo.optional(),enhanced:mediaInfo.optional(),main:mediaInfo.optional(),vertical:mediaInfo.optional(),secondary:mediaInfo.optional(),

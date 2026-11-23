@@ -65,5 +65,5 @@ export function groundedMoments(
     if (!excerpt || seen.has(m.passage_id)) return [];
     seen.add(m.passage_id);
     return [{ title: m.title, excerpt, rationale: m.rationale, model_id: m.model_id }];
-  }).slice(0, 8);
+  }).slice(0, 15);
 }

@@ -44,13 +44,14 @@ export async function POST(request: Request) {
       return json({ error: "MEDIA_TOO_LARGE" }, 413);
     const file = new File([await new Response(blob.stream).arrayBuffer()],
       pathname.split("/").pop() || "session.mp4", { type: blob.blob.contentType || "application/octet-stream" });
-    // First pass: reliable, low-latency transcription. Diarization is a
-    // separate editorial enhancement, not required for the initial transcript.
+    // Phase 2: use the transcription model that returns genuine word-level timestamps.
+    // Do not estimate times from transcript length or from AI-generated prose.
     stage = "OPENAI_TRANSCRIBE";
     const form = new FormData();
     form.set("file", file);
-    form.set("model", "gpt-4o-mini-transcribe");
-    form.set("response_format", "json");
+    form.set("model", "whisper-1");
+    form.set("response_format", "verbose_json");
+    form.append("timestamp_granularities[]", "word");
     form.set("language", lang);
     const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
@@ -71,10 +72,18 @@ export async function POST(request: Request) {
     if (typeof data.text !== "string" || !data.text.trim())
       return json({ error: "TRANSCRIPTION_EMPTY" }, 502);
     const segments = parseSegments(data.segments);
+    const timedWords=Array.isArray(data.words)?data.words.flatMap((w:unknown)=>{
+      if(!w||typeof w!=="object")return [];
+      const v=w as Record<string,unknown>;
+      if(typeof v.word!=="string"||!v.word.trim()||v.word.length>100||
+        typeof v.start!=="number"||typeof v.end!=="number"||
+        !Number.isFinite(v.start)||!Number.isFinite(v.end)||v.start<0||v.end<=v.start||v.end>7200)return [];
+      return [{word:v.word,start:v.start,end:v.end}];
+    }).slice(0,6000):[];
     // Keep the original source wording intact for exact quote verification.
     // Segment speaker IDs are anonymous; never assume one of them is Dominique.
     const transcript = data.text.slice(0, 26000);
-    return json({ transcript, segments, truncated: data.text.length > 26000,
+    return json({ transcript, segments, timedWords, truncated: data.text.length > 26000,
       notice: "PRIVATE_REVIEW_REQUIRED" });
   } catch (error) {
     const kind = error instanceof Error ? error.name : "Unknown";

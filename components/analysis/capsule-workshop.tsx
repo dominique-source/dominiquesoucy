@@ -2,6 +2,7 @@
 import { episodeCode, type StudioProject } from "@/lib/analysis/project";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
+import { findQuotedRange, toProjectRange } from "@/lib/analysis/timed-excerpts";
 type Capsule=StudioProject["capsules"][number];
 type EventKind=StudioProject["events"][number]["type"];
 type EventStatus=StudioProject["events"][number]["status"];
@@ -24,7 +25,8 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
  const chosen=capsules.find(c=>c.id===project.selectedCapsuleId)||capsules[0];
  function select(id:string){onChange({selectedCapsuleId:id})}
  function change(capsuleId:string,patch:Partial<Capsule>){
-  onChange({capsules:capsules.map(c=>c.id===capsuleId?{...c,...patch,status:"draft"}:c)});
+  onChange({capsules:capsules.map(c=>c.id===capsuleId?{...c,...patch,status:"draft",timingSource:
+    ("start" in patch||"end" in patch)?"manual":c.timingSource}:c)});
  }
  function addDraft(){
   if(capsules.length>=40)return;
@@ -41,19 +43,24 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
   const moments=project.analysis?.moments||[];
   const openSlots=40-capsules.length;
   if(!moments.length||openSlots<=0)return;
-  const newDrafts:Capsule[]=moments.slice(0,openSlots).map((m,i)=>({
+  const newDrafts:Capsule[]=moments.slice(0,openSlots).map((m)=>{
+   const audioRange=findQuotedRange(m.excerpt,project.timedWords);
+   const range=audioRange?toProjectRange(audioRange,project.timeline.offsets.audio,
+     Math.max(project.timeline.duration,project.timedWords.at(-1)?.end||0)):null;
+   return {
    id:crypto.randomUUID(),
    title:m.title.slice(0,100),
-   start:0,end:0,
+   start:range?.start??0,end:range?.end??0,
+   timingSource:range?"automatic":"unmatched",
    format:project.format,
    style:m.model_id===11?"editorial":m.model_id===4?"quote":"conversation",
    caption:m.excerpt.slice(0,500),
-   bubble:m.model_id===1?"QUESTION DU JOURNALISTE":m.title.slice(0,80),
+   bubble:m.model_id===1?m.excerpt.slice(0,160):"",
    background:"dark",keying:{...defaultChroma},textPosition:"bottom",status:"draft",
-  }));
+  };});
   onChange({capsules:[...capsules,...newDrafts],
     selectedCapsuleId:newDrafts[0].id,stage:"editing"});
-  onEvent("analysis",`${newDrafts.length} propositions de capsules créées (timecodes à confirmer)`,"success");
+  onEvent("analysis",`${newDrafts.filter(c=>c.timingSource==="automatic").length}/${newDrafts.length} capsules horodatées automatiquement`,"success");
  }
  function remove(id:string){
   onChange({capsules:capsules.filter(c=>c.id!==id),
@@ -79,15 +86,15 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
    </button>
   </div>
   <p className="analysis-note">{fr
-   ?"L’IA a identifié les citations, mais pas encore leur position exacte dans la vidéo. Les propositions générées ont volontairement des timecodes vides (0–0) : indique leur début et leur fin avant l’export."
-   :"AI found the quotes but not their exact video timestamps. Generated drafts deliberately have no timecodes (0–0); set their range before exporting."}</p>
+   ?"Les extraits retrouvés dans la transcription horodatée reçoivent un début et une fin automatiquement. Une citation ambiguë ou introuvable reste à vérifier : aucun timecode n’est inventé."
+   :"Excerpts found in the timed transcript receive automatic start and end points. Ambiguous or missing quotes require review; no timestamps are invented."}</p>
   {!!capsules.length&&<div className="studio-workshop-layout">
    <div className="studio-capsule-list">{capsules.map((c,i)=><button
     type="button" key={c.id} onClick={()=>select(c.id)}
     className={`studio-capsule-row ${chosen?.id===c.id?"is-current":""}`}>
       <small>{String(i+1).padStart(2,"0")} · {c.status.toUpperCase()}</small>
       <strong>{c.title}</strong>
-      <span>{c.start.toFixed(1)}–{c.end.toFixed(1)} s · {c.format}</span>
+      <span>{c.start.toFixed(1)}–{c.end.toFixed(1)} s · {c.format} · {c.timingSource==="automatic"?(fr?"AUTO":"AUTO"):c.timingSource==="unmatched"?(fr?"À VÉRIFIER":"REVIEW"):(fr?"MANUEL":"MANUAL")}</span>
     </button>)}</div>
    {chosen&&<div className="studio-capsule-editor">
     <div className="studio-capsule-identity">
@@ -104,6 +111,7 @@ export function CapsuleWorkshop({lang,project,onChange,onEvent}:{
        <input type="number" min={0} max={7200} step={0.1} value={chosen.end}
          onChange={e=>change(chosen.id,{end:Math.max(0,Math.min(7200,Number(e.target.value)||0))})}/></label>
     </div>
+    {chosen.timingSource==="automatic"&&<p className="analysis-note">{fr?"Découpage proposé à partir de l’audio original horodaté. Vérifie la synchronisation de la caméra avant l’export.":"Cut based on timestamps in the original audio. Confirm the camera is synchronized before exporting."}</p>}
     {!validRange&&<p className="studio-capsule-warning">{fr?"Choisis un début et une fin valides avant l’export.":"Set valid start and end times before exporting."}</p>}
     <div className="studio-capsule-2col">
      <label>{fr?"STYLE":"STYLE"}<select value={chosen.style} onChange={e=>change(chosen.id,{style:e.target.value as Capsule["style"]})}>
