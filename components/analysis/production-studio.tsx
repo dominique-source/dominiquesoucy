@@ -1,5 +1,5 @@
 "use client";
-import { upload } from "@vercel/blob/client";
+import { decodeLocalAudio,chunkRanges,makeMonoWavChunk } from "@/lib/analysis/local-audio-chunks";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { capsuleById } from "@/lib/analysis/catalog";
@@ -9,14 +9,12 @@ import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
 import { StudioBackdropPicker } from "./studio-backdrop-picker";
 import { CapsuleWorkshop } from "./capsule-workshop";
-import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject, type SourceMedia } from "@/lib/analysis/project";
+import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
 
 const names:Record<SourceKey,string>={audio:"AUDIO ORIGINAL",enhanced:"AUDIO FINAL OPTIMISÉ",main:"CANON · PLAN PRINCIPAL",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
 const allowed:Record<SourceKey,RegExp>={audio:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,enhanced:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,main:/\.(mov|mp4|m4v|webm)$/i,vertical:/\.(mov|mp4|m4v|webm)$/i,secondary:/\.(mov|mp4|m4v|webm)$/i};
 type ProjectRow=EpisodeRow;
-type UploadState={progress:number;busy:boolean;error?:string};
-type PendingUploads=Partial<Record<SourceKey,UploadState>>;
 function download(filename:string,content:string,mime="application/json"){
   const url=URL.createObjectURL(new Blob([content],{type:mime}));
   const a=document.createElement("a");a.href=url;a.download=filename;a.click();
@@ -48,11 +46,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const [activeSection,setActiveSection]=useState<"projects"|"import"|"analysis"|"editing"|"production"|"advanced">("projects");
   const [projects,setProjects]=useState<ProjectRow[]>([]);
   const [files,setFiles]=useState<SourceFiles>({});
-  const [remoteUrls,setRemoteUrls]=useState<Partial<Record<SourceKey,string>>>({});
-  const [uploads,setUploads]=useState<PendingUploads>({});
-  const [pendingMedia,setPendingMedia]=useState<Partial<Record<SourceKey,boolean>>>({});
-  const [bulkBusy,setBulkBusy]=useState(false);
-  const uploading=Object.values(uploads).some(u=>u?.busy);
+  const uploading=false;
+  const [transcriptionProgress,setTranscriptionProgress]=useState("");
   const [ready,setReady]=useState(false);
   const [status,setStatus]=useState<"loading"|"pending"|"saving"|"saved"|"error">("loading");
   const [consent,setConsent]=useState(false);
@@ -216,32 +211,6 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     return()=>clearTimeout(timeout);
   },[project,ready,fr,uploading,retryKey,saveProject]);
   useEffect(()=>{
-    if(!ready)return;
-    const controller=new AbortController();
-    const refreshLinks=async()=>{
-      const media=project.media;
-      const sources=Object.keys(media) as SourceKey[];
-      if(!sources.length){setRemoteUrls({});setLinksError(false);return}
-      const links=await Promise.all(sources.map(async key=>{
-        try{
-          const r=await fetch(`/api/analysis/project-media-link?id=${project.id}&source=${key}`,{
-            signal:controller.signal,cache:"no-store",
-          });
-          if(!r.ok)return [key,""] as const;
-          const data=await r.json() as {url:string};
-          return [key,data.url] as const;
-        }catch{return [key,""] as const}
-      }));
-      if(controller.signal.aborted)return;
-      setLinksError(links.some(x=>!x[1]));
-      setRemoteUrls(Object.fromEntries(links.filter(x=>x[1])));
-    };
-    void refreshLinks();
-    // Private signed links expire after 15 minutes.
-    const timer=window.setInterval(()=>{void refreshLinks()},12*60*1000);
-    return()=>{controller.abort();window.clearInterval(timer)};
-  },[project.id,project.media,ready]);
-  useEffect(()=>{
     const before=(e:BeforeUnloadEvent)=>{
       if(uploading||status!=="saved"){e.preventDefault();}
     };
@@ -256,131 +225,71 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       return;
     }
     setFiles(prev=>({...prev,[key]:file}));
-    setPendingMedia(prev=>({...prev,[key]:true}));
-    setMessage("");setError("");
-  };
-  const saveMedia=async(key:SourceKey)=>{
-    const file=files[key];
-    if(!file)return;
-    const id=latest.current.id;
-    setUploads(p=>({...p,[key]:{busy:true,progress:0}}));setError("");
-    let uploadStage:"transfer"|"project-save"="transfer";
-    let uploadedPath="";
-    try{
-      const ext=file.name.split(".").pop()?.toLowerCase();
-      const path=`studio-projects/${id}/${key}/${crypto.randomUUID()}.${ext}`;
-      const blob=await upload(path,file,{
-        access:"private",handleUploadUrl:"/api/analysis/project-media-upload",multipart:true,
-        onUploadProgress:({percentage})=>setUploads(p=>({...p,[key]:{busy:true,progress:Math.round(percentage)}})),
-      });
-      uploadedPath=blob.pathname;
-      uploadStage="project-save";
-      if(latest.current.id!==id)throw Error("PROJECT_CHANGED");
-      const info:SourceMedia={pathname:blob.pathname,filename:file.name,bytes:file.size,
-        contentType:file.type||"application/octet-stream"};
-      const current=latest.current;
-      // A processed voice track becomes the default final sound while the
-      // original remains available for transcription and camera sync.
-      const previous=current.media[key];
-      const mediaChanged=!previous||previous.pathname!==info.pathname;
-      const next={...current,media:{...current.media,[key]:info},
-        timeline:{
-          ...current.timeline,
-          alignmentApproved:mediaChanged?false:current.timeline.alignmentApproved,
-          offsets:mediaChanged?{...current.timeline.offsets,[key]:0}:current.timeline.offsets,
-          visualClaps:mediaChanged&&["main","vertical","secondary"].includes(key)
-            ?{...current.timeline.visualClaps,[key]:null}:current.timeline.visualClaps,
-          finalAudioSource:key==="enhanced"?"enhanced" as const:current.timeline.finalAudioSource,
-        }};
-      // Keep metadata in browser recovery even if the server request fails.
-      latest.current=next;
-      setProject(next);
-      setStatus("pending");
-      await saveProject(next);
-      setUploads(p=>({...p,[key]:{busy:false,progress:100}}));
-      setPendingMedia(p=>({...p,[key]:false}));
-      setMessage(fr?`${file.name} enregistré dans le stockage privé.`:`${file.name} saved privately.`);
-      record("upload",`${key} : fichier privé enregistré`,"success");
-    }catch(e){
-      const details=e instanceof Error?e.message:"UNKNOWN";
-      // Persist a safe diagnostic without exposing signed tokens or private URLs.
-      const category=/401|unauthorized|token|403|forbidden|access/i.test(details)?"AUTH_OR_ACCESS":
-        /too.large|limit|size|413|quota/i.test(details)?"FILE_OR_QUOTA_LIMIT":
-        /network|fetch|timeout|abort/i.test(details)?"NETWORK_OR_TIMEOUT":
-        /content.type|mime|unsupported/i.test(details)?"MEDIA_TYPE":
-        "UNKNOWN";
-      const code=`${uploadStage.toUpperCase()}_${category}`;
-      setUploads(p=>({...p,[key]:{busy:false,progress:0,error:code}}));
-      setError(fr?
-        (uploadStage==="project-save"
-         ?"Le média a été transféré, mais son association au projet n'a pas été confirmée."
-         :"Le transfert privé de ce média a échoué.")+` (${code}). Conserve le fichier local; ne le supprime pas.`:
-        (uploadStage==="project-save"
-         ?"Media transfer succeeded, but saving the project reference was not confirmed."
-         :"Private media upload failed.")+` (${code}). Keep your local source file.`);
-      record("error",`${key}: ${code}${uploadedPath?" (média transféré, projet non confirmé)":""}`,"failure");
-    }
-  };
-  const saveAllMedia=async()=>{
-    if(bulkBusy||uploading)return;
-    setBulkBusy(true);
-    try{
-      for(const key of ["audio","enhanced","main","vertical","secondary"] as SourceKey[]){
-        if(files[key] && (pendingMedia[key]||!latest.current.media[key]))await saveMedia(key);
-      }
-    }finally{setBulkBusy(false)}
+    const current=latest.current;
+    const previous=current.localMedia?.[key];
+    const changed=previous?.filename!==file.name||previous.bytes!==file.size;
+    modify({
+      localMedia:{...current.localMedia,[key]:{filename:file.name.slice(0,180),bytes:file.size}},
+      timeline:{
+        ...current.timeline,
+        alignmentApproved:changed?false:current.timeline.alignmentApproved,
+        offsets:changed?{...current.timeline.offsets,[key]:0}:current.timeline.offsets,
+        visualClaps:changed&&["main","vertical","secondary"].includes(key)?
+          {...current.timeline.visualClaps,[key]:null}:current.timeline.visualClaps,
+        finalAudioSource:key==="enhanced"?"enhanced":current.timeline.finalAudioSource,
+      },
+    });
+    setMessage(fr?`${file.name} lié localement, sans téléversement vers Vercel.`:
+      `${file.name} linked locally; nothing uploaded to Vercel.`);
+    setError("");
   };
   const transcribe=async()=>{
     const audio=files.audio;
     if(!audio||!consent||busy)return;
     setTranscriptionFailure(null);
-    if(audio.size>24_000_000){
-      setTranscriptionFailure({stage:"upload",code:"MEDIA_TOO_LARGE",
-        detail:fr?"Le fichier dépasse la limite de 24 Mo de transcription. Choisis un audio compressé MP3 ou M4A de moins de 24 Mo. Ton original demeure intact.":
-          "File exceeds the 24 MB transcription limit. Select a compressed MP3 or M4A under 24 MB. Your original is untouched."});
-      return;
-    }
-    const ext=audio.name.split(".").pop()?.toLowerCase()||"";
-    if(!["mp3","mp4","m4a","mpeg","mpga","wav","webm","ogg","flac"].includes(ext)){
-      setTranscriptionFailure({stage:"upload",code:"UNSUPPORTED_TRANSCRIPTION_FORMAT",
-        detail:fr?"Ce format n'est pas accepté pour la transcription. Utilise MP3, M4A, WAV ou MP4 audio.":
-          "Unsupported transcription format. Use MP3, M4A, WAV, or MP4 audio."});
-      return;
-    }
-    let stage:"upload"|"transcribe"="upload";
     setBusy("transcribe");setError("");
     try{
-      // Limit the basename, not the extension; the server validates this exact path.
-      const filename=audio.name.replace(/[^a-zA-Z0-9_.-]/g,"_").slice(-100);
-      const blob=await upload(`private-studio/${crypto.randomUUID()}/${filename}`,audio,{
-        access:"private",handleUploadUrl:"/api/analysis/media-upload",multipart:true,
-      });
-      stage="transcribe";
-      const response=await fetch("/api/analysis/transcribe",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({pathname:blob.pathname,lang,consent:true}),
-      });
-      const data=await response.json().catch(()=>null) as
-        {transcript?:string;timedWords?:StudioProject["timedWords"];error?:string}|null;
-      if(!response.ok||!data?.transcript){
-        const code=data?.error||`HTTP_${response.status}`;
-        throw Error(code.replace(/[^A-Z0-9_:-]/gi,"").slice(0,90)||"TRANSCRIBE_FAILED");
+      setTranscriptionProgress(fr?"Décodage audio local…":"Decoding local audio…");
+      const decoded=await decodeLocalAudio(audio);
+      const ranges=chunkRanges(decoded.duration);
+      const textParts:string[]=[];
+      const words:StudioProject["timedWords"]=[];
+      for(let i=0;i<ranges.length;i++){
+        const {start,end}=ranges[i];
+        setTranscriptionProgress(fr?`Transcription : segment ${i+1}/${ranges.length}`:
+          `Transcribing segment ${i+1}/${ranges.length}`);
+        const chunk=makeMonoWavChunk(decoded,start,end);
+        const form=new FormData();
+        form.set("audio",chunk);form.set("lang",lang);form.set("consent","true");
+        const response=await fetch("/api/analysis/transcribe",{method:"POST",body:form});
+        const data=await response.json().catch(()=>null) as
+          {transcript?:string;timedWords?:StudioProject["timedWords"];error?:string}|null;
+        if(!response.ok||!data?.transcript){
+          const code=data?.error||`HTTP_${response.status}`;
+          throw Error(code.replace(/[^A-Z0-9_:-]/gi,"").slice(0,90)||"TRANSCRIBE_FAILED");
+        }
+        textParts.push(data.transcript);
+        for(const word of data.timedWords||[]){
+          if(words.length>=6000)break;
+          words.push({...word,start:Math.round((word.start+start)*100)/100,
+            end:Math.round((word.end+start)*100)/100});
+        }
       }
-      const words=data.timedWords||[];
-      const audioDuration=words.length?Math.ceil(words[words.length-1].end+1):0;
-      modify({transcript:data.transcript,timedWords:words,analysis:null,selectedMoment:0,stage:"transcription",
-        timeline:{...latest.current.timeline,duration:Math.min(7200,Math.max(latest.current.timeline.duration,audioDuration))}});
-      record("transcription","Transcription générée","success");
-      setTranscriptionFailure(null);
-      setActiveSection("analysis");
-      setMessage(fr?"Transcription obtenue. Vérifie le texte ci-dessous.":"Transcript received. Review the text below.");
+      modify({transcript:textParts.join(" ").slice(0,26000),timedWords:words,
+        analysis:null,selectedMoment:0,stage:"transcription",
+        timeline:{...latest.current.timeline,duration:Math.min(7200,Math.max(10,Math.ceil(decoded.duration)))}
+      });
+      record("transcription","Transcription locale horodatée générée sans Blob","success");
+      setTranscriptionFailure(null);setActiveSection("analysis");
+      setMessage(fr?"Transcription obtenue. Aucun audio n’a été stocké sur Vercel.":
+        "Transcript received. No audio was stored in Vercel Blob.");
     }catch(e){
       const code=(e instanceof Error?e.message:"UNKNOWN").slice(0,90);
-      const detail=transcriptionFailureMessage(code,stage,fr);
-      setTranscriptionFailure({code,stage,detail});
-      record("error",`Échec transcription [${stage}]: ${code}`,"failure");
+      const detail=transcriptionFailureMessage(code,"transcribe",fr);
+      setTranscriptionFailure({code,stage:"transcribe",detail});
+      record("error",`Échec transcription directe : ${code}`,"failure");
       setMessage("");
-    }finally{setBusy("")}
+    }finally{setBusy("");setTranscriptionProgress("")}
   };
   const reconstructQuestions=async()=>{
     if(!consent||project.transcript.length<100||busy)return;
@@ -419,7 +328,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const openProject=async(id:string)=>{
     if(uploading||status==="saving"||status==="pending")return;
     try{
-      const p=await load(id);setFiles({});setUploads({});setRemoteUrls({});setPendingMedia({});
+      const p=await load(id);setFiles({});
       persisted.current=JSON.stringify({...p,updatedAt:undefined});
       latest.current=p;setProject(p);setStatus("saved");setError("");setTranscriptionFailure(null);setActiveSection("projects");
     }catch{setError(fr?"Impossible d’ouvrir ce projet.":"Cannot open this project.")}
@@ -427,7 +336,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const newProject=()=>{
     if(uploading||status==="pending"||status==="saving")return;
     const last=[project,...projects].reduce((n,item)=>item.season===project.season?Math.max(n,item.episode):n,0);
-    const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});setUploads({});setRemoteUrls({});setPendingMedia({});
+    const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});
     latest.current=p;setProject(p);setStatus("pending");setError("");setMessage("");
     setRecoveryCandidate(null);
     setTranscriptionFailure(null);
@@ -439,22 +348,21 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     <div className="analysis-panel-head"><h2>{String(n).padStart(2,"0")} / {title}</h2><span>{meta}</span></div>{children}
   </section>;
   const tile=(key:SourceKey)=>{
-    const file=files[key],saved=project.media[key],progress=uploads[key];
+    const file=files[key],saved=project.localMedia?.[key]||undefined;
+    const legacy=project.media[key];
     return <div className="studio-source-tile">
       <strong>{names[key]}</strong>
       <label className="analysis-source-pick">
-        {file?(fr?"REMPLACER":"REPLACE"):(fr?"+ CHOISIR UN FICHIER":"+ CHOOSE FILE")}
+        {file?(fr?"REMPLACER LE FICHIER LOCAL":"REPLACE LOCAL FILE"):(fr?"+ CHOISIR UN FICHIER":" + CHOOSE FILE")}
         <input aria-label={names[key]} type="file"
           accept={key==="audio"||key==="enhanced"?"audio/*,.mp3,.m4a,.wav,.ogg,.flac":"video/*,.mov,.mp4,.m4v,.webm"}
-          disabled={progress?.busy} onChange={e=>choose(key,e)}/>
+          onChange={e=>choose(key,e)}/>
       </label>
-      {file&&<p>{file.name} · {(file.size/1e6).toFixed(1)} Mo</p>}
-      {saved&&<p className="studio-media-confirm">✓ {fr?"MÉDIA ENREGISTRÉ":"MEDIA SAVED"} · {saved.filename}</p>}
-      {file&&<button type="button" className="analysis-secondary" disabled={progress?.busy||!ready} onClick={()=>saveMedia(key)}>
-        {progress?.busy?(fr?`ENVOI… ${progress.progress}%`:`UPLOAD… ${progress.progress}%`):
-          (fr?"SAUVEGARDER LE MÉDIA":"SAVE MEDIA")}
-      </button>}
-      {progress?.error&&<p role="alert">{fr?"Envoi échoué. Réessayer.":"Upload failed. Retry."}</p>}
+      {file?<p className="studio-media-confirm">✓ {fr?"FICHIER LOCAL PRÊT":"LOCAL FILE READY"} · {file.name} · {(file.size/1e6).toFixed(1)} Mo</p>:
+        saved?<p className="analysis-note">{fr?`Dernière source : ${saved.filename} — à resélectionner sur cet appareil.`:
+          `Last source: ${saved.filename} — reselect on this device.`}</p>:
+        legacy?<p className="analysis-note">{fr?`Ancienne copie Vercel : ${legacy.filename}. Resélectionne l'original local.`:
+          `Legacy Vercel file: ${legacy.filename}. Reselect the local original.`}</p>:null}
     </div>;
   };
   const projectSaved=status==="saved";
@@ -678,9 +586,6 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         disabled={bulkBusy||uploading||!ready||!(["audio","enhanced","main","vertical","secondary"] as SourceKey[]).some(k=>!!files[k]&&(pendingMedia[k]||!project.media[k]))}>
         {bulkBusy?(fr?"ENREGISTREMENT DES MÉDIAS…":"SAVING MEDIA…"):(fr?"ENREGISTRER TOUS LES MÉDIAS SÉLECTIONNÉS":"SAVE ALL SELECTED MEDIA")}
       </button>
-      {linksError&&<p className="analysis-error" role="alert">{fr
-        ?"Certaines vidéos sont enregistrées, mais leur accès privé n’a pas pu être restauré. Vérifie ta session avant de refaire le clap."
-        :"Some saved videos could not be reopened privately. Check your session before recalibrating."}</p>}
       <p className="analysis-note">{fr
         ?"Les médias marqués « MÉDIA ENREGISTRÉ » appartiennent déjà au projet. Le montage peut reprendre avec ces fichiers; la bêta d’export MP4 exige encore les originaux locaux."
         :"Media marked MEDIA SAVED already belongs to this project. Editing can resume with them; beta MP4 export still requires local originals."}</p>
