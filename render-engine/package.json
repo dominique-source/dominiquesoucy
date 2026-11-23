@@ -5,13 +5,15 @@
   "type": "module",
   "scripts": {
     "render": "node scripts/render.mjs",
-    "preview": "remotion studio src/index.tsx"
+    "preview": "remotion studio src/index.tsx",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@remotion/cli": "4.0.530",
     "remotion": "4.0.530",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "@fontsource/barlow-condensed": "5.3.0"
   },
   "devDependencies": {
     "typescript": "^5.9.0",
