@@ -61,7 +61,7 @@ export async function POST(request:Request){
       return json({error:"CAPSULE_NOT_FOUND"},400);
     if(v.kind==="episode"&&v.capsuleId)return json({error:"INVALID_EPISODE"},400);
     // Verify the privately uploaded bytes before declaring any output completed.
-    const stored=await head(v.pathname,{access:"private"});
+    const stored=await head(v.pathname);
     if(!stored||stored.size<=1024||stored.size>5_000_000_000)
       return json({error:"OUTPUT_INVALID"},422);
     const entry:OutputRecord={
