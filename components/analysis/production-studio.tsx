@@ -590,12 +590,25 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
                 style:"conversation" as const,caption:q.answerExcerpt.slice(0,500),bubble:q.question,
                 background:"dark" as const,keying:{...defaultChroma},textPosition:"bottom" as const,status:"draft" as const,
               }].slice(0,40),selectedCapsuleId:id,stage:"editing"});
-              document.getElementById("studio-capsule-workshop")?.scrollIntoView({behavior:"smooth",block:"start"});
+              setActiveSection("editing");
+              window.setTimeout(()=>document.getElementById("studio-capsule-workshop")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
             }}>{fr?"UTILISER CETTE BULLE DANS UNE CAPSULE":"USE THIS BUBBLE IN A CAPSULE"}</button>
           </div>)}
         </div>}
       </div>
-      {project.analysis&&<><p className="analysis-synopsis">{project.analysis.synopsis}</p>
+      {project.analysis&&<><div className="studio-auto-edit-panel">
+        <strong>{fr?"ANALYSE TERMINÉE — PROCHAINE ÉTAPE":"ANALYSIS COMPLETE — NEXT STEP"}</strong>
+        <p>{fr?
+          `Tes ${project.analysis.moments.length} moments sont repérés. Passe à l’atelier pour préparer des capsules, choisir nos bulles et exporter un plan HD.`:
+          `${project.analysis.moments.length} highlights found. Open the workshop to prepare clips, choose graphics and export an HD plan.`}</p>
+        <button type="button" className="analysis-primary" onClick={()=>{
+          setActiveSection("editing");
+          window.setTimeout(()=>document.getElementById("studio-capsule-workshop")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
+        }}>
+          {fr?`CRÉER MES ${project.analysis.moments.length} CAPSULES →`:
+            `CREATE MY ${project.analysis.moments.length} CAPSULES →`}
+        </button>
+      </div><p className="analysis-synopsis">{project.analysis.synopsis}</p>
         <div className="analysis-tags">{project.analysis.themes.map((t,i)=><span key={i}>{t}</span>)}</div>
         <div className="analysis-moment-list">{project.analysis.moments.map((m,i)=><button
           key={i} type="button" className={project.selectedMoment===i?"selected":""}
