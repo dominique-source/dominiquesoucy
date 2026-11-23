@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { StudioDashboard } from "./dashboard";
 
 type Props = { lang: "fr" | "en"; provider: boolean; expires: number };
@@ -22,12 +23,12 @@ export function StudioWorkspace(props: Props) {
               <span>01</span><strong>{fr ? "OUVRIR LE STUDIO" : "OPEN STUDIO"}</strong>
               <small>{fr ? "Enregistrement, conférence et production" : "Recording, conference and production"}</small>
             </button>
-            <button type="button" onClick={() => setOpened(true)}>
-              <span>02</span><strong>{fr ? "REPRENDRE UNE SÉANCE" : "RESUME A SESSION"}</strong>
-              <small>{fr ? "Retrouver les données récupérables dans les outils existants" : "Find recoverable data in existing tools"}</small>
-            </button>
+            <Link className="studio-workspace-tile" href={`/${props.lang}/studio-analyse`}>
+              <span>02</span><strong>{fr ? "ANALYSER / REPRENDRE" : "ANALYZE / RESUME"}</strong>
+              <small>{fr ? "Importer un média, reprendre une analyse et accéder aux outils de production" : "Import media, resume analysis and access production tools"}</small>
+            </Link>
           </div>
-          <p className="studio-workspace-note">{fr ? "Les fonctions avancées restent dans le Studio. Aucun nouveau traitement n’est lancé depuis cet accueil." : "Advanced functions remain in the Studio. This home screen does not start processing."}</p>
+          <p className="studio-workspace-note">{fr ? "Les fonctions avancées restent disponibles. Aucun traitement n’est lancé depuis cet accueil." : "Advanced functions remain in the Studio. This home screen does not start processing."}</p>
         </main>
       ) : <StudioDashboard {...props} />}
     </div>
