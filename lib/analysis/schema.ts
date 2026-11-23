@@ -15,6 +15,6 @@ export const analysisResult = z.object({
     excerpt: z.string(),
     rationale: z.string(),
     model_id: z.number().int().min(1).max(12),
-  }).strict()).max(8),
+  }).strict()).max(15),
 }).strict();
 export type AnalysisResult = z.infer<typeof analysisResult>;
