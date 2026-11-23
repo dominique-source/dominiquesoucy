@@ -291,6 +291,21 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     raf=requestAnimationFrame(paint);
     return ()=>cancelAnimationFrame(raf);
   },[decorPreview,decorCamera,decorFollowEdit,capsule,fr,selectedBackgroundUrl,videos.join("|"),effectiveCuts,realAudioSource,realCamera,offsets,playhead]);
+  // Capsules created before media upload also get a saved starter edit when
+  // cameras finally become available. A manually edited plan is never replaced.
+  useEffect(()=>{
+    if(!capsule||capsule.cameraEditSource||capsule.cameraCuts?.length||
+       !onCapsuleChange||!videos.length||capsule.end<=capsule.start||
+       capsule.end>duration)return;
+    const plan=proposeMulticamCuts({
+      start:capsule.start,end:capsule.end,available:videos,
+      primary:videos.includes("main")?"main":videos[0],
+    });
+    if(plan.length)onCapsuleChange(capsule.id,{cameraCuts:plan,cameraEditSource:"automatic"});
+    // Recalculate only when the capsule identity, range or available cameras change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[capsule?.id,capsule?.start,capsule?.end,capsule?.cameraEditSource,
+    capsule?.cameraCuts?.length,videos.join("|"),duration,onCapsuleChange]);
   function proposeEdit(){
     pauseAll();
     const from=capsule?capsule.start:clipStart;
