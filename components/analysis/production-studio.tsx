@@ -354,7 +354,9 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       const r=await fetch("/api/analysis",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({consent:true,lang,transcript:project.transcript})});
       if(!r.ok)throw Error("ANALYSIS_FAILED");
-      const value=await r.json() as NonNullable<StudioProject["analysis"]>;
+      const raw=await r.json() as NonNullable<StudioProject["analysis"]>;
+      // API also returns diagnostics; the persisted project schema only accepts editorial fields.
+      const value={synopsis:raw.synopsis,themes:raw.themes,editorial_cautions:raw.editorial_cautions,moments:raw.moments};
       modify({analysis:value,selectedMoment:0,stage:"analysis"});
       record("analysis",`Analyse terminée : ${value.moments.length} extrait(s)`,"success");
       setMessage(fr?"Analyse terminée. Les extraits seront enregistrés dans le projet.":"Analysis complete. Highlights will be saved in the project.");
