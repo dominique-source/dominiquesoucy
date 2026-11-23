@@ -57,6 +57,8 @@ export const capsuleSchema=z.object({
   textPosition:z.enum(["top","center","bottom"]).default("bottom"),
   status:z.enum(["draft","rendered","failed"]).default("draft"),
   timingSource:z.enum(["automatic","manual","unmatched"]).optional(),
+  cameraCuts:timelineSchema.shape.cuts.optional(),
+  cameraEditSource:z.enum(["automatic","manual"]).optional(),
 }).strict();
 export const timedWordSchema=z.object({
  word:z.string().min(1).max(100),
