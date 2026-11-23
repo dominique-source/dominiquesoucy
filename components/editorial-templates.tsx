@@ -1,4 +1,5 @@
-import { FieldArchive, SportArchive } from "./premium-editorial";
+import { FieldArchive } from "./premium-editorial";
+import { ArchivePhoto } from "./photography";
 import Link from "next/link";
 import Image from "next/image";
 import { dict, type Locale, type Section } from "@/lib/i18n";
@@ -507,6 +508,7 @@ export function SubjectEditorial({
 }) {
   const d = dict(lang);
   const b = brand(lang);
+  if (section === "sport-culture") return <SportCultureEditorial lang={lang} entries={entries} allEntries={allEntries} active={active} />;
   return (
     <div className={`subject-editorial subject-${section} content-shell`}>
       <header className="subject-heading">
@@ -516,7 +518,6 @@ export function SubjectEditorial({
         {section === "societe" && <p className="subjects">{d.subjects}</p>}
         <span className="subject-orbit" aria-hidden="true" />
       </header>
-      {section === "sport-culture" && <SportArchive lang={lang} />}
       <TopicFilters
         lang={lang}
         section={section}
@@ -540,4 +541,93 @@ export function SubjectEditorial({
       )}
     </div>
   );
+}
+
+export function SportCultureEditorial({
+  lang, entries, allEntries, active,
+}: {
+  lang: Locale; entries: Entry[]; allEntries: Entry[]; active?: string;
+}) {
+  const fr = lang === "fr";
+  const themes = fr ? [
+    { number: "01", title: "SPORT & IDENTITÉ", body: "Ce qui nous rassemble, nous distingue et nous définit." },
+    { number: "02", title: "SPORT & MÉDIAS", body: "Les récits que l’on construit autour des athlètes et des événements." },
+    { number: "03", title: "SPORT & ÉDUCATION", body: "Les valeurs et les occasions que nous transmettons aux jeunes." },
+    { number: "04", title: "CULTURE POPULAIRE", body: "L’influence du sport sur la musique, les traditions et nos vies." },
+  ] : [
+    { number: "01", title: "SPORT & IDENTITY", body: "What brings us together, sets us apart and defines us." },
+    { number: "02", title: "SPORT & MEDIA", body: "The stories we tell around athletes and events." },
+    { number: "03", title: "SPORT & EDUCATION", body: "The values and opportunities we pass on to young people." },
+    { number: "04", title: "POPULAR CULTURE", body: "How sport shapes music, traditions and everyday life." },
+  ];
+  return <div className="sport-culture-editorial">
+    <header className="sport-culture-hero">
+      <div className="sport-culture-shell">
+        <p className="eyebrow accent">SPORT / CULTURE / {fr ? "SOCIÉTÉ" : "SOCIETY"}</p>
+        <div className="sport-culture-hero-grid">
+          <h1><span>{fr ? "BIEN PLUS" : "MORE THAN"}</span><span>{fr ? "QU’UN JEU." : "A GAME."}</span></h1>
+          <div className="sport-culture-hero-intro">
+            <h2>{fr ? "Ce que le sport raconte de nous." : "What sport reveals about us."}</h2>
+            <p>{fr
+              ? "Le sport ne se limite pas aux résultats. Il raconte nos cultures, nos identités, nos ambitions et nos contradictions."
+              : "Sport is more than results. It reflects our cultures, our identities, our ambitions and our contradictions."}</p>
+          </div>
+        </div>
+        <div className="sport-culture-principles" aria-label={fr ? "Trois perspectives" : "Three perspectives"}>
+          {(fr ? ["IDENTITÉ", "CULTURE", "SOCIÉTÉ"] : ["IDENTITY", "CULTURE", "SOCIETY"]).map((label,index)=>
+            <div key={label}><span>0{index+1}</span><strong>{label}</strong></div>
+          )}
+        </div>
+      </div>
+    </header>
+    <section className="sport-culture-archive" aria-labelledby="sport-culture-archive-title">
+      <div className="sport-culture-shell">
+        <div className="sport-culture-section-heading">
+          <div><p className="eyebrow">{fr ? "ARCHIVES PERSONNELLES" : "PERSONAL ARCHIVES"}</p>
+            <h2 id="sport-culture-archive-title">{fr ? "DU TERRAIN À LA CULTURE." : "FROM THE COURT TO CULTURE."}</h2></div>
+          <p>{fr
+            ? "Mon parcours sur le terrain nourrit mon regard sur les liens entre le sport, la culture et notre société."
+            : "My experience on the court shapes how I see the connections between sport, culture and society."}</p>
+        </div>
+        <div className="sport-culture-archive-grid">
+          <div className="sport-culture-archive-primary">
+            <ArchivePhoto photo="07_archive_rouge_et_or" lang={lang} caption={fr ? "Archives personnelles · Rouge et Or · Photographie et signature originales" : "Personal archives · Rouge et Or · Original photo and signature"} />
+          </div>
+          <div className="sport-culture-archive-secondary">
+            <ArchivePhoto photo="01_basket_action_archive" lang={lang} caption={fr ? "Archives personnelles · Photographie d’action originale" : "Personal archives · Original action photograph"} />
+            <blockquote>{fr
+              ? "Le terrain a été mon premier observatoire de la société."
+              : "The court was my first window into society."}</blockquote>
+            <p>{fr
+              ? "Deux images de mon parcours. Un point de départ pour explorer ce que le sport signifie au-delà du jeu."
+              : "Two images from my journey. A starting point to explore what sport means beyond the game."}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section className="sport-culture-themes" aria-labelledby="sport-culture-themes-title">
+      <div className="sport-culture-shell">
+        <p className="eyebrow accent">{fr ? "LES QUESTIONS QUI NOUS TRAVERSENT" : "THE QUESTIONS THAT SHAPE US"}</p>
+        <h2 id="sport-culture-themes-title">{fr ? "CE QUE LE SPORT RACONTE DE NOUS." : "WHAT SPORT SAYS ABOUT US."}</h2>
+        <div className="sport-culture-theme-grid">
+          {themes.map(theme=><div className="sport-culture-theme" key={theme.number}>
+            <span>{theme.number}</span><h3>{theme.title}</h3><p>{theme.body}</p>
+          </div>)}
+        </div>
+      </div>
+    </section>
+    <section className="sport-culture-publications" id="publications" aria-labelledby="sport-culture-publications-title">
+      <div className="sport-culture-shell">
+        <h2 id="sport-culture-publications-title">{fr ? "LES PUBLICATIONS." : "PUBLICATIONS."}</h2>
+        {allEntries.length ? <>
+          <TopicFilters lang={lang} section="sport-culture" entries={allEntries} active={active} />
+          {entries.length ? <div className="subject-grid">
+            {entries.map(e=><Reveal key={e.slug}><EditorialCard entry={e} lang={lang}/></Reveal>)}
+          </div> : <p className="sport-culture-upcoming">{brand(lang).noResults}</p>}
+        </> : <p className="sport-culture-upcoming">{fr
+          ? "De nouvelles publications viendront prolonger ces thèmes. Les photographies présentées ci-dessus sont des archives, pas des articles déjà publiés."
+          : "New stories will explore these themes. The photographs above are archives, not published articles."}</p>}
+      </div>
+    </section>
+  </div>;
 }
