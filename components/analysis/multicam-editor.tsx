@@ -140,7 +140,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
     document.getElementById("studio-camera-preview")?.scrollIntoView({behavior:"smooth",block:"start"});
   }
   const play=async(from?:number)=>{
-    if(playing){pauseAll();return}
+    if(playing&&from===undefined){pauseAll();return}
     setError("");
     seekAll(from??playhead);
     const active = Object.entries(elements.current) as Array<[SourceKey,HTMLMediaElement|null]>;
