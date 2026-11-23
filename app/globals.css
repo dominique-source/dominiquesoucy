@@ -1419,3 +1419,16 @@ a:hover {
 @media(max-width:600px){.studio-simple-steps{grid-template-columns:1fr 1fr;gap:8px}.studio-simple-tile{min-height:180px;padding:14px}.studio-simple-tile strong{font-size:25px}.studio-simple-tile-icon{font-size:27px;margin-top:6px}.studio-simple-continue{flex-direction:column;align-items:stretch}.studio-simple-go{width:100%}.studio-simple-tools button{font-size:11px;padding:10px 12px}}
 @media(max-width:380px){.studio-simple-steps{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.studio-simple-tile{transition:none}.studio-simple-tile:hover{transform:none}}
+
+
+/* Three large, reusable graphic selections for approved DOM SOUCY capsules */
+.studio-bubble-chooser{margin:24px 0 18px;padding:20px;border:1px solid #495044;border-radius:13px;background:#151715}
+.studio-bubble-chooser>strong{display:block;font-size:13px;font-weight:900;letter-spacing:.075em;color:#f4f4ef;margin-bottom:12px}
+.studio-bubble-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.studio-bubble-tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;gap:9px;min-height:120px;padding:17px 16px;background:#222522;color:#eee;border:1px solid #575c55;border-radius:11px;cursor:pointer}
+.studio-bubble-tile:hover,.studio-bubble-tile:focus-visible{border-color:#ccff00}
+.studio-bubble-tile.active{background:#29331b;border:2px solid #ccff00}
+.studio-bubble-tile>span{font-size:30px;line-height:1;color:#ccff00}
+.studio-bubble-tile strong{font-size:18px;font-weight:950;letter-spacing:.02em}
+.studio-bubble-tile small{font-size:11px;font-weight:750;color:#d0d7c7;letter-spacing:.08em}
+@media(max-width:620px){.studio-bubble-tiles{grid-template-columns:1fr}.studio-bubble-tile{min-height:84px;flex-direction:row;align-items:center;justify-content:flex-start}.studio-bubble-tile small{margin-left:auto}}
