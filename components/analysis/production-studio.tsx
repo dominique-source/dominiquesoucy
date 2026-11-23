@@ -317,7 +317,10 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       });
       const data=await response.json() as {transcript?:string;timedWords?:StudioProject["timedWords"];error?:string};
       if(!response.ok||!data.transcript)throw Error(data.error||"TRANSCRIBE_FAILED");
-      modify({transcript:data.transcript,timedWords:data.timedWords||[],analysis:null,selectedMoment:0,stage:"transcription"});
+      const words=data.timedWords||[];
+      const audioDuration=words.length?Math.ceil(words[words.length-1].end+1):0;
+      modify({transcript:data.transcript,timedWords:words,analysis:null,selectedMoment:0,stage:"transcription",
+        timeline:{...latest.current.timeline,duration:Math.min(7200,Math.max(latest.current.timeline.duration,audioDuration))}});
       record("transcription","Transcription générée","success");
       setMessage(fr?"Transcription obtenue. Vérifie le texte ci-dessous.":"Transcript received. Review the text below.");
     }catch(e){
