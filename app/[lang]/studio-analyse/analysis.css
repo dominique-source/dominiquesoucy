@@ -526,3 +526,10 @@
 .studio-bubble-portrait-upload input{font-size:12px;min-height:42px}
 @media(max-width:700px){.studio-bubble-journalist-identity{grid-template-columns:1fr}.ds-bubble-journalist-portrait{min-height:68px}}
 @media(prefers-reduced-motion:reduce){.studio-bubble-video-graphics.studio-bubble-click-to-edit{transition:none}}
+
+
+/* Main no-friction operation: download a standalone alpha PNG for Premiere. */
+.studio-bubble-png-action{display:grid;gap:8px;margin-top:10px;padding:14px;border:2px solid #ccff00;border-radius:14px;background:linear-gradient(140deg,#1e2b12,#0c100b)}
+.studio-bubble-png-action .analysis-primary{color:#111!important;background:#ccff00!important}
+.studio-bubble-png-action .analysis-primary:disabled{opacity:.55;cursor:not-allowed}
+.studio-bubble-png-action .analysis-note{margin:2px 4px 5px;color:#dbe8d1}
