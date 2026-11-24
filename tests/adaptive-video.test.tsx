@@ -11,7 +11,8 @@ import {
   localVideoPoster,
 } from "../lib/video-layout";
 import { contentSchema, parseContent } from "../lib/content";
-const url = "https://www.youtube.com/watch?v=6Zy87nhpHS8";
+import { pilotVideo } from "../lib/config";
+const url = pilotVideo.videoUrl;
 for (const orientation of videoOrientations)
   for (const layout of videoLayouts) {
     test(`${orientation}/${layout} reserves the correct frame and defers external playback`, () => {

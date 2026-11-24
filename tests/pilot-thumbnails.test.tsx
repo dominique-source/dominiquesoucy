@@ -9,7 +9,7 @@ import { PilotThumbnailLink } from "../components/pilot-thumbnail-link";
 test("three distinct authentic thumbnail treatments share the existing portrait pilot", () => {
   assert.equal(
     pilotVideo.videoUrl,
-    "https://www.youtube.com/watch?v=6Zy87nhpHS8",
+    "https://youtu.be/4uFh1vsihw4",
   );
   assert.equal(pilotVideo.orientation, "portrait");
   assert.deepEqual(
@@ -50,7 +50,7 @@ test("future videos resolve independently without sending every thumbnail to the
   assert.equal(
     thumbnailDestination({
       ...entry,
-      videoUrl: "https://youtu.be/6Zy87nhpHS8",
+      videoUrl: "https://www.youtube.com/watch?v=4uFh1vsihw4",
     }),
     "#pilote",
   );
