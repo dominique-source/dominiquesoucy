@@ -112,7 +112,7 @@ export function AboutImmersive({ lang }: { lang: Locale }) {
           </div>
           <div className={styles.introContent} key={stage}>
             <p className={styles.eyebrow}>DS. / THE HUMAN UNIVERSE — 0{stage + 1}</p>
-            <h1>{stage === 4 ? t.lead : t.intro[stage]}</h1>
+            <h1>{stage === 4 ? (lang === "fr" ? "Mon univers" : "My universe") : t.intro[stage]}</h1>
             <p>{stage === 4 ? t.sub : "DOMINIQUE SOUCY"}</p>
           </div>
           <nav className={styles.introControls} aria-label={lang === "fr" ? "Contrôles de l'introduction" : "Introduction controls"}>
@@ -151,7 +151,7 @@ export function AboutImmersive({ lang }: { lang: Locale }) {
         <section className={styles.hub} aria-labelledby="hub-title">
           <div className={styles.hubHeading}>
             <p className={styles.eyebrow}>DS. / THE HUMAN UNIVERSE</p>
-            <h1 id="hub-title">{t.lead}</h1>
+            <h1 id="hub-title">{lang === "fr" ? "Mon univers" : "My universe"}</h1>
             <p>{t.sub}</p>
             <p className={styles.bio}>{d.bio}</p>
           </div>
