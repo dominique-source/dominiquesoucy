@@ -1,0 +1,171 @@
+{
+  "project": "DS. THE HUMAN UNIVERSE",
+  "master_priority": [
+    "01",
+    "05",
+    "REF-societe (concept seulement; portrait interdit)"
+  ],
+  "references": [
+    {
+      "path": "references-originales/01-empreinte-originale.jpeg",
+      "source": "04BED973-DBBD-4147-8362-163C68BF7BC7.jpeg",
+      "status": "reference-maitre",
+      "width": 1536,
+      "height": 864,
+      "sha256": "d272de76d85d874f17d05acccd7879446358cb5d5765a5dab02ee09757314542"
+    },
+    {
+      "path": "references-originales/05-main-originale.jpeg",
+      "source": "5F71B239-EC63-4353-A8F5-E762F3B12F70.jpeg",
+      "status": "reference-maitre",
+      "width": 1536,
+      "height": 864,
+      "sha256": "6725811c7ef6c27528c1a5ecebb50ea1dd1aa50b00e294d1797b1e16de1db40c"
+    },
+    {
+      "path": "references-originales/REF-societe-originale-ne-pas-afficher-portrait.jpeg",
+      "source": "467DAC54-976B-4C7D-9F33-1CF7F660C336.jpeg",
+      "status": "reference-conceptuelle-portrait-interdit",
+      "width": 1536,
+      "height": 864,
+      "sha256": "16ade5fd3cebce31240f07356e0475083dff5717f60c5451de730ef7e12adbe0"
+    },
+    {
+      "path": "maquettes/02-dezoom-doigt.webp",
+      "source": "empreinte_néon_dans_l_obscurité.png",
+      "status": "groupe-approuve",
+      "width": 1672,
+      "height": 941,
+      "sha256": "3a17e907b1e21009b0bb308154f5d44da8dcc901c860d78f7dde091814e14987",
+      "encoding_note": "Conversion WebP qualité 95, dimensions originales; original PNG source conservé dans la conversation."
+    },
+    {
+      "path": "maquettes/03-societe-bulles.webp",
+      "source": "entrer_dans_la_société_connectée.png",
+      "status": "groupe-approuve",
+      "width": 1672,
+      "height": 941,
+      "sha256": "c19b91b316a250f209c82efa3ed4d06573c280d533786080dc5e901c4feebb34",
+      "encoding_note": "Conversion WebP qualité 95, dimensions originales; original PNG source conservé dans la conversation."
+    },
+    {
+      "path": "maquettes/04-terre-transition.webp",
+      "source": "réseau_humain_sous_la_terre_lumineuse.png",
+      "status": "groupe-approuve-fin-orbite-a-completer",
+      "width": 1672,
+      "height": 941,
+      "sha256": "36ec1bb43620b258af52409da343e25425503321448ebe4446acd7ce633a1a23",
+      "encoding_note": "Conversion WebP qualité 95, dimensions originales; original PNG source conservé dans la conversation."
+    },
+    {
+      "path": "maquettes/06-hover-sport.webp",
+      "source": "a_cinematic_high_contrast_dark_ui_storyboard_w.png",
+      "status": "reference-interaction-annotations-non-publiques",
+      "width": 1672,
+      "height": 941,
+      "sha256": "86012885f300eefd8426d04b38c88f3350bae17364444ca1aabe6bdc679fde20",
+      "encoding_note": "Conversion WebP qualité 95, dimensions originales; original PNG source conservé dans la conversation."
+    },
+    {
+      "path": "maquettes/07-immersion-storyboard.webp",
+      "source": "a_cinematic_high_contrast_ultra_detailed_storybo.png",
+      "status": "planche-pas-ecran-selection-incoherente",
+      "width": 1672,
+      "height": 941,
+      "sha256": "9b5da7c09b7d2c2831845515ea860afd839708006d5e4bffff1eecea486a0f64",
+      "encoding_note": "Conversion WebP qualité 95, dimensions originales; original PNG source conservé dans la conversation."
+    },
+    {
+      "path": "maquettes/08-etre-introduction.webp",
+      "source": "a_cinematic_high_contrast_ultra_detailed_ui_hero.png",
+      "status": "hero-seul-bibliotheque-a-completer",
+      "width": 1672,
+      "height": 941,
+      "sha256": "908813f709be054bc8ed4a1ac937f3fec1b0854c82e56d66a43b9c7419a285c2",
+      "encoding_note": "Conversion WebP qualité 95, dimensions originales; original PNG source conservé dans la conversation."
+    },
+    {
+      "path": "maquettes/09-sport.webp",
+      "source": "le_sport_empreinte_en_mouvement.png",
+      "status": "proposition-editoriale",
+      "width": 1672,
+      "height": 941,
+      "sha256": "2c0eedce5754ed009194a7f04287b1408c34293d807b85baa613d8cbcbe4f78d",
+      "encoding_note": "Conversion WebP qualité 95, dimensions originales; original PNG source conservé dans la conversation."
+    },
+    {
+      "path": "maquettes/10-societe.webp",
+      "source": "la_société_constellation_d_univers_intérieurs.png",
+      "status": "proposition-editoriale",
+      "width": 1672,
+      "height": 941,
+      "sha256": "01ba9225fc5275caacc6a706086e67f96c6136344dbbc9a99fedcd6b3dc4f270",
+      "encoding_note": "Conversion WebP qualité 95, dimensions originales; original PNG source conservé dans la conversation."
+    },
+    {
+      "path": "maquettes/11-creation.webp",
+      "source": "la_création_trace_d_intention_humaine.png",
+      "status": "proposition-editoriale",
+      "width": 1672,
+      "height": 941,
+      "sha256": "1bfcf996ffde46f43549c537af805587e67ebae70851a6bf605d44c1b1248459",
+      "encoding_note": "Conversion WebP qualité 95, dimensions originales; original PNG source conservé dans la conversation."
+    },
+    {
+      "path": "maquettes/12-transmission.webp",
+      "source": "la_transmission_empreinte_des_générations.png",
+      "status": "proposition-editoriale",
+      "width": 1672,
+      "height": 941,
+      "sha256": "7f41ec2d766c3323606804002bcb71e383a8802b12a766270950c8f2a03cc60c",
+      "encoding_note": "Conversion WebP qualité 95, dimensions originales; original PNG source conservé dans la conversation."
+    }
+  ],
+  "runtime_derivatives": {
+    "path": "assets-web/",
+    "status": "Conversions WebP de composites, non calques séparés. Vérifier UI intégrée; 04b est un aperçu recadré de résolution limitée."
+  },
+  "hotspots_reference_05": {
+    "coordinate_system": "normalized 0..1, relative to rendered image content; approximate, validate before use",
+    "points": [
+      {
+        "id": "etre",
+        "x": 0.184,
+        "y": 0.505
+      },
+      {
+        "id": "sport",
+        "x": 0.361,
+        "y": 0.166
+      },
+      {
+        "id": "societe",
+        "x": 0.505,
+        "y": 0.117
+      },
+      {
+        "id": "creation",
+        "x": 0.656,
+        "y": 0.167
+      },
+      {
+        "id": "transmission",
+        "x": 0.768,
+        "y": 0.365
+      }
+    ],
+    "palm": {
+      "x": 0.5,
+      "y": 0.79
+    }
+  },
+  "missing": [
+    "clean isolated hand layer",
+    "five independent masks and clean hero plates",
+    "full resolution orbit-only hero",
+    "approved editorial copy/video/audio",
+    "full editorial layout for 08",
+    "exact official logo reuse from repo"
+  ],
+  "notes": "No fake portrait. 06/07 annotations and 09-12 text are not approved content. Right hand composition as reference; do not mirror or infer biometric identity."
+}
