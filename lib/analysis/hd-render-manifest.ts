@@ -11,6 +11,7 @@ export type HdRenderManifest={
   questionAttribution:"verified"|"reconstructed";
   masterAsset:string;foregroundAsset:string;audioAsset:string;
   backgroundAsset:string;portraitAsset:string;episodeLabel:string;
+  outroAsset:string;outroDurationSeconds:number;
 };
 
 /** Pure manifest preparation: no source video bytes leave the browser. */
@@ -41,6 +42,9 @@ export function buildHdRenderManifest(
     backgroundAsset:options.transparentForeground?"background.png":"",
     portraitAsset:options.reporterPortrait?"reporter.png":"",
     episodeLabel:`ÉP. ${String(project.episode).padStart(2,"0")}`,
+    // Exact originals: 2 seconds, horizontal (16:9 and centered 1:1) or vertical (9:16).
+    outroAsset:capsule.format==="9:16"?"signature-vertical.mp4":"signature-horizontal.mp4",
+    outroDurationSeconds:2,
   };
 }
 
