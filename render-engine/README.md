@@ -25,6 +25,35 @@ relancer. Le bouton du Studio qui produit le manifeste nécessite que
 la nouvelle version du site soit déployée; avant cela, on peut modifier
 `sample-manifest.json` en renseignant les vrais timecodes et les textes.
 
+## Signature automatique de fin — officielle DOM SOUCY
+
+Chaque nouveau manifeste généré dans le Studio sélectionne maintenant automatiquement
+l'animation de fin **originale de 2 secondes** avec sa piste audio :
+
+- **16:9** → `signature-horizontal.mp4` (1920 × 1080, 30 fps).
+- **9:16** → `signature-vertical.mp4` (1080 × 1920, 30 fps).
+- **1:1** → `signature-horizontal.mp4` centrée dans un cadre carré noir pour ne pas couper le logo.
+
+L'animation commence **après** la dernière image et la dernière syllabe de l'extrait.
+Elle ne recouvre donc ni la vidéo, ni les bulles, ni les paroles.
+Le lecteur exporte la piste audio originale de la signature une seule fois.
+
+Les deux MP4 sont des **fichiers privés fournis par Dominique**, non stockés dans
+GitHub ni Vercel. Lors du premier rendu d'un format, `RENDU-HD.command`
+demandera simplement de sélectionner la vidéo de signature correspondante
+sur le Mac. Il enregistre un lien symbolique local dans `render-engine/public/`;
+les rendus suivants réutilisent le même fichier automatiquement.
+
+Pour un usage direct (sans le lanceur), placer les deux originaux dans
+`render-engine/public/` sous les noms indiqués ci-dessus.
+
+Les anciens manifestes sans champ `outroAsset` continuent d'être compatibles et
+ne déclenchent pas l'outro. Les nouveaux manifestes l'activent automatiquement.
+
+**Limite** : cette fonctionnalité est intégrée au **moteur de rendu HD local**.
+Le site Vercel ne fabrique toujours pas lui-même les vidéos MP4 finales.
+Les PNG transparents sont des images fixes et n'incluent pas cette animation de fin.
+
 ## Phase 1 — Adobe Premiere Pro
 
 - Dans Premiere Pro, synchroniser les 3 caméras et le son **une seule fois** pour l'épisode; vérifier les lèvres. Monter les changements de caméra avant l'export.
