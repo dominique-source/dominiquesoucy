@@ -31,7 +31,7 @@ export const signature =
 
 // The pilot is a media configuration, not an article with invented publishing data.
 export const pilotVideo = {
-  videoUrl: "https://www.youtube.com/watch?v=6Zy87nhpHS8",
+  videoUrl: "https://youtu.be/4uFh1vsihw4",
   orientation: "portrait" as const,
   layout: "featured" as const,
   label: "PILOTE — ÉPISODE 00",

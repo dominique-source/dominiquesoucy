@@ -22,12 +22,12 @@ test("autoplay is opt-in after activation and retains a usable privacy-enhanced 
   const source = videoSource(pilotVideo.videoUrl)!;
   assert.equal(
     source.src,
-    "https://www.youtube-nocookie.com/embed/6Zy87nhpHS8",
+    "https://www.youtube-nocookie.com/embed/4uFh1vsihw4",
   );
   assert.equal(activatedEmbedUrl(source.src, false), source.src);
   const activated = new URL(activatedEmbedUrl(source.src, true));
   assert.equal(activated.hostname, "www.youtube-nocookie.com");
-  assert.equal(activated.pathname, "/embed/6Zy87nhpHS8");
+  assert.equal(activated.pathname, "/embed/4uFh1vsihw4");
   assert.equal(activated.searchParams.get("autoplay"), "1");
   assert.equal(activated.searchParams.get("controls"), "1");
   assert.equal(activated.searchParams.get("playsinline"), "1");
