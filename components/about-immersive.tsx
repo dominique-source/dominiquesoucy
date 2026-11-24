@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
-import { dict } from "@/lib/i18n";
 import styles from "./about-immersive.module.css";
 
 const ids = ["etre", "sport", "societe", "creation", "transmission"] as const;
@@ -11,7 +10,6 @@ type Stage = 0 | 1 | 2 | 3 | 4;
 const copy = {
   fr: {
     intro: ["Une empreinte.", "Un individu.", "Des milliards d'univers.", "Un monde en commun."],
-    lead: "Je suis un univers parmi des milliards d'autres.",
     sub: "Voici celui à travers lequel je perçois le monde.",
     next: "Suivant", prev: "Précédent", skip: "Passer l'introduction", replay: "Revoir l'introduction",
     discover: "Explorer les cinq univers", back: "Retour à la main", home: "Dominique Soucy",
@@ -29,7 +27,6 @@ const copy = {
   },
   en: {
     intro: ["A fingerprint.", "One individual.", "Billions of universes.", "One shared world."],
-    lead: "I am one universe among billions of others.",
     sub: "This is the one through which I see the world.",
     next: "Next", prev: "Previous", skip: "Skip introduction", replay: "Replay introduction",
     discover: "Explore the five universes", back: "Back to the hand", home: "Dominique Soucy",
@@ -55,7 +52,7 @@ function readUniverse(): Universe | null {
   return ids.find(item => item === id) ?? null;
 }
 export function AboutImmersive({ lang }: { lang: Locale }) {
-  const t = copy[lang], d = dict(lang);
+  const t = copy[lang];
   const [stage, setStage] = useState<Stage>(0);
   const [intro, setIntro] = useState(true);
   const [selected, setSelected] = useState<Universe | null>(null);
@@ -152,23 +149,25 @@ export function AboutImmersive({ lang }: { lang: Locale }) {
           <div className={styles.hubHeading}>
             <p className={styles.eyebrow}>DS. / THE HUMAN UNIVERSE</p>
             <h1 id="hub-title">{lang === "fr" ? "Mon univers" : "My universe"}</h1>
-            <p>{t.sub}</p>
-            <p className={styles.bio}>{d.bio}</p>
+            <p className={styles.hubHint}>{lang === "fr" ? "Choisissez un doigt pour explorer." : "Choose a finger to explore."}</p>
           </div>
           <div className={styles.handScene}>
-            <div className={styles.handShape} aria-hidden="true">
-              <span className={styles.palm} /><span className={styles.finger} /><span className={styles.finger} /><span className={styles.finger} /><span className={styles.finger} /><span className={styles.finger} />
-            </div>
+            <div className={styles.handArtwork} aria-hidden="true" />
             <div className={styles.hotspots} role="group" aria-label={t.discover}>
               {ids.map((id, i) => <button key={id} ref={el => { triggerRefs.current[id] = el; }}
+                type="button"
                 className={styles.hotspot} data-active={active === id}
+                aria-label={t.names[i] + ". " + t.questions[i]}
                 onMouseEnter={() => setActive(id)} onMouseLeave={() => setActive(null)}
                 onFocus={() => setActive(id)} onBlur={() => setActive(null)}
                 onClick={() => openUniverse(id)}>
-                <span className={styles.hotspotNumber}>0{i + 1}</span>
-                <strong>{t.names[i]}</strong><small>{t.questions[i]}</small>
+                <span className={styles.hotspotPulse} aria-hidden="true" />
+                <span className={styles.hotspotInfo} aria-hidden="true"><span className={styles.hotspotNumber}>0{i + 1}</span><strong>{t.names[i]}</strong><small>{t.questions[i]}</small></span>
               </button>)}
             </div>
+          </div>
+          <div className={styles.mobileDestinations} aria-label={t.discover}>
+            {ids.map((id,i) => <button type="button" key={id} onClick={() => openUniverse(id)}><span>0{i+1}</span> {t.names[i]} <span aria-hidden="true">↗</span></button>)}
           </div>
           <button className={styles.replay} onClick={() => { setStage(0); setIntro(true); }}>{t.replay} ↺</button>
         </section>
