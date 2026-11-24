@@ -5,6 +5,7 @@ import type { StudioProject } from "@/lib/analysis/project";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { buildHdRenderManifest, hdManifestFilename } from "@/lib/analysis/hd-render-manifest";
+import { createTransparentBubblePng,downloadBubblePng } from "@/lib/analysis/transparent-bubble-png";
 
 type Capsule = StudioProject["capsules"][number];
 type Style = "conversation" | "quote" | "rafale";
@@ -135,6 +136,27 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
     current.end<=project.timeline.duration&&current.end-current.start<=600;
   const textValid=!!current&&(selectedStyle==="quote"?
     current.caption.trim().length>0:current.bubble.trim().length>0);
+
+  const [exportingPng,setExportingPng]=useState(false);
+  async function exportTransparentPng(){
+    if(!current||!textValid||exportingPng)return;
+    setExportingPng(true);setInfo("");
+    try{
+      const blob=await createTransparentBubblePng({
+        style:selectedStyle,question:current.bubble,caption:current.caption,
+        journalistName:current.journalistName,
+        journalistOutlet:current.journalistOutlet,
+        questionAttribution:current.questionAttribution,
+        portraitFile:selectedStyle==="conversation"?journalistPhoto:null,
+      });
+      downloadBubblePng(blob,"dom-soucy-bulle-"+selectedStyle+"-"+current.id.slice(0,8)+".png");
+      setInfo(fr?"Bulle PNG transparente téléchargée : glisse-la directement sur ta piste vidéo dans Premiere.":"Transparent PNG downloaded: drag it directly onto your Premiere timeline.");
+      onEvent("export","Bulle PNG transparente exportée localement","success");
+    }catch(error){
+      setInfo(fr?"Impossible de créer le PNG. Vérifie le texte et la photo, puis réessaie.":"PNG creation failed. Check the text and photo, then retry.");
+      onEvent("error","Export PNG impossible : "+(error instanceof Error?error.message:"UNKNOWN"),"failure");
+    }finally{setExportingPng(false)}
+  }
 
   function exportPlan(){
     if(!current||!timeValid||!textValid)return;
@@ -319,6 +341,17 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
         "L’IA n’a pas trouvé un début et une fin fiables. Tu peux voir la bulle, mais le rendu sera bloqué jusqu’à correction des repères dans « Options avancées ».":
         "AI has not found reliable start/end points. You can preview the bubble, but rendering is blocked until timestamps are fixed in Advanced options."}</p>}
       {!textValid&&<p className="studio-bubble-warning">{fr?"Ajoute le texte de la bulle avant de préparer le rendu.":"Add bubble text before preparing rendering."}</p>}
+      <div className="studio-bubble-png-action">
+        <button type="button" className="analysis-primary studio-bubble-lab-big"
+          disabled={!textValid||exportingPng} onClick={()=>{void exportTransparentPng()}}>
+          {exportingPng?(fr?"CRÉATION DU PNG…":"CREATING PNG…"):
+            fr?"↓ TÉLÉCHARGER LA BULLE EN PNG TRANSPARENT":"↓ DOWNLOAD TRANSPARENT BUBBLE PNG"}
+        </button>
+        <p className="analysis-note">{fr?
+          "Bulle seule en 1600 × 900, fond transparent, sans vidéo. Prête à ajouter dans Premiere Pro. Aucun repère de temps requis.":
+          "Standalone 1600 × 900 bubble, transparent background and no video. Ready for Premiere Pro. No timestamps required."}</p>
+      </div>
+      <details className="studio-simple-details"><summary>{fr?"RENDU VIDÉO HD AUTOMATISÉ (AVANCÉ)":"AUTOMATED HD VIDEO RENDER (ADVANCED)"}</summary>
       <button type="button" className="analysis-primary studio-bubble-lab-big"
         disabled={!timeValid||!textValid} onClick={exportPlan}>
         {fr?"✓ APPROUVER LA BULLE ET PRÉPARER LE HD":"✓ APPROVE BUBBLE AND PREPARE HD"}
@@ -326,6 +359,7 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
       <p className="analysis-note">{fr?
         "Ce bouton télécharge les instructions du moteur HD (.JSON), pas encore le MP4 final. L’assemblage avec la vidéo se fait sur ton Mac, sans retoucher Premiere.":
         "This button downloads HD rendering instructions (.JSON), not the final MP4. Your Mac assembles the video without editing in Premiere."}</p>
+      </details>
     </div>}
     {!capsules.length&&<button type="button" className="analysis-secondary" onClick={createManual}>
       {fr?"+ CRÉER UNE CAPSULE MANUELLE (AVANCÉ)":"+ CREATE A MANUAL CLIP (ADVANCED)"}
