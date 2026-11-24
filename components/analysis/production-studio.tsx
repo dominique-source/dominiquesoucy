@@ -23,6 +23,8 @@ function download(filename:string,content:string,mime="application/json"){
 }
 function transcriptionFailureMessage(code:string,stage:"upload"|"transcribe",fr:boolean){
   const known:Record<string,[string,string]>={
+    UNAUTHORIZED:["Ta session privée du Studio a expiré. Reconnecte-toi dans un nouvel onglet, puis reviens ici et réessaie. Ne ferme pas cet onglet : ton audio reste sélectionné.","Your private Studio session expired. Sign in in a new tab, then return here and retry. Keep this tab open; your audio remains selected."],
+    AUTH_STORE_UNAVAILABLE:["Le service de connexion du Studio est momentanément indisponible. Ce n'est pas un problème de fichier audio.","The Studio authentication service is temporarily unavailable. Your audio file is not the issue."],
     RATE_LIMITED:["Trop de demandes de transcription. Réessaie plus tard.","Transcription request limit reached. Try again later."],
     AI_RATE_LIMITED:["Le service de transcription limite actuellement les requêtes. Réessaie plus tard.","AI transcription is rate limited. Try again later."],
     AUDIO_REJECTED:["Le service refuse cet audio. Essaie un fichier MP3 ou M4A compatible.","The service rejected this audio. Try a compatible MP3 or M4A file."],
@@ -252,6 +254,13 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     setTranscriptionFailure(null);
     setBusy("transcribe");setError("");
     try{
+      setTranscriptionProgress(fr?"Vérification de la session privée…":"Checking Studio session…");
+      const authResponse=await fetch("/api/analysis/transcribe",{method:"GET",cache:"no-store",credentials:"same-origin"});
+      if(!authResponse.ok){
+        const authBody=await authResponse.json().catch(()=>null) as {error?:string}|null;
+        throw Error(authBody?.error||(authResponse.status===401?"UNAUTHORIZED":
+          authResponse.status===503?"AUTH_STORE_UNAVAILABLE":"AUTH_CHECK_FAILED"));
+      }
       setTranscriptionProgress(fr?"Décodage audio local…":"Decoding local audio…");
       const decoded=await decodeLocalAudio(audio);
       const ranges=chunkRanges(decoded.duration);
@@ -582,10 +591,19 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           <button type="button" aria-label={fr?"Fermer l'erreur":"Dismiss error"} onClick={()=>setTranscriptionFailure(null)}>×</button>
         </div>
         <p>{transcriptionFailure.detail}</p>
+        {transcriptionFailure.code==="UNAUTHORIZED"&&<div className="studio-session-recovery">
+          <strong>{fr?"01 / RECONNECTER LE STUDIO":"01 / SIGN BACK IN"}</strong>
+          <a href={`/${lang}/studio-live`} target="_blank" rel="noopener noreferrer"
+             className="studio-session-reconnect">
+            {fr?"OUVRIR LA CONNEXION DANS UN NOUVEL ONGLET ↗":"OPEN SIGN-IN IN A NEW TAB ↗"}
+          </a>
+          <p>{fr?"Une fois reconnecté, reviens dans CET onglet et clique sur Réessayer. Ne recharge pas la page : ton audio reste sélectionné.":"After signing in, return to THIS tab and click Retry. Do not refresh; your audio stays selected."}</p>
+          <strong>{fr?"02 / RÉESSAYER LA TRANSCRIPTION":"02 / RETRY TRANSCRIPTION"}</strong>
+        </div>}
         <code>{transcriptionFailure.stage.toUpperCase()} · {transcriptionFailure.code}</code>
         <div className="studio-transcription-failure-actions">
           <button type="button" className="analysis-primary" disabled={!!busy||!consent||!files.audio}
-            onClick={()=>{void transcribe()}}>{fr?"RÉESSAYER LA TRANSCRIPTION":"RETRY TRANSCRIPTION"}</button>
+            onClick={()=>{void transcribe()}}>{transcriptionFailure.code==="UNAUTHORIZED"?(fr?"JE SUIS RECONNECTÉ — RÉESSAYER":"SIGNED BACK IN — RETRY"):(fr?"RÉESSAYER LA TRANSCRIPTION":"RETRY TRANSCRIPTION")}</button>
           <button type="button" className="analysis-secondary" onClick={()=>
             void navigator.clipboard?.writeText(`${transcriptionFailure.stage}: ${transcriptionFailure.code}`)}>
             {fr?"COPIER LE CODE D'ERREUR":"COPY ERROR CODE"}</button>
