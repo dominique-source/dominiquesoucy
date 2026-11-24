@@ -24,16 +24,16 @@ const options: {style:Style;number:string;fr:string;en:string}[] = [
   {style:"rafale",number:"03",fr:"RAFALE DE QUESTIONS",en:"QUESTION BURST"},
 ];
 
-function BubbleVisual({style,question,caption,mini=false}:{style:Style;question:string;caption:string;mini?:boolean}){
+function BubbleVisual({style,question,caption,mini=false,attribution="reconstructed"}:{style:Style;question:string;caption:string;mini?:boolean;attribution?:"verified"|"reconstructed"}){
   const lines = question.split("\n").map(v=>v.trim()).filter(Boolean).slice(0,3);
   const previewQuestion = question.trim() || "Votre question apparaîtra ici";
   const previewQuote = caption.trim() || "Votre citation apparaîtra ici";
   return <div className={"ds-bubble-graphic ds-bubble-"+style+(mini?" mini":"")}>
     {style==="conversation"?<div className="ds-bubble-glass">
-      <div className="ds-bubble-ribbon">QUESTION RECONSTRUITE</div>
-      <div className="ds-bubble-prompt">◉ QUESTION PROPOSÉE</div>
+      <div className="ds-bubble-ribbon">{attribution==="verified"?"QUESTION — JOURNALISTE":"QUESTION RECONSTRUITE"}</div>
+      <div className="ds-bubble-prompt">◉ {attribution==="verified"?"QUESTION ORIGINALE":"QUESTION PROPOSÉE"}</div>
       <strong>« {previewQuestion.slice(0,175)} »</strong>
-      <small>RECONSTITUTION ÉDITORIALE</small>
+      {attribution==="reconstructed"&&<small>RECONSTITUTION ÉDITORIALE</small>}
     </div>:style==="quote"?<div className="ds-bubble-glass">
       <div className="ds-bubble-ribbon">LA RÉPONSE</div>
       <strong>« {previewQuote.slice(0,200)} »</strong>
@@ -52,7 +52,6 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
   const current=capsules.find(c=>c.id===project.selectedCapsuleId)||capsules[0];
   const [previewUrl,setPreviewUrl]=useState("");
   const [info,setInfo]=useState("");
-  const [technical,setTechnical]=useState(false);
   const videoRef=useRef<HTMLVideoElement|null>(null);
 
   useEffect(()=>{
@@ -105,7 +104,6 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
       textPosition:"bottom",status:"draft",timingSource:"unmatched",
     };
     onChange({capsules:[...capsules,c],selectedCapsuleId:c.id,stage:"editing"});
-    setTechnical(true);
   }
 
   const selectedStyle:Style=current&&["conversation","quote","rafale"].includes(current.style)?
@@ -186,7 +184,7 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
           </div>
           <div className="studio-bubble-video-graphics" key={current?.id||"demo"}>
             <BubbleVisual style={selectedStyle} question={current?.bubble||""}
-              caption={current?.caption||""}/>
+              caption={current?.caption||""} attribution={current?.questionAttribution}/>
           </div>
           <div className="studio-bubble-video-bottom" aria-hidden="true"><b> / </b> DOMINIQUE SOUCY</div>
         </div>
