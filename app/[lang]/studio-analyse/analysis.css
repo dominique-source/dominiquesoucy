@@ -477,3 +477,15 @@
 @media(max-width:920px){.studio-bubble-lab-grid{grid-template-columns:1fr}.studio-bubble-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}.studio-bubble-gallery-art{height:105px}.studio-bubble-video-graphics{width:52%}}
 @media(max-width:650px){.studio-bubble-gallery{grid-template-columns:1fr}.studio-bubble-gallery-art{height:110px}.studio-bubble-video-graphics{width:61%}.studio-bubble-timing{grid-template-columns:1fr}.studio-bubble-editor-simple{padding:14px}}
 @media(prefers-reduced-motion:reduce){.studio-bubble-video-graphics .ds-bubble-graphic{animation:none}}
+
+
+/* One finished Premiere master per production. No second video import screen. */
+.studio-master-dropzone{border:2px dashed #a8d859;border-radius:15px;background:radial-gradient(circle at 50% 20%,#24371b,#0b1109 65%);transition:border-color .2s ease}
+.studio-master-dropzone:hover,.studio-master-dropzone:focus-within{border-color:#ccff00;background:#192713}
+.studio-master-pick{cursor:pointer;min-height:235px;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:22px;text-align:center}
+.studio-master-pick>span{font:950 italic 56px/1 "Barlow Condensed",Impact,sans-serif;color:#ccff00}
+.studio-master-pick>strong{font:950 italic clamp(27px,4vw,45px)/1 "Barlow Condensed",Impact,sans-serif;color:#f4f4ef;letter-spacing:-.012em}
+.studio-master-pick>small{font-size:13px;color:#d7e1c9;overflow-wrap:anywhere;max-width:90%}
+.studio-master-pick input[type=file]{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.studio-master-pick:has(input:focus-visible){outline:2px solid #ccff00;outline-offset:3px;border-radius:13px}
+@media(max-width:640px){.studio-master-pick{min-height:190px}}
