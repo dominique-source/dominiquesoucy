@@ -102,6 +102,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   const capsules=project.capsules;
   const current=capsules.find(c=>c.id===project.selectedCapsuleId)||capsules[0];
   const [previewUrl,setPreviewUrl]=useState("");
+  const [mediaDuration,setMediaDuration]=useState(0);
   const [info,setInfo]=useState("");
   const [portraits,setPortraits]=useState<Record<string,File>>({});
   async function portraitFor(capsule:Capsule):Promise<File|null>{
@@ -133,6 +134,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   };
 
   useEffect(()=>{
+    setMediaDuration(0);
     if(!master)return;
     const url=URL.createObjectURL(master);
     setPreviewUrl(url);
@@ -143,12 +145,12 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
     const player=videoRef.current;
     if(player&&current&&current.end>current.start){
       player.pause();
-      const seek=()=>{try{player.currentTime=current.start}catch{}};
+      const seek=()=>{if(current.start<player.duration){try{player.currentTime=current.start}catch{}}};
       if(player.readyState>=1)seek();
       else player.addEventListener("loadedmetadata",seek,{once:true});
       return()=>player.removeEventListener("loadedmetadata",seek);
     }
-  },[current?.id,current?.start,current?.end,previewUrl]);
+  },[current?.id,current?.start,current?.end,previewUrl,view,mediaDuration]);
 
   function update(patch:Partial<Capsule>){
     if(!current)return;
@@ -318,11 +320,11 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
     <div className="studio-bubble-lab-grid">
       <div className="studio-bubble-video-side">
         <strong>{fr?"2. APERÇU SUR TA VIDÉO":"2. PREVIEW ON YOUR VIDEO"}</strong>
+        {mediaDuration>0&&<p className="analysis-note">{fr?"Vidéo source : ":"Source video: "}{Math.floor(mediaDuration/60)}:{String(Math.floor(mediaDuration%60)).padStart(2,"0")}{Math.abs(mediaDuration-project.timeline.duration)>2&&(fr?" · Durée différente du projet : vérifie le fichier source.":" · Project duration differs: check source file.")}</p>}
+        {current&&current.end>current.start&&mediaDuration>0&&current.end>mediaDuration&&<p role="alert">{fr?"Cet extrait dépasse la vidéo chargée. Importe le master complet.":"This clip exceeds the loaded video. Import the full master."}</p>
         <div className={"studio-bubble-preview format-"+format.replace(":","-")}>
           {previewUrl?<video ref={videoRef} src={previewUrl} controls playsInline preload="metadata"
-            onTimeUpdate={e=>{
-              if(current?.end&&e.currentTarget.currentTime>=current.end)e.currentTarget.pause();
-            }}/>:<div className="studio-bubble-no-video">
+            onLoadedMetadata={e=>{const duration=e.currentTarget.duration;if(Number.isFinite(duration)&&duration>0)setMediaDuration(duration)}}/>:<div className="studio-bubble-no-video">
             <span>▶</span>
             <strong>{fr?"TA VIDÉO PREMIERE ICI":"YOUR PREMIERE VIDEO HERE"}</strong>
             <small>{fr?"Importe ton MP4 pour voir les bulles par-dessus.":"Import your MP4 to see the bubbles on top."}</small>

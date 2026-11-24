@@ -22,7 +22,7 @@ export function createDraftsFromAnalysis(project:StudioProject):Capsule[]{
     .map(m=>{
       const audioRange=findQuotedRange(m.excerpt,project.timedWords);
       const range=audioRange?toProjectRange(audioRange,project.timeline.offsets.audio,
-        Math.max(project.timeline.duration,project.timedWords.at(-1)?.end||0)):null;
+        project.timeline.duration):null;
       const cameraCuts=range&&available.length?proposeMulticamCuts({
         start:range.start,end:range.end,available,primary,
       }):undefined;

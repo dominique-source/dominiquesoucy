@@ -250,13 +250,14 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     setError("");
   };
   const choosePremiereMaster=(file:File)=>{
+    if(busy)return;
     if(file.size<=0||file.size>MAX_PROJECT_MEDIA_BYTES||!/\.(mov|mp4|m4v)$/i.test(file.name)){
       setError(fr?"Choisis un MP4 ou MOV de 5 Go maximum.":"Choose an MP4 or MOV up to 5 GB.");
       return;
     }
     const audioFromVideo=file.size<=600_000_000;
     const previous=latest.current;
-    const different=!!previous.localMedia.main&&(previous.localMedia.main.filename!==file.name||previous.localMedia.main.bytes!==file.size);
+    const different=previous.localMedia.main?previous.localMedia.main.filename!==file.name||previous.localMedia.main.bytes!==file.size:!!(previous.transcript||previous.capsules.length);
     if(different&&(previous.transcript||previous.capsules.length)&&!window.confirm(fr?
       "Changer de vidéo invalidera les anciens extraits et leurs repères. Créer une nouvelle analyse pour ce master?":
       "Changing the video invalidates previous clips and their timing. Start a new analysis for this master?"))return;
@@ -306,6 +307,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
   }
   const transcribe=async()=>{
     const audio=files.audio;
+    const master=files.main;
     if(!audio||!consent||busy)return;
     setTranscriptionFailure(null);
     setBusy("transcribe");setError("");
@@ -319,6 +321,20 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       }
       setTranscriptionProgress(fr?"Décodage audio local…":"Decoding local audio…");
       const decoded=await decodeLocalAudio(audio);
+      let masterDuration=decoded.duration;
+      if(master){
+        const url=URL.createObjectURL(master);
+        const video=document.createElement("video");
+        try{masterDuration=await new Promise<number>((resolve,reject)=>{
+          const timer=window.setTimeout(()=>reject(Error("VIDEO_METADATA_TIMEOUT")),15000);
+          video.onloadedmetadata=()=>{clearTimeout(timer);resolve(video.duration)};
+          video.onerror=()=>{clearTimeout(timer);reject(Error("VIDEO_METADATA_FAILED"))};
+          video.preload="metadata";video.src=url;
+        });}finally{video.removeAttribute("src");video.load();URL.revokeObjectURL(url);}
+        if(!Number.isFinite(masterDuration)||masterDuration<=0||Math.abs(masterDuration-decoded.duration)>2){
+          throw Error("AUDIO_VIDEO_DURATION_MISMATCH");
+        }
+      }
       const ranges=chunkRanges(decoded.duration);
       const textParts:string[]=[];
       const words:StudioProject["timedWords"]=[];
@@ -345,7 +361,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       }
       const transcript=textParts.join(" ").slice(0,26000);
       const timeline={...latest.current.timeline,
-        duration:Math.min(7200,Math.max(10,Math.ceil(decoded.duration)))};
+        duration:Math.min(7200,Math.max(10,masterDuration))};
       modify({transcript,timedWords:words,analysis:null,selectedMoment:0,
         stage:"transcription",timeline});
       record("transcription",fr?"Transcription horodatée générée en mémoire, sans Blob":"Timed transcript generated in memory without Blob","success");
@@ -364,7 +380,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       }
     }catch(e){
       const code=(e instanceof Error?e.message:"UNKNOWN").slice(0,90);
-      const detail=transcriptionFailureMessage(code,"transcribe",fr);
+      const detail=code==="AUDIO_VIDEO_DURATION_MISMATCH"?(fr?"La durée de l’audio ne correspond pas au MP4. Sélectionne le master complet et son audio correspondant.":"Audio duration differs from the MP4. Select the full matching master and audio."):transcriptionFailureMessage(code,"transcribe",fr);
       setTranscriptionFailure({code,stage:"transcribe",detail});
       record("error",fr?`Échec transcription directe : ${code}`:`Transcription failed: ${code}`,"failure");
       setMessage("");
