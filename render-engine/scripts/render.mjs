@@ -17,7 +17,7 @@ if(props.schemaVersion!==1||!formats.includes(props.format)||!styles.includes(pr
   abort("Manifest invalid: schemaVersion, format, style or timecodes. Max 10 minutes per capsule.");
 const optional=["foregroundAsset","audioAsset","backgroundAsset","portraitAsset","outroAsset"];
 for(const key of ["masterAsset",...optional]){
-  const value=props[key];
+  const value=props[key]??"";
   if(typeof value!=="string"||value&&(!/^[a-zA-Z0-9_.-]{1,120}$/.test(value)||basename(value)!==value))
     abort(key+" doit contenir uniquement un nom de fichier local simple (pas de chemin)");
 }
