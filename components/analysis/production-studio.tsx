@@ -255,11 +255,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     setBusy("transcribe");setError("");
     try{
       setTranscriptionProgress(fr?"Vérification de la session privée…":"Checking Studio session…");
-      const authResponse=await fetch("/api/analysis/transcribe",{method:"GET",cache:"no-store",credentials:"same-origin"});
+      const authResponse=await fetch("/api/studio/session",{method:"GET",cache:"no-store",credentials:"same-origin"});
       if(!authResponse.ok){
         const authBody=await authResponse.json().catch(()=>null) as {error?:string}|null;
-        throw Error(authBody?.error||(authResponse.status===401?"UNAUTHORIZED":
-          authResponse.status===503?"AUTH_STORE_UNAVAILABLE":"AUTH_CHECK_FAILED"));
+        throw Error(authResponse.status===401?"UNAUTHORIZED":
+          authResponse.status===503?"AUTH_STORE_UNAVAILABLE":authBody?.error||"AUTH_CHECK_FAILED");
       }
       setTranscriptionProgress(fr?"Décodage audio local…":"Decoding local audio…");
       const decoded=await decodeLocalAudio(audio);
