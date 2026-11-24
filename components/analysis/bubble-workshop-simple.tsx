@@ -148,7 +148,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
     setOutputs(old=>{const next={...old};delete next[current.id];return next});
     onChange({capsules:capsules.map(c=>c.id===current.id?{
       ...c,...patch,status:"draft" as const,
-      review:reviewAfterTimingChange(c,patch),
+      review:c.review==="approved"?"pending":reviewAfterTimingChange(c,patch),
       timingSource:("start" in patch||"end" in patch)?"manual" as const:c.timingSource,
       keying:{...defaultChroma,enabled:false},background:"original" as const,
     }:c)});
@@ -188,7 +188,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
     {pending:"Needs review",approved:"Approved",rejected:"Rejected"};
 
   function reviewClip(review:NonNullable<Capsule["review"]>){
-    if(!current||review==="approved"&&!timeValid)return;
+    if(!current||review==="approved"&&(!timeValid||!textValid))return;
     onChange({capsules:capsules.map(c=>c.id===current.id?{...c,review}:c)});
     setInfo("");
   }
@@ -308,21 +308,6 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         onClick={generate}>{fr?"+ AJOUTER LES PROPOSITIONS MANQUANTES":"+ ADD MISSING SUGGESTIONS"}</button>}
     </div>}
 
-    {current&&<div className="studio-clip-review">
-      <p role="status"><strong>{current.title}</strong><span>{reviewLabels[current.review??"pending"]}</span></p>
-      <div className="studio-clip-review-actions">
-        {current.review==="approved"?<button type="button" className="analysis-primary"
-          onClick={onOpenExport}>{fr?"ALLER AUX EXPORTS →":"OPEN EXPORTS →"}</button>:
-          <button type="button" className="analysis-primary" disabled={!timeValid}
-            onClick={()=>reviewClip("approved")}>{fr?"APPROUVER L’EXTRAIT":"APPROVE CLIP"}</button>}
-        {current.review!=="rejected"&&<button type="button" className="analysis-secondary"
-          onClick={()=>reviewClip("rejected")}>{fr?"REJETER L’EXTRAIT":"REJECT CLIP"}</button>}
-        {(current.review==="approved"||current.review==="rejected")&&<button type="button" className="analysis-secondary"
-          onClick={()=>reviewClip("pending")}>{fr?"REMETTRE À VALIDER":"RESET REVIEW"}</button>}
-      </div>
-      {!timeValid&&<small>{fr?"Vérifie les repères dans les options avancées avant d’approuver.":"Check timing in Advanced options before approving."}</small>}
-    </div>}
-
     <div className="studio-bubble-lab-grid">
       <div className="studio-bubble-video-side">
         <strong>{fr?"2. APERÇU SUR TA VIDÉO":"2. PREVIEW ON YOUR VIDEO"}</strong>
@@ -430,6 +415,90 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
           "Photo previews here. The local HD renderer also needs the file named reporter.png. Portraits are not uploaded to Vercel."}</p>}
       </div>}
             {selectedStyle!=="quote"&&selectedStyle!=="none"&&<p className="analysis-note">
+        {fr?"Les questions imaginées par l’IA restent identifiées comme des reconstitutions. Ne présente jamais une question inventée comme une vraie intervention journalistique.":"AI-generated questions are marked as reconstructions and must not be presented as real journalist statements."}
+      </p>}
+      <div className="studio-bubble-format-controls" role="group" aria-label={fr?"Format vidéo":"Video format"}>
+        {(["16:9","9:16","1:1"] as Format[]).map(v=><button type="button" key={v}
+          aria-pressed={format===v} className={format===v?"active":""}
+          onClick={()=>update({format:v})}>{v}</button>)}
+      </div>
+      <details className="studio-simple-details">
+        <summary>{fr?"OPTIONS AVANCÉES (SEULEMENT SI NÉCESSAIRE)":"ADVANCED OPTIONS (ONLY IF NEEDED)"}</summary>
+        <p className="analysis-note">{fr?"Les repères viennent normalement de la transcription. Ne change les secondes que si l’extrait n’a pas été reconnu.":"Timing normally comes from transcription. Only adjust seconds if the clip wasn't matched."}</p>
+        <div className="studio-bubble-timing">
+          <label>{fr?"Début (secondes)":"Start (seconds)"}<input type="number" min={0} max={7200} step={.1}
+            value={current.start} onChange={e=>update({start:Number(e.target.value)||0})}/></label>
+          <label>{fr?"Fin (secondes)":"End (seconds)"}<input type="number" min={0} max={7200} step={.1}
+            value={current.end} onChange={e=>update({end:Number(e.target.value)||0})}/></label>
+        </div>
+        {selectedStyle!=="quote"&&selectedStyle!=="none"&&<label>{fr?"Origine de la question":"Question source"}
+          <select value={current.questionAttribution||"reconstructed"}
+            onChange={e=>update({questionAttribution:e.target.value as "reconstructed"|"verified"})}>
+            <option value="reconstructed">{fr?"Question reconstituée (IA)":"Reconstructed question (AI)"}</option>
+            <option value="verified" disabled={current.journalistOutlet==="Personnage fictif"}>{fr?"Question enregistrée et vérifiée":"Recorded, verified question"}</option>
+          </select>
+        </label>}
+      </details>
+      {!timeValid&&<p className="studio-bubble-warning">{fr?
+        "Choisis le début et la fin de ta capsule ci-dessus pour pouvoir l’approuver.":
+        "Choose the start and end above to approve your clip."}</p>}
+      {!textValid&&<p className="studio-bubble-warning">{fr?"Écris un texte court : 180 caractères maximum, ou 3 questions de 100 caractères. La vidéo garde son audio complet.":"Use a short text: 180 characters maximum, or 3 questions of 100 characters. The full video audio remains intact."}</p>}
+      {selectedStyle!=="none"&&<div className="studio-bubble-png-action">
+        <button type="button" className="analysis-primary studio-bubble-lab-big"
+          disabled={!textValid||exportingPng} onClick={()=>{void exportTransparentPng()}}>
+          {exportingPng?(fr?"CRÉATION DU PNG…":"CREATING PNG…"):
+            fr?"↓ TÉLÉCHARGER LA BULLE EN PNG TRANSPARENT":"↓ DOWNLOAD TRANSPARENT BUBBLE PNG"}
+        </button>
+        <p className="analysis-note">{fr?
+          "Bulle seule en 1600 × 900, fond transparent, sans vidéo. Prête à ajouter dans Premiere Pro. Aucun repère de temps requis.":
+          "Standalone 1600 × 900 bubble, transparent background and no video. Ready for Premiere Pro. No timestamps required."}</p>
+      </div>}
+      <details className="studio-simple-details"><summary>{fr?"RENDU VIDÉO HD AUTOMATISÉ (AVANCÉ)":"AUTOMATED HD VIDEO RENDER (ADVANCED)"}</summary>
+      <button type="button" className="analysis-primary studio-bubble-lab-big"
+        disabled={current.review!=="approved"||!timeValid||!textValid} onClick={()=>exportPlan(current)}>
+        {fr?"TÉLÉCHARGER LES INSTRUCTIONS HD":"DOWNLOAD HD INSTRUCTIONS"}
+      </button>
+      <p className="analysis-note">{fr?
+        "Ce bouton télécharge les instructions du moteur HD (.JSON), pas encore le MP4 final. L’assemblage avec la vidéo se fait sur ton Mac, sans retoucher Premiere.":
+        "This button downloads HD rendering instructions (.JSON), not the final MP4. Your Mac assembles the video without editing in Premiere."}</p>
+      </details>
+    </div>}
+    {!capsules.length&&<button type="button" className="analysis-secondary" onClick={createManual}>
+      {fr?"+ CRÉER UNE CAPSULE MANUELLE (AVANCÉ)":"+ CREATE A MANUAL CLIP (ADVANCED)"}
+    </button>}
+    {!!info&&<p role="status" className="studio-bubble-notice">{info}</p>}
+    {!!capsules.length&&<p className="analysis-note">{fr?
+      String(validList.length)+" capsule(s) avec des repères valides. Aucun détourage, arrière-plan ou choix de caméra supplémentaire n'est demandé.":
+      String(validList.length)+" clips with valid timing. No keying, background or camera controls are required."}</p>}
+  </section>
+  <section hidden={view!=="export"} className="analysis-panel studio-step">
+    <div className="analysis-panel-head"><h2>{fr?"04 / EXPORTER":"04 / EXPORT"}</h2><span>{fr?"TOUTES LES CAPSULES":"ALL CLIPS"}</span></div>
+    <p className="analysis-note">{fr?"MP4 local en temps réel : garde cet onglet ouvert. Pour une qualité HD optimale, utilise Remotion et les instructions JSON.":"Real-time local MP4: keep this tab open. For optimal HD quality, use Remotion and JSON instructions."}</p>
+    {capsules.length?<ul className="studio-approved-clips">
+      {capsules.map(c=>{
+        const ready=c.review==="approved"&&hasValidTiming(c,project.timeline.duration)&&hasBubbleText(c);
+        return <li key={c.id}>
+          <div><strong>{c.title}</strong><span>{c.format} · {Math.max(0,Math.round(c.end-c.start))} s · {reviewLabels[c.review??"pending"]}</span></div>
+          <div style={{display:"grid",gap:8}}>
+          {ready?<><button className="analysis-primary" type="button" disabled={!!rendering||!master} onClick={()=>void exportVideo(c)}>{rendering?.id===c.id?`${rendering.progress}%`:fr?"EXPORTER CETTE CAPSULE MP4":"EXPORT THIS CLIP MP4"}</button>
+          <button className="analysis-secondary" type="button" onClick={()=>exportPlan(c)}>{fr?"INSTRUCTIONS RENDU HD (JSON)":"HD RENDER INSTRUCTIONS (JSON)"}</button>
+          {!master&&<small>{fr?"Réimporte le master local pour le MP4.":"Reimport the local master for MP4."}</small>}
+          </>:<button className="analysis-secondary" type="button" onClick={()=>{onChange({selectedCapsuleId:c.id});onReviewClips()}}>{fr?"MODIFIER / APPROUVER":"EDIT / APPROVE"}</button>}
+          {outputs[c.id]&&<><a className="analysis-primary" href={outputs[c.id].url} download={outputs[c.id].filename}>{fr?"↓ TÉLÉCHARGER MP4":"↓ DOWNLOAD MP4"}</a>
+            <label>{fr?"Plateforme":"Platform"}<select value={publication[c.id]?.platform||"YouTube"} onChange={e=>setPublication(old=>({...old,[c.id]:{date:old[c.id]?.date||"",platform:e.target.value}}))}>{["YouTube","Instagram","Facebook","TikTok","LinkedIn"].map(v=><option key={v}>{v}</option>)}</select></label>
+            <label>{fr?"Date de publication":"Publication date"}<input type="datetime-local" value={publication[c.id]?.date||""} onChange={e=>setPublication(old=>({...old,[c.id]:{date:e.target.value,platform:old[c.id]?.platform||"YouTube"}}))}/></label>
+            <button className="analysis-secondary" type="button" disabled={!publication[c.id]?.date} onClick={()=>exportCalendar(c)}>{fr?"PLANIFIER DANS MON CALENDRIER (.ICS)":"ADD TO MY CALENDAR (.ICS)"}</button>
+            <small>{fr?"Rappel de publication manuelle, pas de publication automatique.":"Manual publishing reminder, not automatic posting."}</small>
+          </>}
+          </div>
+        </li>;
+      })}
+    </ul>:<p className="analysis-note">{fr?"Approuve un extrait dans Créer les bulles pour le préparer au rendu HD.":
+      "Approve a clip in Create Bubbles to prepare it for HD rendering."}</p>}
+    <button type="button" className="analysis-secondary" onClick={onReviewClips}>{fr?"← CRÉER LES BULLES":"← CREATE BUBBLES"}</button>
+    {view==="export"&&!!info&&<p role="status" className="studio-bubble-notice">{info}</p>}
+  </section></>;
+}         {selectedStyle!=="quote"&&selectedStyle!=="none"&&<p className="analysis-note">
         {fr?"Les questions imaginées par l’IA restent identifiées comme des reconstitutions. Ne présente jamais une question inventée comme une vraie intervention journalistique.":"AI-generated questions are marked as reconstructions and must not be presented as real journalist statements."}
       </p>}
       <div className="studio-bubble-format-controls" role="group" aria-label={fr?"Format vidéo":"Video format"}>
