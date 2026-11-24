@@ -387,3 +387,12 @@
 .studio-workshop-wall-summary{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px;border:1px solid #617b3b;background:#141c10;border-radius:10px;margin:15px 0}
 .studio-workshop-wall-summary>strong{color:#ccff00;font-size:13px}
 .studio-workshop-wall-summary>button{margin-left:auto}
+
+
+/* Recover a timed-out private Studio session without losing locally selected audio. */
+.studio-session-recovery{display:grid;gap:12px;margin:20px 0;padding:18px;background:#181d11;border:1px solid #92bb49;border-radius:12px}
+.studio-session-recovery>strong{font-size:13px;letter-spacing:.05em;font-weight:950;color:#ccff00}
+.studio-session-recovery>p{margin:0;color:#e4eadb;font-size:14px;line-height:1.5}
+.studio-session-reconnect{display:flex;align-items:center;justify-content:center;text-align:center;min-height:60px;background:#ccff00;color:#121510!important;text-decoration:none!important;border:0;border-radius:10px;font-weight:950;font-size:clamp(14px,1.6vw,21px);padding:15px 20px}
+.studio-session-reconnect:hover,.studio-session-reconnect:focus-visible{background:#e2ff87;outline:2px solid #f4f4ef;outline-offset:2px}
+@media(max-width:600px){.studio-session-recovery{padding:12px}.studio-session-reconnect{min-height:66px}}
