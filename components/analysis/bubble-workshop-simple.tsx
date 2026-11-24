@@ -280,6 +280,12 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
             setJournalistPhoto(file);
           }}/>
         </label>
+        {journalistPhoto&&<button type="button" className="analysis-secondary" onClick={()=>{
+          const url=URL.createObjectURL(journalistPhoto);
+          const link=document.createElement("a");link.href=url;link.download="reporter.png";
+          document.body.appendChild(link);link.click();link.remove();
+          window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+        }}>{fr?"↓ TÉLÉCHARGER LA PHOTO POUR LE RENDU HD":"↓ DOWNLOAD PHOTO FOR HD RENDER"}</button>}
         {journalistPhoto&&<p className="analysis-note">{fr?
           "La photo apparaît ici. Pour l'export HD local, il faudra aussi fournir son fichier sous le nom reporter.png. Les portraits ne sont pas envoyés sur Vercel.":
           "Photo previews here. The local HD renderer also needs the file named reporter.png. Portraits are not uploaded to Vercel."}</p>}
