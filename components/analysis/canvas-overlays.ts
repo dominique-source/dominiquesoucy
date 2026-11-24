@@ -1,7 +1,7 @@
 import type { StudioProject } from "@/lib/analysis/project";
 import { keyPixels } from "@/lib/analysis/chroma-key";
 type Capsule=StudioProject["capsules"][number];
-export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string};
+export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap};
 const backgroundCache=new Map<string,HTMLImageElement>();
 export async function preloadStudioBackground(url:string){
   if(!url.startsWith("/assets/studio/backdrops/"))throw Error("INVALID_STUDIO_BACKGROUND");
@@ -119,6 +119,13 @@ export function drawStudioFrame(
  ctx.fillStyle="#ccff00";
  ctx.fillText("DOM SOUCY MEDIA",pad,pad+25);
  if(visual.style==="none"){ctx.restore();return;}
+ if(visual.graphic){
+   const vertical=height>width,square=height===width;
+   const w=width*(vertical?.96:square?.72:.5),h=w*visual.graphic.height/visual.graphic.width;
+   const x=vertical?(width-w)/2:width-w-width*.015;
+   const y=vertical||square?height*.84-h:height*.45-h/2;
+   ctx.drawImage(visual.graphic,x,y,w,h);ctx.restore();return;
+ }
  const main=(visual.caption||"").trim().slice(0,230);
  if(main){
   const y=visual.textPosition==="top"?Math.round(height*.22):visual.textPosition==="center"?Math.round(height*.46):Math.round(height*.72);

@@ -81,6 +81,7 @@ export async function renderLocalMp4(opts:RenderOptions):Promise<Blob>{
       if(!Number.isFinite(el.duration)||el.readyState<1)throw new Error("MEDIA_NOT_READY");
       el.currentTime=Math.min(Math.max(0,el.duration-.1),sourceTime(opts.start,opts.offsets[key]));
     }
+    await Promise.all(available.map(async([,el])=>{if(!el||!el.seeking)return;await new Promise<void>((resolve,reject)=>{const timeout=window.setTimeout(()=>reject(Error("SEEK_TIMEOUT")),10000);el.addEventListener("seeked",()=>{clearTimeout(timeout);resolve()},{once:true});})}));
     await bus.ctx.resume();
     recorder.start(1000);
     await Promise.all(available.map(async([,el])=>{if(el)await el.play()}));

@@ -5,6 +5,7 @@ import { reviewAfterTimingChange, type StudioProject } from "@/lib/analysis/proj
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { buildHdRenderManifest, hdManifestFilename } from "@/lib/analysis/hd-render-manifest";
+import { renderLocalMp4 } from "./local-mp4";
 import { createTransparentBubblePng,downloadBubblePng } from "@/lib/analysis/transparent-bubble-png";
 
 type Capsule = StudioProject["capsules"][number];
@@ -79,11 +80,17 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   const current=capsules.find(c=>c.id===project.selectedCapsuleId)||capsules[0];
   const [previewUrl,setPreviewUrl]=useState("");
   const [info,setInfo]=useState("");
-  const [journalistPhoto,setJournalistPhoto]=useState<File|null>(null);
+  const [portraits,setPortraits]=useState<Record<string,File>>({});
+  const journalistPhoto=current?portraits[current.id]||null:null;
+  const [rendering,setRendering]=useState<{id:string;progress:number}|null>(null);
+  const [outputs,setOutputs]=useState<Record<string,{url:string;filename:string}>>({});
+  const outputUrls=useRef<string[]>([]);
+  const [publication,setPublication]=useState<Record<string,{date:string;platform:string}>>({});
+  useEffect(()=>()=>{outputUrls.current.forEach(url=>URL.revokeObjectURL(url))},[]);
   const [journalistPhotoUrl,setJournalistPhotoUrl]=useState("");
   const editorRef=useRef<HTMLTextAreaElement|null>(null);
   const videoRef=useRef<HTMLVideoElement|null>(null);
-  useEffect(()=>{setJournalistPhoto(null)},[current?.id]);
+
   useEffect(()=>{
     if(!journalistPhoto){setJournalistPhotoUrl("");return}
     const url=URL.createObjectURL(journalistPhoto);
@@ -186,7 +193,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   function exportPlan(capsule:Capsule){
     if(capsule.review!=="approved"||!hasValidTiming(capsule,project.timeline.duration)||!hasBubbleText(capsule))return;
     const style=workshopStyle(capsule);
-    const hasPortrait=capsule.id===current?.id&&!!journalistPhoto&&style==="conversation";
+    const hasPortrait=!!portraits[capsule.id]&&style==="conversation";
     try{
       const manifest=buildHdRenderManifest(project,{
         ...capsule,
@@ -205,6 +212,40 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
     }
   }
 
+  async function exportVideo(capsule:Capsule){
+    if(rendering||!master||!hasValidTiming(capsule,project.timeline.duration)||!hasBubbleText(capsule))return;
+    setInfo("");setRendering({id:capsule.id,progress:0});
+    const url=URL.createObjectURL(master);
+    const video=document.createElement("video");video.playsInline=true;video.preload="auto";video.src=url;
+    try{
+      await new Promise<void>((resolve,reject)=>{
+        const timeout=window.setTimeout(()=>reject(Error("MEDIA_TIMEOUT")),15000);
+        video.onloadeddata=()=>{clearTimeout(timeout);resolve()};
+        video.onerror=()=>{clearTimeout(timeout);reject(Error("MEDIA_NOT_READY"))};
+        video.load();
+      });
+      const style=workshopStyle(capsule);
+      let graphic:ImageBitmap|undefined;
+      try{
+        if(style!=="none")graphic=await createImageBitmap(await createTransparentBubblePng({style,question:capsule.bubble,caption:capsule.caption,journalistName:capsule.journalistName,journalistOutlet:capsule.journalistOutlet,questionAttribution:capsule.questionAttribution,portraitFile:portraits[capsule.id]}));
+        const blob=await renderLocalMp4({nodes:{main:video},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},audioSource:"main",cuts:[],fallback:"main",duration:video.duration,start:capsule.start,end:capsule.end,format:capsule.format,visual:{style,background:"original",caption:"",bubble:"",textPosition:"bottom",keying:{...defaultChroma,enabled:false},graphic},onProgress:progress=>setRendering({id:capsule.id,progress})});
+        const filename=hdManifestFilename(capsule).replace(/\.json$/,".mp4");
+        const result=URL.createObjectURL(blob);outputUrls.current.push(result);
+        setOutputs(old=>({...old,[capsule.id]:{url:result,filename}}));
+        setInfo(fr?"MP4 prêt : télécharge-le puis prépare sa publication.":"MP4 ready: download it and prepare publication.");
+        onEvent("export",filename,"success");
+      }finally{graphic?.close()}
+    }catch(error){setInfo((fr?"Rendu navigateur impossible. Essaie le moteur HD local. ":"Browser render unavailable. Try the local HD engine. ")+(error instanceof Error?error.message:""));}
+    finally{video.pause();video.removeAttribute("src");video.load();URL.revokeObjectURL(url);setRendering(null)}
+  }
+  function exportCalendar(c:Capsule){
+    const plan=publication[c.id];if(!plan?.date||!outputs[c.id])return;
+    const date=new Date(plan.date);if(!Number.isFinite(date.getTime()))return;
+    const stamp=(d:Date)=>d.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+    const clean=(s:string)=>s.replace(/[\r\n]/g," ").replace(/\\/g,"\\\\").replace(/[,;]/g,m=>"\\"+m);
+    const body=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//DOM SOUCY MEDIA//Publication//FR","BEGIN:VEVENT","UID:"+crypto.randomUUID()+"@dominiquesoucy.com","DTSTAMP:"+stamp(new Date()),"DTSTART:"+stamp(date),"SUMMARY:"+clean("Publier sur "+plan.platform+" : "+c.title),"DESCRIPTION:"+clean("Publication manuelle. Fichier : "+outputs[c.id].filename),"END:VEVENT","END:VCALENDAR"].join("\r\n");
+    const url=URL.createObjectURL(new Blob([body],{type:"text/calendar"}));const a=document.createElement("a");a.href=url;a.download="publication-"+c.id.slice(0,8)+".ics";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
   const validList=capsules.filter(c=>c.end>c.start&&c.end<=project.timeline.duration);
   return <><section hidden={view!=="editing"} id="studio-capsule-workshop" className="analysis-panel studio-bubble-lab">
     <div className="studio-bubble-lab-heading">
@@ -343,7 +384,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
               setInfo(fr?"Photo PNG de 8 Mo maximum.":"PNG photo up to 8 MB.");
               return;
             }
-            setJournalistPhoto(file);
+            setPortraits(old=>({...old,[current.id]:file}));
           }}/>
         </label>
         {journalistPhoto&&<button type="button" className="analysis-secondary" onClick={()=>{
@@ -415,15 +456,24 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   </section>
   <section hidden={view!=="export"} className="analysis-panel studio-step">
     <div className="analysis-panel-head"><h2>{fr?"04 / EXPORTER":"04 / EXPORT"}</h2><span>{fr?"TOUTES LES CAPSULES":"ALL CLIPS"}</span></div>
+    <p className="analysis-note">{fr?"MP4 local en temps réel : garde cet onglet ouvert. Pour une qualité HD optimale, utilise Remotion et les instructions JSON.":"Real-time local MP4: keep this tab open. For optimal HD quality, use Remotion and JSON instructions."}</p>
     {capsules.length?<ul className="studio-approved-clips">
       {capsules.map(c=>{
         const ready=c.review==="approved"&&hasValidTiming(c,project.timeline.duration)&&hasBubbleText(c);
         return <li key={c.id}>
           <div><strong>{c.title}</strong><span>{c.format} · {Math.max(0,Math.round(c.end-c.start))} s · {reviewLabels[c.review??"pending"]}</span></div>
-          <button className="analysis-primary" type="button" onClick={()=>{
-            if(ready){exportPlan(c);return}
-            onChange({selectedCapsuleId:c.id});onReviewClips();
-          }}>{ready?(fr?"TÉLÉCHARGER LE JSON HD":"DOWNLOAD HD JSON"):(fr?"MODIFIER / APPROUVER":"EDIT / APPROVE")}</button>
+          <div style={{display:"grid",gap:8}}>
+          {ready?<><button className="analysis-primary" type="button" disabled={!!rendering||!master} onClick={()=>void exportVideo(c)}>{rendering?.id===c.id?`${rendering.progress}%`:fr?"EXPORTER CETTE CAPSULE MP4":"EXPORT THIS CLIP MP4"}</button>
+          <button className="analysis-secondary" type="button" onClick={()=>exportPlan(c)}>{fr?"INSTRUCTIONS RENDU HD (JSON)":"HD RENDER INSTRUCTIONS (JSON)"}</button>
+          {!master&&<small>{fr?"Réimporte le master local pour le MP4.":"Reimport the local master for MP4."}</small>}
+          </>:<button className="analysis-secondary" type="button" onClick={()=>{onChange({selectedCapsuleId:c.id});onReviewClips()}}>{fr?"MODIFIER / APPROUVER":"EDIT / APPROVE"}</button>}
+          {outputs[c.id]&&<><a className="analysis-primary" href={outputs[c.id].url} download={outputs[c.id].filename}>{fr?"↓ TÉLÉCHARGER MP4":"↓ DOWNLOAD MP4"}</a>
+            <label>{fr?"Plateforme":"Platform"}<select value={publication[c.id]?.platform||"YouTube"} onChange={e=>setPublication(old=>({...old,[c.id]:{date:old[c.id]?.date||"",platform:e.target.value}}))}>{["YouTube","Instagram","Facebook","TikTok","LinkedIn"].map(v=><option key={v}>{v}</option>)}</select></label>
+            <label>{fr?"Date de publication":"Publication date"}<input type="datetime-local" value={publication[c.id]?.date||""} onChange={e=>setPublication(old=>({...old,[c.id]:{date:e.target.value,platform:old[c.id]?.platform||"YouTube"}}))}/></label>
+            <button className="analysis-secondary" type="button" disabled={!publication[c.id]?.date} onClick={()=>exportCalendar(c)}>{fr?"PLANIFIER DANS MON CALENDRIER (.ICS)":"ADD TO MY CALENDAR (.ICS)"}</button>
+            <small>{fr?"Rappel de publication manuelle, pas de publication automatique.":"Manual publishing reminder, not automatic posting."}</small>
+          </>}
+          </div>
         </li>;
       })}
     </ul>:<p className="analysis-note">{fr?"Approuve un extrait dans Créer les bulles pour le préparer au rendu HD.":
