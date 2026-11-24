@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { locale, dict, sections, type Section } from "@/lib/i18n";
 import { getEntries, matchesTopic, observationTopics } from "@/lib/content";
+import { AboutImmersive } from "@/components/about-immersive";
 import { AboutNarrative } from "@/components/premium-editorial";
 import {
   VideoEditorial,
@@ -13,8 +14,8 @@ type Props = {
   searchParams: Promise<{ category?: string }>;
 };
 function sectionName(value: string) {
-  if (value !== "a-propos" && !sections.includes(value as Section)) notFound();
-  return value as Section | "a-propos";
+  if (value !== "a-propos" && value !== "mon-univers" && !sections.includes(value as Section)) notFound();
+  return value as Section | "a-propos" | "mon-univers";
 }
 export async function generateMetadata({ params }: Props) {
   const p = await params;
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: Props) {
     lang,
     `/${section}`,
     d.nav[section],
-    section === "a-propos" ? d.bio : d.descriptions[section],
+    section === "a-propos" || section === "mon-univers" ? d.bio : d.descriptions[section],
   );
 }
 export default async function SectionPage({ params, searchParams }: Props) {
@@ -33,6 +34,7 @@ export default async function SectionPage({ params, searchParams }: Props) {
   const lang = locale(p.lang);
   const section = sectionName(p.section);
   if (section === "a-propos") return <AboutNarrative lang={lang} />;
+  if (section === "mon-univers") return <AboutImmersive lang={lang} />;
   const { category } = await searchParams;
   const valid =
     section === "observations"

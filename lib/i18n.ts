@@ -15,6 +15,7 @@ export type Section = (typeof sections)[number];
 export const dictionaries = {
   fr: {
     nav: {
+      "mon-univers": "Mon univers",
       reflexions: "Réflexions",
       observations: "Observations",
       "sport-culture": "Sport & culture",
@@ -89,6 +90,7 @@ export const dictionaries = {
   },
   en: {
     nav: {
+      "mon-univers": "My universe",
       reflexions: "Reflections",
       observations: "Observations",
       "sport-culture": "Sport & culture",
