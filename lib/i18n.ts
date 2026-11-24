@@ -15,11 +15,11 @@ export type Section = (typeof sections)[number];
 export const dictionaries = {
   fr: {
     nav: {
+      "a-propos": "À propos",
       reflexions: "Réflexions",
       observations: "Observations",
       "sport-culture": "Sport & culture",
       societe: "Société",
-      "a-propos": "À propos",
     },
     eyebrow: "Sport / Société / Humain",
     positioning: "Le sport comme miroir de la société.",
@@ -89,11 +89,11 @@ export const dictionaries = {
   },
   en: {
     nav: {
+      "a-propos": "About",
       reflexions: "Reflections",
       observations: "Observations",
       "sport-culture": "Sport & culture",
       societe: "Society",
-      "a-propos": "About",
     },
     eyebrow: "Sport / Society / Human",
     positioning: "Sport as a mirror of society.",
