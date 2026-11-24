@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { locale, dict, sections, type Section } from "@/lib/i18n";
 import { getEntries, matchesTopic, observationTopics } from "@/lib/content";
-import { AboutNarrative } from "@/components/premium-editorial";
+import { AboutImmersive } from "@/components/about-immersive";
 import {
   VideoEditorial,
   FieldNotes,
@@ -32,7 +32,7 @@ export default async function SectionPage({ params, searchParams }: Props) {
   const p = await params;
   const lang = locale(p.lang);
   const section = sectionName(p.section);
-  if (section === "a-propos") return <AboutNarrative lang={lang} />;
+  if (section === "a-propos") return <AboutImmersive lang={lang} />;
   const { category } = await searchParams;
   const valid =
     section === "observations"
