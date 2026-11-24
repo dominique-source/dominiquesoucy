@@ -16,7 +16,9 @@ const json=(value:unknown,status=200)=>NextResponse.json(value,{status,headers})
  */
 export async function POST(request:Request){
   if(!sameOrigin(request))return json({error:"ORIGIN_DENIED"},403);
-  const user=await session().catch(()=>null);
+  let user:Awaited<ReturnType<typeof session>>;
+  try{user=await session()}
+  catch{return json({error:"AUTH_STORE_UNAVAILABLE"},503)}
   if(!user)return json({error:"UNAUTHORIZED"},401);
   if(!process.env.OPENAI_API_KEY)return json({error:"AI_NOT_CONFIGURED"},503);
   const length=Number(request.headers.get("content-length")||0);
