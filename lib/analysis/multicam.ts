@@ -7,6 +7,10 @@ export const labels: Record<SourceKey, string> = {
   audio: "Audio original", enhanced: "Audio optimisé / voix", main: "Canon / principale",
   vertical: "iPhone / verticale", secondary: "Samsung / secondaire",
 };
+export const englishLabels: Record<SourceKey, string> = {
+  audio: "Original audio", enhanced: "Enhanced audio / voice", main: "Canon / main camera",
+  vertical: "iPhone / vertical", secondary: "Samsung / secondary",
+};
 export type Cut = { id: string; at: number; camera: CameraKey };
 export function sourceTime(projectTime: number, offset: number) {
   return Math.max(0, projectTime + offset);

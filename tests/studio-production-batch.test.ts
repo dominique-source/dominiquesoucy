@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {freshProject} from "../lib/analysis/project";
+import {capsuleSchema,freshProject,reviewAfterTimingChange} from "../lib/analysis/project";
 import {defaultChroma} from "../lib/analysis/chroma-key";
 import {createProductionPlan,renderFormat} from "../lib/analysis/production-plan";
 import {outputPath,validOutputPath,outputRecordSchema} from "../lib/analysis/outputs";
@@ -51,4 +51,25 @@ test("strict output path is project-scoped, unique and format constrained",()=>{
     id,projectId,capsuleId:null,kind:"episode",format:"horizontal",
     title:"Full episode",pathname,bytes:10000,createdAt:Date.now(),
   }).success,true);
+});
+
+test("the browser batch honors editorial review while preserving legacy manual exports",()=>{
+  const base=capsuleSchema.parse({
+    id:crypto.randomUUID(),title:"Clip",start:2,end:6,format:"16:9",style:"quote",
+    caption:"Excerpt",bubble:"",background:"original",
+  });
+  const capsules=[
+    base,
+    {...base,id:crypto.randomUUID(),timingSource:"automatic" as const},
+    {...base,id:crypto.randomUUID(),review:"pending" as const},
+    {...base,id:crypto.randomUUID(),review:"rejected" as const},
+    {...base,id:crypto.randomUUID(),review:"approved" as const},
+  ];
+  assert.deepEqual(createProductionPlan({
+    capsules,selectedIds:capsules.map(c=>c.id),duration:30,includeEpisode:false,formats:["horizontal"],
+  }).map(j=>j.capsuleId),[capsules[0].id,capsules[4].id]);
+  assert.equal(capsuleSchema.parse(capsules[4]).review,"approved");
+  assert.equal(reviewAfterTimingChange(capsules[4],{caption:"Edited text"}),"approved");
+  assert.equal(reviewAfterTimingChange(capsules[4],{start:3}),"pending");
+  assert.equal(reviewAfterTimingChange(capsules[3],{end:5}),"rejected");
 });

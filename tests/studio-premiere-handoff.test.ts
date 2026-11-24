@@ -33,9 +33,10 @@ test("Premiere cut list clearly marks missing timestamps and escapes spreadsheet
   const brief=buildPremiereEditBrief(p);
   assert.match(brief,/PAS un fichier de séquence Premiere importable/);
 });
-test("Primary Studio uses four large buttons and does not launch browser rendering on entry",()=>{
+test("Primary Studio offers five stages and does not launch browser rendering on entry",()=>{
   const studio=readFileSync("components/analysis/production-studio.tsx","utf8");
   assert.ok(studio.includes("studio-simple-steps"));
+  assert.ok(studio.includes('id:"publish"'));
   assert.ok(studio.includes('showTechnicalMontage&&activeSection==="advanced"'));
   assert.ok(studio.includes("studio-simple-production"));
   assert.ok(studio.includes("renderer"));

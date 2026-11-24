@@ -59,6 +59,7 @@ export const capsuleSchema=z.object({
   keying:z.object({enabled:z.boolean(),color:z.string().regex(/^#[0-9a-fA-F]{6}$/),tolerance:z.number().finite().min(0.03).max(0.45),softness:z.number().finite().min(0.01).max(0.35),spill:z.number().finite().min(0).max(1)}).strict().default({enabled:false,color:"#30b7b0",tolerance:0.16,softness:0.12,spill:0.45}),
   textPosition:z.enum(["top","center","bottom"]).default("bottom"),
   status:z.enum(["draft","rendered","failed"]).default("draft"),
+  review:z.enum(["pending","approved","rejected"]).optional(),
   timingSource:z.enum(["automatic","manual","unmatched"]).optional(),
   cameraCuts:timelineSchema.shape.cuts.optional(),
   cameraEditSource:z.enum(["automatic","manual"]).optional(),
@@ -118,11 +119,25 @@ export function validProjectMedia(project:StudioProject) {
   }
   return true;
 }
-export function freshProject():StudioProject {
-  return {id:crypto.randomUUID(),name:"DOM SOUCY MEDIA — ÉPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",studioBackdrop:{mode:"random",selectedId:"basketball"},events:[],capsules:[],selectedCapsuleId:"",reconstructedQuestions:[],timedWords:[],transcript:"",
+export function freshProject(lang:"fr"|"en"="fr"):StudioProject {
+  return {id:crypto.randomUUID(),name:lang==="fr"?"DOM SOUCY MEDIA — ÉPISODE 001":"DOM SOUCY MEDIA — EPISODE 001",season:1,episode:1,recordingDate:"",stage:"recording",studioBackdrop:{mode:"random",selectedId:"basketball"},events:[],capsules:[],selectedCapsuleId:"",reconstructedQuestions:[],timedWords:[],transcript:"",
     analysis:null,selectedMoment:0,format:"9:16",media:{},localMedia:{},
     timeline:{duration:300,clipStart:0,clipEnd:60,audioSource:"audio",finalAudioSource:"audio",alignmentApproved:false,visualClaps:{main:null,vertical:null,secondary:null},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},
       claps:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},cuts:[]}};
+}
+
+type Capsule=StudioProject["capsules"][number];
+
+export function canProduceLegacyCapsule(capsule:Capsule) {
+  return capsule.review==="approved" ||
+    (capsule.review===undefined && capsule.timingSource!=="automatic");
+}
+
+export function reviewAfterTimingChange(capsule:Capsule,patch:Partial<Capsule>) {
+  const changed=(patch.start!==undefined&&patch.start!==capsule.start) ||
+    (patch.end!==undefined&&patch.end!==capsule.end);
+  return changed && (capsule.review==="approved" ||
+    (capsule.review===undefined&&capsule.timingSource==="automatic")) ? "pending" : capsule.review;
 }
 
 export function episodeCode(season:number,episode:number){

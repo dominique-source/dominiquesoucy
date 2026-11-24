@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { StudioProject } from "@/lib/analysis/project";
+import { reviewAfterTimingChange, type StudioProject } from "@/lib/analysis/project";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { buildHdRenderManifest, hdManifestFilename } from "@/lib/analysis/hd-render-manifest";
@@ -14,6 +14,9 @@ type Props = {
   lang: "fr" | "en";
   project: StudioProject;
   master?: File;
+  view: "editing" | "export";
+  onReviewClips: () => void;
+  onOpenExport: () => void;
   onChange: (patch: Partial<StudioProject>) => void;
   onEvent: (type: StudioProject["events"][number]["type"], message: string,
     status?: StudioProject["events"][number]["status"]) => void;
@@ -25,29 +28,30 @@ const options: {style:Style;number:string;fr:string;en:string}[] = [
   {style:"rafale",number:"03",fr:"RAFALE DE QUESTIONS",en:"QUESTION BURST"},
 ];
 
-function BubbleVisual({style,question,caption,mini=false,attribution="reconstructed",journalistName="",journalistOutlet="",portraitUrl=""}:{style:Style;question:string;caption:string;mini?:boolean;attribution?:"verified"|"reconstructed";journalistName?:string;journalistOutlet?:string;portraitUrl?:string}){
+function BubbleVisual({fr,style,question,caption,mini=false,attribution="reconstructed",journalistName="",journalistOutlet="",portraitUrl=""}:{fr:boolean;style:Style;question:string;caption:string;mini?:boolean;attribution?:"verified"|"reconstructed";journalistName?:string;journalistOutlet?:string;portraitUrl?:string}){
   const lines = question.split("\n").map(v=>v.trim()).filter(Boolean).slice(0,3);
-  const previewQuestion = question.trim() || "Votre question apparaîtra ici";
-  const previewQuote = caption.trim() || "Votre citation apparaîtra ici";
+  const previewQuestion = question.trim() || (fr?"Votre question apparaîtra ici":"Your question appears here");
+  const previewQuote = caption.trim() || (fr?"Votre citation apparaîtra ici":"Your quote appears here");
   return <div className={"ds-bubble-graphic ds-bubble-"+style+(mini?" mini":"")}>
     {style==="conversation"?<div className="ds-bubble-glass ds-bubble-journalist-glass">
       <div className="ds-bubble-journalist-layout">
         <div className="ds-bubble-journalist-body">
-          <div className="ds-bubble-ribbon"><span aria-hidden="true">◉</span> {attribution==="verified"?"QUESTION — JOURNALISTE":"QUESTION — PROPOSÉE"}</div>
+          <div className="ds-bubble-ribbon"><span aria-hidden="true">◉</span> {attribution==="verified"?(fr?"QUESTION — JOURNALISTE":"JOURNALIST QUESTION"):(fr?"QUESTION — PROPOSÉE":"SUGGESTED QUESTION")}</div>
           {(journalistName||journalistOutlet)&&<div className="ds-bubble-attribution">
-            {journalistName||"Journaliste"}{journalistOutlet&&<span> / {journalistOutlet}</span>}
+            {journalistName||(fr?"Journaliste":"Journalist")}{journalistOutlet&&<span> / {journalistOutlet}</span>}
           </div>}
           <strong>« {previewQuestion.slice(0,175)} »</strong>
-          {attribution==="reconstructed"&&<small>RECONSTITUTION ÉDITORIALE</small>}
+          {attribution==="reconstructed"&&<small>{fr?"RECONSTITUTION ÉDITORIALE":"EDITORIAL RECONSTRUCTION"}</small>}
         </div>
         <div className="ds-bubble-journalist-portrait" aria-hidden="true">
           {portraitUrl?<img src={portraitUrl} alt=""/>:<span className="ds-bubble-portrait-icon">◉</span>}
         </div>
       </div>    </div>:style==="quote"?<div className="ds-bubble-glass">
-      <div className="ds-bubble-ribbon">{mini?"CITATION CHOC":"LA RÉPONSE"}</div>
+      <div className="ds-bubble-ribbon">{mini?(fr?"CITATION CHOC":"POWERFUL QUOTE"):(fr?"LA RÉPONSE":"THE ANSWER")}</div>
       <strong className="ds-bubble-quote-text">« {previewQuote.slice(0,200)} »</strong>
     </div>:<div className="ds-bubble-rafale">
-      {(lines.length?lines:["Votre première question","Votre deuxième question","Votre troisième question"])
+      {(lines.length?lines:fr?["Votre première question","Votre deuxième question","Votre troisième question"]:
+        ["Your first question","Your second question","Your third question"])
         .map((line,i)=><div className="ds-bubble-glass" key={i}>
           <b>{String(i+1).padStart(2,"0")}</b><strong>{line.slice(0,130)}</strong>
         </div>)}
@@ -55,7 +59,19 @@ function BubbleVisual({style,question,caption,mini=false,attribution="reconstruc
   </div>;
 }
 
-export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Props){
+function workshopStyle(capsule?:Capsule):Style {
+  return capsule?.style==="conversation"||capsule?.style==="rafale"?capsule.style:"quote";
+}
+
+function hasBubbleText(capsule:Capsule) {
+  return (workshopStyle(capsule)==="quote"?capsule.caption:capsule.bubble).trim().length>0;
+}
+
+function hasValidTiming(capsule:Capsule,duration:number) {
+  return capsule.start>=0&&capsule.end>capsule.start&&capsule.end<=duration&&capsule.end-capsule.start<=600;
+}
+
+export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onOpenExport,onChange,onEvent}:Props){
   const fr=lang==="fr";
   const capsules=project.capsules;
   const current=capsules.find(c=>c.id===project.selectedCapsuleId)||capsules[0];
@@ -93,12 +109,13 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
       else player.addEventListener("loadedmetadata",seek,{once:true});
       return()=>player.removeEventListener("loadedmetadata",seek);
     }
-  },[current?.id,current?.start,previewUrl]);
+  },[current?.id,current?.start,current?.end,previewUrl]);
 
   function update(patch:Partial<Capsule>){
     if(!current)return;
     onChange({capsules:capsules.map(c=>c.id===current.id?{
       ...c,...patch,status:"draft" as const,
+      review:reviewAfterTimingChange(c,patch),
       timingSource:("start" in patch||"end" in patch)?"manual" as const:c.timingSource,
       keying:{...defaultChroma,enabled:false},background:"original" as const,
     }:c)});
@@ -114,14 +131,14 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
     onChange({capsules:[...capsules,...drafts.map(c=>({
       ...c,keying:{...defaultChroma,enabled:false},background:"original" as const,
     }))],selectedCapsuleId:drafts[0].id,stage:"editing"});
-    onEvent("analysis",String(drafts.length)+" capsules préparées pour les bulles","success");
+    onEvent("analysis",fr?`${drafts.length} capsules préparées pour les bulles`:`${drafts.length} clips prepared for graphics`,"success");
     setInfo(fr?"Les extraits sont prêts. Choisis maintenant une bulle.":"Clips are ready. Choose your bubbles.");
   }
 
   function createManual(){
     if(capsules.length>=40)return;
     const c:Capsule={
-      id:crypto.randomUUID(),title:"Capsule "+String(capsules.length+1).padStart(2,"0"),
+      id:crypto.randomUUID(),title:(fr?"Capsule ":"Clip ")+String(capsules.length+1).padStart(2,"0"),
       start:0,end:0,format:project.format,style:"quote",caption:"",bubble:"",
       background:"original",keying:{...defaultChroma,enabled:false},
       textPosition:"bottom",status:"draft",timingSource:"unmatched",
@@ -129,13 +146,19 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
     onChange({capsules:[...capsules,c],selectedCapsuleId:c.id,stage:"editing"});
   }
 
-  const selectedStyle:Style=current&&["conversation","quote","rafale"].includes(current.style)?
-    current.style as Style:"quote";
+  const selectedStyle=workshopStyle(current);
   const format:Format=current?.format||"16:9";
-  const timeValid=!!current&&current.end>current.start&&current.start>=0&&
-    current.end<=project.timeline.duration&&current.end-current.start<=600;
-  const textValid=!!current&&(selectedStyle==="quote"?
-    current.caption.trim().length>0:current.bubble.trim().length>0);
+  const timeValid=!!current&&hasValidTiming(current,project.timeline.duration);
+  const textValid=!!current&&hasBubbleText(current);
+  const approved=capsules.filter(c=>c.review==="approved");
+  const reviewLabels=fr?{pending:"À valider",approved:"Approuvée",rejected:"Rejetée"}:
+    {pending:"Needs review",approved:"Approved",rejected:"Rejected"};
+
+  function reviewClip(review:NonNullable<Capsule["review"]>){
+    if(!current||review==="approved"&&!timeValid)return;
+    onChange({capsules:capsules.map(c=>c.id===current.id?{...c,review}:c)});
+    setInfo("");
+  }
 
   const [exportingPng,setExportingPng]=useState(false);
   async function exportTransparentPng(){
@@ -151,26 +174,28 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
       });
       downloadBubblePng(blob,"dom-soucy-bulle-"+selectedStyle+"-"+current.id.slice(0,8)+".png");
       setInfo(fr?"Bulle PNG transparente téléchargée : glisse-la directement sur ta piste vidéo dans Premiere.":"Transparent PNG downloaded: drag it directly onto your Premiere timeline.");
-      onEvent("export","Bulle PNG transparente exportée localement","success");
+      onEvent("export",fr?"Bulle PNG transparente exportée localement":"Transparent bubble PNG exported locally","success");
     }catch(error){
       setInfo(fr?"Impossible de créer le PNG. Vérifie le texte et la photo, puis réessaie.":"PNG creation failed. Check the text and photo, then retry.");
       onEvent("error","Export PNG impossible : "+(error instanceof Error?error.message:"UNKNOWN"),"failure");
     }finally{setExportingPng(false)}
   }
 
-  function exportPlan(){
-    if(!current||!timeValid||!textValid)return;
+  function exportPlan(capsule:Capsule){
+    if(capsule.review!=="approved"||!hasValidTiming(capsule,project.timeline.duration)||!hasBubbleText(capsule))return;
+    const style=workshopStyle(capsule);
+    const hasPortrait=capsule.id===current?.id&&!!journalistPhoto&&style==="conversation";
     try{
       const manifest=buildHdRenderManifest(project,{
-        ...current,
-        style:selectedStyle,
+        ...capsule,
+        style,
         keying:{...defaultChroma,enabled:false},background:"original",
-      },{transparentForeground:false,reporterPortrait:!!journalistPhoto&&selectedStyle==="conversation"});
+      },{transparentForeground:false,reporterPortrait:hasPortrait});
       const url=URL.createObjectURL(new Blob([JSON.stringify(manifest,null,2)],{type:"application/json"}));
-      const link=document.createElement("a");link.href=url;link.download=hdManifestFilename(current);
+      const link=document.createElement("a");link.href=url;link.download=hdManifestFilename(capsule);
       document.body.appendChild(link);link.click();link.remove();
       window.setTimeout(()=>URL.revokeObjectURL(url),1500);
-      setInfo(journalistPhoto&&selectedStyle==="conversation"?
+      setInfo(hasPortrait?
         (fr?"Instructions téléchargées. Pour conserver la photo au rendu HD, copie également son fichier sous le nom reporter.png dans le moteur local.":"Instructions downloaded. To keep the journalist photo in the HD render, copy it as reporter.png into the local render folder."):
         (fr?"Instructions HD téléchargées. Le moteur local sur ton Mac les appliquera à master.mp4.":"HD render instructions downloaded. The local Mac renderer applies them to master.mp4."));
     }catch{
@@ -179,10 +204,10 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
   }
 
   const validList=capsules.filter(c=>c.end>c.start&&c.end<=project.timeline.duration);
-  return <section id="studio-capsule-workshop" className="analysis-panel studio-bubble-lab">
+  return <><section hidden={view!=="editing"} id="studio-capsule-workshop" className="analysis-panel studio-bubble-lab">
     <div className="studio-bubble-lab-heading">
       <div>
-        <p className="analysis-kicker">DOM SOUCY MEDIA / GRAPHIC LAB</p>
+        <p className="analysis-kicker">DOM SOUCY MEDIA / {fr?"ATELIER GRAPHIQUE":"GRAPHIC LAB"}</p>
         <h2>{fr?"CRÉER MES BULLES.":"BUILD MY BUBBLES."}</h2>
         <p>{fr?"Ta vidéo est déjà montée dans Premiere. Ici, on ajoute seulement nos bulles.":"Your video is already edited in Premiere. Here, we only add our bubbles."}</p>
       </div>
@@ -206,11 +231,27 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
           onClick={()=>onChange({selectedCapsuleId:c.id})}>
           <span>{String(i+1).padStart(2,"0")}</span>
           <strong>{c.title}</strong>
-          <small>{c.end>c.start?(fr?"✓ EXTRAIT REPÉRÉ":"✓ CLIP FOUND"):(fr?"REPÈRE À VÉRIFIER":"REVIEW TIMING")}</small>
+          <small>{reviewLabels[c.review??"pending"]}{!hasValidTiming(c,project.timeline.duration)&&
+            (fr?" · Repères à vérifier":" · Check timing")}</small>
         </button>)}
       </div>
       {!!project.analysis?.moments.length&&capsules.length<40&&<button type="button" className="analysis-secondary"
         onClick={generate}>{fr?"+ AJOUTER LES PROPOSITIONS MANQUANTES":"+ ADD MISSING SUGGESTIONS"}</button>}
+    </div>}
+
+    {current&&<div className="studio-clip-review">
+      <p role="status"><strong>{current.title}</strong><span>{reviewLabels[current.review??"pending"]}</span></p>
+      <div className="studio-clip-review-actions">
+        {current.review==="approved"?<button type="button" className="analysis-primary"
+          onClick={onOpenExport}>{fr?"ALLER AUX EXPORTS →":"OPEN EXPORTS →"}</button>:
+          <button type="button" className="analysis-primary" disabled={!timeValid}
+            onClick={()=>reviewClip("approved")}>{fr?"APPROUVER L’EXTRAIT":"APPROVE CLIP"}</button>}
+        {current.review!=="rejected"&&<button type="button" className="analysis-secondary"
+          onClick={()=>reviewClip("rejected")}>{fr?"REJETER L’EXTRAIT":"REJECT CLIP"}</button>}
+        {(current.review==="approved"||current.review==="rejected")&&<button type="button" className="analysis-secondary"
+          onClick={()=>reviewClip("pending")}>{fr?"REMETTRE À VALIDER":"RESET REVIEW"}</button>}
+      </div>
+      {!timeValid&&<small>{fr?"Vérifie les repères dans les options avancées avant d’approuver.":"Check timing in Advanced options before approving."}</small>}
     </div>}
 
     <div className="studio-bubble-lab-grid">
@@ -226,13 +267,13 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
             <small>{fr?"Importe ton MP4 pour voir les bulles par-dessus.":"Import your MP4 to see the bubbles on top."}</small>
           </div>}
           <div className="studio-bubble-video-top" aria-hidden="true">
-            <b>DOM SOUCY <em>MEDIA.</em></b><span>● EN DIRECT</span>
+            <b>DOM SOUCY <em>MEDIA.</em></b><span>● {fr?"EN DIRECT":"LIVE"}</span>
           </div>
           <button type="button" className="studio-bubble-video-graphics studio-bubble-click-to-edit"
             key={current?.id||"demo"} onClick={editBubble}
             title={fr?"Cliquer pour modifier le texte de cette bulle":"Click to edit this bubble's text"}
             aria-label={fr?"Modifier le texte de la bulle affichée":"Edit the displayed bubble text"}>
-            <BubbleVisual style={selectedStyle} question={current?.bubble||""}
+            <BubbleVisual fr={fr} style={selectedStyle} question={current?.bubble||""}
               caption={current?.caption||""} attribution={current?.questionAttribution}
               journalistName={current?.journalistName||""}
               journalistOutlet={current?.journalistOutlet||""}
@@ -254,9 +295,10 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
             onClick={()=>current?update({style:item.style}):setInfo(fr?
               "Lance d'abord l'analyse pour choisir un modèle sur un extrait.":"Analyze your video first to select a model for a clip.")}>
             <div className="studio-bubble-gallery-art">
-              <BubbleVisual style={item.style}
-                question={item.style==="rafale"?"Pourquoi maintenant?\nQu'est-ce qui doit changer?\nEt après?":"Pourquoi remettre le sport en question?"}
-                caption="Il faut commencer par la base." mini/>
+              <BubbleVisual fr={fr} style={item.style}
+                question={item.style==="rafale"?(fr?"Pourquoi maintenant?\nQu'est-ce qui doit changer?\nEt après?":"Why now?\nWhat needs to change?\nWhat comes next?"):
+                  (fr?"Pourquoi remettre le sport en question?":"Why rethink sport?")}
+                caption={fr?"Il faut commencer par la base.":"We have to start with the basics."} mini/>
             </div>
             <span><b>{item.number}</b> {fr?item.fr:item.en}</span>
             {current&&selectedStyle===item.style&&<small>✓ {fr?"CHOISIE":"SELECTED"}</small>}
@@ -353,8 +395,8 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
       </div>
       <details className="studio-simple-details"><summary>{fr?"RENDU VIDÉO HD AUTOMATISÉ (AVANCÉ)":"AUTOMATED HD VIDEO RENDER (ADVANCED)"}</summary>
       <button type="button" className="analysis-primary studio-bubble-lab-big"
-        disabled={!timeValid||!textValid} onClick={exportPlan}>
-        {fr?"✓ APPROUVER LA BULLE ET PRÉPARER LE HD":"✓ APPROVE BUBBLE AND PREPARE HD"}
+        disabled={current.review!=="approved"||!timeValid||!textValid} onClick={()=>exportPlan(current)}>
+        {fr?"TÉLÉCHARGER LES INSTRUCTIONS HD":"DOWNLOAD HD INSTRUCTIONS"}
       </button>
       <p className="analysis-note">{fr?
         "Ce bouton télécharge les instructions du moteur HD (.JSON), pas encore le MP4 final. L’assemblage avec la vidéo se fait sur ton Mac, sans retoucher Premiere.":
@@ -368,5 +410,23 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
     {!!capsules.length&&<p className="analysis-note">{fr?
       String(validList.length)+" capsule(s) avec des repères valides. Aucun détourage, arrière-plan ou choix de caméra supplémentaire n'est demandé.":
       String(validList.length)+" clips with valid timing. No keying, background or camera controls are required."}</p>}
-  </section>;
+  </section>
+  <section hidden={view!=="export"} className="analysis-panel studio-step">
+    <div className="analysis-panel-head"><h2>{fr?"04 / EXPORTER":"04 / EXPORT"}</h2><span>{fr?"CAPSULES APPROUVÉES":"APPROVED CLIPS"}</span></div>
+    {approved.length?<ul className="studio-approved-clips">
+      {approved.map(c=>{
+        const ready=hasValidTiming(c,project.timeline.duration)&&hasBubbleText(c);
+        return <li key={c.id}>
+          <div><strong>{c.title}</strong><span>{c.format}</span></div>
+          <button className="analysis-primary" type="button" onClick={()=>{
+            if(ready){exportPlan(c);return}
+            onChange({selectedCapsuleId:c.id});onReviewClips();
+          }}>{ready?(fr?"TÉLÉCHARGER LE JSON HD":"DOWNLOAD HD JSON"):(fr?"TERMINER LA BULLE":"FINISH BUBBLE")}</button>
+        </li>;
+      })}
+    </ul>:<p className="analysis-note">{fr?"Approuve un extrait dans Créer les bulles pour le préparer au rendu HD.":
+      "Approve a clip in Create Bubbles to prepare it for HD rendering."}</p>}
+    <button type="button" className="analysis-secondary" onClick={onReviewClips}>{fr?"← CRÉER LES BULLES":"← CREATE BUBBLES"}</button>
+    {view==="export"&&!!info&&<p role="status" className="studio-bubble-notice">{info}</p>}
+  </section></>;
 }

@@ -4,7 +4,7 @@ import { renderLocalMp4 } from "./local-mp4";
 import { createProductionPlan,renderFormat,type RenderJob } from "@/lib/analysis/production-plan";
 import type { OutputFormat } from "@/lib/analysis/outputs";
 import { cameraKeys,proposeMulticamCuts,type CameraKey,type Cut,type SourceFiles,type SourceKey } from "@/lib/analysis/multicam";
-import type { StudioProject } from "@/lib/analysis/project";
+import { canProduceLegacyCapsule, type StudioProject } from "@/lib/analysis/project";
 
 type Capsule=StudioProject["capsules"][number];
 type JobStatus={job:RenderJob;state:"queued"|"rendering"|"saved"|"download"|"failed";progress:number;error?:string};
@@ -44,14 +44,14 @@ export function ProductionBatch({
   const cancel=useRef(false);
   const createdUrls=useRef<string[]>([]);
   useEffect(()=>()=>{for(const url of createdUrls.current)URL.revokeObjectURL(url)},[]);
-  const validCapsules=capsules.filter(c=>c.end>c.start&&c.end<=duration);
+  const validCapsules=capsules.filter(c=>c.end>c.start&&c.end<=duration&&canProduceLegacyCapsule(c));
   const cameras=cameraKeys.filter(k=>!!mediaFiles[k]);
   const canRender=cameras.length>0&&!!mediaFiles[audioSource]&&!!mediaFiles[finalAudioSource];
   const toggleFormat=(format:OutputFormat)=>setSelectedFormats(old=>
     old.includes(format)?old.filter(x=>x!==format):[...old,format]);
   const toggleCapsule=(id:string)=>setSelected(old=>old.includes(id)?
     old.filter(x=>x!==id):[...old,id]);
-  const requested=createProductionPlan({capsules,selectedIds:selected,formats:selectedFormats,includeEpisode,duration});
+  const requested=createProductionPlan({capsules,selectedIds:selected,formats:selectedFormats,includeEpisode,duration,lang});
   const updateJob=(id:string,patch:Partial<JobStatus>)=>setJobs(old=>old.map(j=>
     j.job.id===id?{...j,...patch}:j));
 
@@ -63,7 +63,9 @@ export function ProductionBatch({
         "Select your local audio and video files before starting.");
       return;
     }
-    const plan=retryFailed?jobs.filter(j=>j.state==="failed").map(j=>({...j.job,id:crypto.randomUUID()})):requested;
+    const plan=retryFailed?jobs.filter(j=>j.state==="failed"&&
+      (j.job.capsuleId===null||validCapsules.some(c=>c.id===j.job.capsuleId)))
+      .map(j=>({...j.job,id:crypto.randomUUID()})):requested;
     if(!plan.length){
       setError(fr?"Sélectionne au moins une vidéo et un format.":"Select at least one video and format.");
       return;

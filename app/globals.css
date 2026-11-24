@@ -1390,7 +1390,7 @@ a:hover {
 .studio-simple-tools{display:flex;flex-wrap:wrap;gap:10px}
 .studio-simple-tools button{border:1px solid #4f514d;background:#151615;color:#eee;padding:13px 18px;min-height:44px;border-radius:10px;cursor:pointer;font-size:12px;letter-spacing:.08em;font-weight:850}
 .studio-simple-tools button:hover,.studio-simple-tools button:focus-visible{border-color:#ccff00;color:#ccff00}
-.studio-simple-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.studio-simple-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
 .studio-simple-tile{min-height:215px;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;padding:20px 19px;border:1px solid #454644;background:#161716;border-radius:14px;color:#f4f4ef;cursor:pointer;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
 .studio-simple-tile:hover,.studio-simple-tile:focus-visible{border-color:#ccff00;transform:translateY(-3px)}
 .studio-simple-tile.active{border:2px solid #ccff00;background:#22271a;box-shadow:0 0 0 1px #ccff0033}
@@ -1415,7 +1415,7 @@ a:hover {
 .studio-simple-production-steps strong{font-size:25px;color:#ccff00;font-weight:950}
 .studio-simple-production-steps span{font-size:16px;font-weight:760}
 .studio-simple-technical{margin-top:22px;padding:12px 0}
-@media(max-width:1050px){.studio-simple-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.studio-simple-heading{flex-wrap:wrap}}
+@media(max-width:1050px){.studio-simple-steps{grid-template-columns:repeat(3,minmax(0,1fr))}.studio-simple-heading{flex-wrap:wrap}}
 @media(max-width:600px){.studio-simple-steps{grid-template-columns:1fr 1fr;gap:8px}.studio-simple-tile{min-height:180px;padding:14px}.studio-simple-tile strong{font-size:25px}.studio-simple-tile-icon{font-size:27px;margin-top:6px}.studio-simple-continue{flex-direction:column;align-items:stretch}.studio-simple-go{width:100%}.studio-simple-tools button{font-size:11px;padding:10px 12px}}
 @media(max-width:380px){.studio-simple-steps{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.studio-simple-tile{transition:none}.studio-simple-tile:hover{transform:none}}

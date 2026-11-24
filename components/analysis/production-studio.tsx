@@ -10,10 +10,11 @@ import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
 import { StudioBackdropPicker } from "./studio-backdrop-picker";
 import { BubbleWorkshopSimple } from "./bubble-workshop-simple";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
-import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject } from "@/lib/analysis/project";
+import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, reviewAfterTimingChange, type StudioProject } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
 
 const names:Record<SourceKey,string>={audio:"AUDIO ORIGINAL",enhanced:"AUDIO FINAL OPTIMISÉ",main:"CANON · PLAN PRINCIPAL",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
+const englishNames:Record<SourceKey,string>={audio:"ORIGINAL AUDIO",enhanced:"ENHANCED FINAL AUDIO",main:"CANON · MAIN CAMERA",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
 const allowed:Record<SourceKey,RegExp>={audio:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,enhanced:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,main:/\.(mov|mp4|m4v|webm)$/i,vertical:/\.(mov|mp4|m4v|webm)$/i,secondary:/\.(mov|mp4|m4v|webm)$/i};
 type ProjectRow=EpisodeRow;
 function download(filename:string,content:string,mime="application/json"){
@@ -43,10 +44,10 @@ function transcriptionFailureMessage(code:string,stage:"upload"|"transcribe",fr:
   return fr?"La transcription n'a pas abouti. Le fichier reste sélectionné : utilise Réessayer ou communique le code d'erreur."
     :"Transcription did not complete. Your source is still selected: retry or share the error code.";
 }
-export function ProductionStudio({lang}:{lang:"fr"|"en"}){
+export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialProject:StudioProject}){
   const fr=lang==="fr";
-  const [project,setProject]=useState<StudioProject>(()=>freshProject());
-  const [activeSection,setActiveSection]=useState<"projects"|"import"|"analysis"|"editing"|"production"|"advanced">("projects");
+  const [project,setProject]=useState(initialProject);
+  const [activeSection,setActiveSection]=useState<"projects"|"import"|"analysis"|"editing"|"production"|"publish"|"advanced">("projects");
   const [showTechnicalMontage,setShowTechnicalMontage]=useState(false);
   const [projects,setProjects]=useState<ProjectRow[]>([]);
   const [files,setFiles]=useState<SourceFiles>({});
@@ -159,12 +160,12 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           pendingLive=sessionStorage.getItem("ds-studio-pending-analysis")||"";
         }catch{ /* storage disabled */ }
         if(pendingLive){
-          const incoming={...freshProject(),transcript:pendingLive.slice(0,26000)};
+          const incoming={...freshProject(lang),transcript:pendingLive.slice(0,26000)};
           latest.current=incoming;setProject(incoming);setStatus("pending");
           try{sessionStorage.removeItem("ds-studio-pending-analysis")}catch{}
         }else if(new URLSearchParams(window.location.search).get("mode")==="new"){
           setActiveSection("import");
-          const fresh=freshProject();
+          const fresh=freshProject(lang);
           latest.current=fresh;setProject(fresh);setStatus("pending");
         }else if(available.length){
           const requested=new URLSearchParams(window.location.search).get("project");
@@ -178,7 +179,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       }finally{if(!cancelled)setReady(true)}
     })();
     return()=>{cancelled=true};
-  },[list,load,fr]);
+  },[list,load,fr,lang]);
   useEffect(()=>{
     if(!ready||uploading)return;
     const snapshot=JSON.stringify({...project,updatedAt:undefined});
@@ -297,7 +298,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       ...context,transcript,analysis:value,selectedMoment:0,stage:"editing",
       capsules,selectedCapsuleId:prepared.selectedCapsuleId||capsules[0]?.id||"",
     });
-    record("analysis","Analyse IA terminée : "+String(value.moments.length)+" extraits, "+String(drafts.length)+" capsules préparées","success");
+    record("analysis",fr?`Analyse IA terminée : ${value.moments.length} extraits, ${drafts.length} capsules préparées`:
+      `AI analysis complete: ${value.moments.length} highlights, ${drafts.length} clips prepared`,"success");
     setActiveSection("editing");
     setMessage(fr?"L'IA a trouvé "+String(value.moments.length)+" passages. Clique sur une bulle pour la voir sur ta vidéo.":
       "AI found "+String(value.moments.length)+" highlights. Choose a bubble to preview it on your video.");
@@ -346,7 +348,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         duration:Math.min(7200,Math.max(10,Math.ceil(decoded.duration)))};
       modify({transcript,timedWords:words,analysis:null,selectedMoment:0,
         stage:"transcription",timeline});
-      record("transcription","Transcription horodatée générée en mémoire, sans Blob","success");
+      record("transcription",fr?"Transcription horodatée générée en mémoire, sans Blob":"Timed transcript generated in memory without Blob","success");
       setTranscriptionFailure(null);
       setBusy("analyze");
       setTranscriptionProgress(fr?"L'IA sélectionne maintenant les meilleurs moments…":
@@ -358,13 +360,13 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         setError(fr?
           "Audio transcrit et conservé, mais l'analyse IA n'a pas abouti. Clique à nouveau sur Analyser pour réessayer.":
           "Audio was transcribed and saved, but AI analysis did not finish. Click Analyze to retry.");
-        record("error","Analyse IA échouée après transcription : "+(e instanceof Error?e.message:"UNKNOWN"),"failure");
+        record("error",(fr?"Analyse IA échouée après transcription : ":"AI analysis failed after transcription: ")+(e instanceof Error?e.message:"UNKNOWN"),"failure");
       }
     }catch(e){
       const code=(e instanceof Error?e.message:"UNKNOWN").slice(0,90);
       const detail=transcriptionFailureMessage(code,"transcribe",fr);
       setTranscriptionFailure({code,stage:"transcribe",detail});
-      record("error",`Échec transcription directe : ${code}`,"failure");
+      record("error",fr?`Échec transcription directe : ${code}`:`Transcription failed: ${code}`,"failure");
       setMessage("");
     }finally{setBusy("");setTranscriptionProgress("")}
   };
@@ -391,7 +393,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     setBusy("analyze");setError("");
     try{await analyzeTranscriptText(project.transcript)}
     catch{
-      record("error","Échec analyse IA","failure");
+    record("error",fr?"Échec analyse IA":"AI analysis failed","failure");
       setError(fr?"Analyse IA indisponible. Ta transcription est conservée.":"AI analysis unavailable. Your transcript is preserved.");
     }finally{setBusy("")}
   };
@@ -406,7 +408,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const newProject=()=>{
     if(uploading||status==="pending"||status==="saving")return;
     const last=[project,...projects].reduce((n,item)=>item.season===project.season?Math.max(n,item.episode):n,0);
-    const p={...freshProject(),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});
+    const p={...freshProject(lang),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});
     latest.current=p;setProject(p);setStatus("pending");setError("");setMessage("");
     setRecoveryCandidate(null);
     setTranscriptionFailure(null);
@@ -420,11 +422,12 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const tile=(key:SourceKey)=>{
     const file=files[key],saved=project.localMedia?.[key]||undefined;
     const legacy=project.media[key];
+    const name=(fr?names:englishNames)[key];
     return <div className="studio-source-tile">
-      <strong>{names[key]}</strong>
+      <strong>{name}</strong>
       <label className="analysis-source-pick">
         {file?(fr?"REMPLACER LE FICHIER LOCAL":"REPLACE LOCAL FILE"):(fr?"+ CHOISIR UN FICHIER":" + CHOOSE FILE")}
-        <input aria-label={names[key]} type="file"
+        <input aria-label={name} type="file"
           accept={key==="audio"||key==="enhanced"?"audio/*,.mp3,.m4a,.wav,.ogg,.flac":"video/*,.mov,.mp4,.m4v,.webm"}
           onChange={e=>choose(key,e)}/>
       </label>
@@ -464,22 +467,33 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   const projectSaved=status==="saved";
   const hasTranscript=project.transcript.trim().length>=100;
   const hasAnalysis=!!project.analysis?.moments.length;
-  const hasCapsules=project.capsules.some(c=>c.end>c.start&&c.end<=project.timeline.duration);
-  const suggestedNext=!files.main&&!hasTranscript?"import":!hasAnalysis?"analysis":!hasCapsules?"editing":"production";
+  const approvedCapsules=project.capsules.filter(c=>c.review==="approved");
+  const suggestedNext=approvedCapsules.length?"production":project.capsules.length?"editing":
+    !files.main&&!files.audio&&!hasTranscript?"import":!hasAnalysis?"analysis":"editing";
   const quickNavigate=(tab:typeof activeSection)=>{
     setActiveSection(tab);
     window.setTimeout(()=>document.getElementById("studio-phase5-current")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
   };
   const mainSteps=[
     {id:"import" as const,num:"01",icon:"↓",name:fr?"IMPORTER":"IMPORT",
-      detail:fr?"Une seule vidéo MP4":"One MP4 video",ready:!!files.main||hasTranscript},
+      detail:fr?"Choisir les médias sources":"Choose source media",ready:!!files.main||!!files.audio||hasTranscript},
     {id:"analysis" as const,num:"02",icon:"✦",name:fr?"ANALYSER":"ANALYZE",
       detail:fr?"Transcription et meilleurs extraits":"Transcript and highlights",ready:hasAnalysis},
-    {id:"editing" as const,num:"03",icon:"◉",name:fr?"MES CAPSULES":"MY CAPSULES",
-      detail:fr?"Choisir les bulles et les extraits":"Choose bubbles and clips",ready:hasCapsules},
-    {id:"production" as const,num:"04",icon:"↗",name:fr?"EXPORT HD":"HD EXPORT",
-      detail:fr?"Préparer le rendu sur ton Mac":"Prepare rendering on your Mac",ready:false},
+    {id:"editing" as const,num:"03",icon:"◉",name:fr?"CRÉER LES BULLES":"CREATE BUBBLES",
+      detail:fr?"Valider les extraits et créer les bulles":"Review clips and create graphics",ready:approvedCapsules.length>0},
+    {id:"production" as const,num:"04",icon:"↓",name:fr?"EXPORTER":"EXPORT",
+      detail:fr?"Préparer le rendu HD sur ton Mac":"Prepare local HD rendering",ready:false},
+    {id:"publish" as const,num:"05",icon:"↗",name:fr?"PUBLIER":"PUBLISH",
+      detail:fr?"Préparer la diffusion":"Prepare social distribution",ready:false},
   ];
+  const nextStep=mainSteps.find(item=>item.id===suggestedNext);
+  const saveLabel={
+    loading:fr?"CHARGEMENT":"LOADING",
+    pending:fr?"MODIFICATIONS À ENREGISTRER":"UNSAVED CHANGES",
+    saving:fr?"SAUVEGARDE EN COURS":"SAVING",
+    saved:fr?"✓ PROJET SAUVEGARDÉ":"✓ PROJECT SAVED",
+    error:fr?"ÉCHEC DE SAUVEGARDE":"SAVE FAILED",
+  }[status];
 
   return <section className="analysis-studio studio-production">
     <div className="analysis-topline">
@@ -492,8 +506,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         <p>{fr?"Un projet enregistré, chaque étape dans le bon ordre.":"One saved project, every step in order."}</p>
       </div>
       <div className={`studio-save-state ${projectSaved?"is-saved":status==="error"?"is-error":""}`} role="status">
-        {status==="loading"?"CHARGEMENT":status==="pending"?"MODIFICATIONS À ENREGISTRER":
-        status==="saving"?"SAUVEGARDE EN COURS":status==="saved"?"✓ PROJET SAUVEGARDÉ":"ÉCHEC DE SAUVEGARDE"}
+        {saveLabel}
       </div>
     </header>
     {transcriptionFailure&&<div className="studio-transcription-banner" role="alert">
@@ -518,7 +531,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
           className={activeSection===item.id?"studio-simple-tile active":"studio-simple-tile"}
           aria-current={activeSection===item.id?"step":undefined}
           onClick={()=>quickNavigate(item.id)}>
-          <span className="studio-simple-tile-top"><span>{item.num} / 04</span><span>{item.ready?"✓ "+(fr?"PRÊT":"DONE"):activeSection===item.id?(fr?"EN COURS":"CURRENT"):(fr?"À FAIRE":"NEXT")}</span></span>
+          <span className="studio-simple-tile-top"><span>{item.num} / {String(mainSteps.length).padStart(2,"0")}</span><span>{activeSection===item.id?(fr?"EN COURS":"CURRENT"):item.ready?"✓ "+(fr?"PRÊT":"READY"):(fr?"À FAIRE":"TO DO")}</span></span>
           <span className="studio-simple-tile-icon" aria-hidden="true">{item.icon}</span>
           <strong>{item.name}</strong>
           <small>{item.detail}</small>
@@ -526,16 +539,10 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       </nav>
       <div className="studio-simple-continue">
         <span><strong>{fr?"PROCHAINE ACTION":"NEXT ACTION"}</strong>
-          {suggestedNext==="import"?(fr?"Choisir l'audio du master":"Choose master audio"):
-           suggestedNext==="analysis"?(fr?"Détecter les meilleurs moments":"Find the highlights"):
-           suggestedNext==="editing"?(fr?"Préparer les capsules et les bulles":"Prepare clips and bubbles"):
-           fr?"Préparer le rendu HD local":"Prepare the local HD render"}
+          {nextStep?.detail}
         </span>
         <button type="button" className="studio-simple-go" onClick={()=>quickNavigate(suggestedNext)}>
-          {suggestedNext==="import"?(fr?"IMPORTER":"IMPORT"):
-           suggestedNext==="analysis"?(fr?"ANALYSER":"ANALYZE"):
-           suggestedNext==="editing"?(fr?"CRÉER MES CAPSULES":"CREATE MY CAPSULES"):
-           fr?"EXPORT HD":"HD EXPORT"} →
+          {nextStep?.name} →
         </button>
       </div>
     </div>
@@ -546,6 +553,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         activeSection==="analysis"?(fr?"TRANSCRIPTION & IA":"TRANSCRIPT & AI"):
         activeSection==="editing"?(fr?"CAPSULES & BULLES":"CAPSULES & GRAPHICS"):
         activeSection==="production"?(fr?"RENDU HD LOCAL":"LOCAL HD RENDERER"):
+        activeSection==="publish"?(fr?"PRÉPARATION DE LA DIFFUSION":"PUBLICATION PREPARATION"):
         fr?"OUTILS AVANCÉS":"ADVANCED TOOLS"}</strong>
     </div>
     <div hidden={activeSection!=="projects"} className="studio-workspace-project-library">
@@ -622,7 +630,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         {fr?"TÉLÉCHARGER UNE COPIE DU PROJET (.JSON)":"DOWNLOAD PROJECT BACKUP (.JSON)"}
       </button>
     </>)}
-    {step(1,fr?"DÉPOSER MA VIDÉO PREMIERE":"DROP MY PREMIERE VIDEO",files.main?"✓ VIDÉO PRÊTE":"MP4 / MOV",<>
+    {step(1,fr?"DÉPOSER MA VIDÉO PREMIERE":"DROP MY PREMIERE VIDEO",files.main?(fr?"✓ VIDÉO PRÊTE":"✓ VIDEO READY"):"MP4 / MOV",<>
       <p>{fr?"Ton montage multicaméra, ton son et ton décor sont déjà terminés dans Premiere. Dépose simplement le master ici : aucune correction d'image n'est demandée.":"Your multicam edit, sound and backdrop are already finished in Premiere. Just drop the master here. No image adjustments are required."}</p>
       <div className="studio-master-dropzone" onDragOver={e=>e.preventDefault()}
         onDrop={e=>{e.preventDefault();const file=e.dataTransfer.files?.[0];if(file)choosePremiereMaster(file)}}>
@@ -670,7 +678,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       </button>
       </details>
     </>)}
-    {step(3,fr?"ANALYSE IA":"AI ANALYSIS",`${project.analysis?.moments.length||0} EXTRAITS`,<>
+    {step(3,fr?"ANALYSE IA":"AI ANALYSIS",`${project.analysis?.moments.length||0} ${fr?"EXTRAITS":"CLIPS"}`,<>
       <p>{fr?"L’analyse détecte des passages exacts, sans créer artificiellement des citations.":"AI finds exact excerpts, without inventing quotes."}</p>
       {transcriptionProgress&&<p role="status" className="analysis-note">{transcriptionProgress}</p>}
       <label className="analysis-consent"><input type="checkbox" checked={consent}
@@ -732,7 +740,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
             <button className="analysis-secondary" type="button" onClick={()=>{
               const id=crypto.randomUUID();
               modify({capsules:[...project.capsules,{
-                id,title:`Question ${i+1}`,start:0,end:0,format:project.format,
+                id,title:`Question ${i+1}`,start:0,end:0,format:project.format,review:"pending" as const,
                 style:"conversation" as const,caption:q.answerExcerpt.slice(0,500),bubble:q.question,
                 background:"dark" as const,keying:{...defaultChroma},textPosition:"bottom" as const,status:"draft" as const,
               }].slice(0,40),selectedCapsuleId:id,stage:"editing"});
@@ -761,14 +769,16 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         <div className="analysis-moment-list">{project.analysis.moments.map((m,i)=><button
           key={i} type="button" className={project.selectedMoment===i?"selected":""}
           onClick={()=>modify({selectedMoment:i})}><span>{i+1}</span><div><strong>{m.title}</strong>
-          <small>{capsuleById(m.model_id)?.title} · {m.excerpt.slice(0,115)}</small></div></button>)}</div>
+          <small>{capsuleById(m.model_id)?.[fr?"title":"en"]} · {m.excerpt.slice(0,115)}</small></div></button>)}</div>
         <button className="analysis-secondary" type="button" onClick={()=>download("dom-soucy-analyse.json",JSON.stringify(project.analysis,null,2))}>
           {fr?"TÉLÉCHARGER L’ANALYSE":"DOWNLOAD ANALYSIS"}
         </button>
       </>}
     </>)}
-    <div hidden={activeSection!=="editing"} className="studio-phase5-capsules">
+    <div hidden={activeSection!=="editing"&&activeSection!=="production"} className="studio-phase5-capsules">
       <BubbleWorkshopSimple lang={lang} project={project} master={files.main}
+        view={activeSection==="production"?"export":"editing"}
+        onReviewClips={()=>quickNavigate("editing")} onOpenExport={()=>quickNavigate("production")}
         onChange={patch=>modify(patch)} onEvent={record}/>
     </div>
 
@@ -780,7 +790,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       <p className="analysis-note">{fr?"Les caméras et le montage multicaméra se font désormais dans Premiere. L’ancien éditeur navigateur reste disponible pour les anciens projets, sans remplacer le rendu HD.":"Multicam editing now happens in Premiere. The old browser editor remains for legacy projects and is not the HD renderer."}</p>
     </div>
     <section hidden={activeSection!=="production"} className="analysis-panel studio-step studio-simple-production">
-      <div className="analysis-panel-head"><h2>{fr?"04 / PRODUIRE EN HD":"04 / PRODUCE IN HD"}</h2><span>PREMIERE + STUDIO + MAC</span></div>
+      <details className="studio-simple-details">
+      <summary>{fr?"COMMENT PRODUIRE LE MP4 HD SUR MAC":"HOW TO RENDER THE HD MP4 ON MAC"}</summary>
       <p>{fr?"Les bulles se règlent dans le Studio. Elles sont placées automatiquement dans le MP4 par notre moteur HD local. Tu n’as pas besoin de les positionner dans Premiere.":"Set the bubbles in Studio. The local HD renderer automatically positions them in the MP4; you do not need to place them in Premiere."}</p>
       <div className="studio-simple-production-steps">
         <div><strong>01</strong><span>{fr?"EXPORTER master.mp4 DEPUIS PREMIERE":"EXPORT master.mp4 FROM PREMIERE"}</span></div>
@@ -795,6 +806,24 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         {fr?"OUVRIR LE MOTEUR HD ET LES INSTRUCTIONS ↗":"OPEN THE HD RENDERER AND INSTRUCTIONS ↗"}
       </a>
       <p className="analysis-note">{fr?"Aujourd’hui, le Studio fournit un manifeste JSON par capsule. L’export HD en un clic directement sur le site reste à développer; aucun rendu n’est lancé ici automatiquement.":"Currently Studio downloads a JSON manifest for each capsule. One-click HD rendering from this page is not implemented; no render starts here automatically."}</p>
+      </details>
+      {approvedCapsules.length>0&&<button className="analysis-secondary" type="button" onClick={()=>quickNavigate("publish")}>
+        {fr?"PRÉPARER LA DIFFUSION →":"PREPARE PUBLICATION →"}
+      </button>}
+    </section>
+    <section hidden={activeSection!=="publish"} className="analysis-panel studio-step studio-simple-production">
+      <div className="analysis-panel-head">
+        <h2>{fr?"05 / PRÉPARER LA DIFFUSION":"05 / PREPARE PUBLICATION"}</h2>
+        <span>{fr?"PLATEFORMES NON CONNECTÉES":"PLATFORMS NOT CONNECTED"}</span>
+      </div>
+      <p>{fr?"Retrouve les capsules approuvées et leurs formats pour préparer la diffusion. Le Studio n’envoie aucun fichier aux plateformes à cette étape.":
+        "Review approved clips and their formats before sharing. Studio sends no files to platforms at this step."}</p>
+      {approvedCapsules.length>0?<ul className="studio-approved-clips">
+        {approvedCapsules.map(c=><li key={c.id}><strong>{c.title}</strong><span>{c.format}</span></li>)}
+      </ul>:<p className="analysis-note">{fr?"Les capsules approuvées apparaîtront ici.":"Approved clips will appear here."}</p>}
+      <button className="analysis-primary studio-simple-primary" type="button" onClick={()=>quickNavigate(approvedCapsules.length?"production":"editing")}>
+        {approvedCapsules.length?(fr?"← ACCÉDER AUX EXPORTS":"← OPEN EXPORTS"):(fr?"← VALIDER LES CAPSULES":"← REVIEW CLIPS")}
+      </button>
     </section>
     {showTechnicalMontage&&activeSection==="advanced"&&<div className="studio-phase5-editor">
     <MultiCamEditor key={project.id}
@@ -808,7 +837,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       format={project.format} onFormatChange={format=>modify({format})}
       capsule={project.capsules.find(c=>c.id===project.selectedCapsuleId)}
       onCapsuleChange={(id,patch)=>modify({capsules:latest.current.capsules.map(c=>
-        c.id===id?{...c,...patch,status:"draft"}:c)})}
+        c.id===id?{...c,...patch,review:reviewAfterTimingChange(c,patch),status:"draft"}:c)})}
       selectedBackgroundUrl={resolveBackdrop(project.studioBackdrop,project.id,[project.name,project.transcript,project.capsules.find(c=>c.id===project.selectedCapsuleId)?.title||""].join(" ")).file}
       onProceedToCapsules={()=>{
         if(!project.capsules.length){

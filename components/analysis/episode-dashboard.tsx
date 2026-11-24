@@ -31,7 +31,7 @@ export function EpisodeDashboard({lang,episodes,currentId,onOpen,onNew,disabled}
       className={`studio-episode-card ${currentId===ep.id?"is-current":""}`}>
       <span className="studio-episode-code">{episodeCode(ep.season,ep.episode)}</span>
       <strong>{ep.name}</strong>
-      <small>{ep.recordingDate || new Date(ep.updatedAt).toLocaleDateString(fr?"fr-CA":"en-CA")} · {ep.mediaCount} {fr?"médias":"media"} · {ep.capsuleCount} capsules</small>
+      <small>{ep.recordingDate || new Date(ep.updatedAt).toLocaleDateString(fr?"fr-CA":"en-CA")} · {ep.mediaCount} {fr?"médias":"media"} · {ep.capsuleCount} {fr?"capsules":"clips"}</small>
       <span className="studio-episode-status">{ep.failedCount>0?`⚠ ${ep.failedCount} ${fr?"incident(s)":"issue(s)"}`:ep.hasAnalysis?(fr?"ANALYSÉ":"ANALYZED"):ep.hasTranscript?(fr?"TRANSCRIT":"TRANSCRIBED"):(fr?"EN COURS":"IN PROGRESS")}</span>
     </button>)}
   </div>
