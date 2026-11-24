@@ -273,7 +273,7 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
           <input type="file" accept="image/png" onChange={e=>{
             const file=e.currentTarget.files?.[0];
             if(!file)return;
-            if(!file.type==="image/png"||file.size>8_000_000){
+            if(file.type!=="image/png"||file.size>8_000_000){
               setInfo(fr?"Photo PNG de 8 Mo maximum.":"PNG photo up to 8 MB.");
               return;
             }
