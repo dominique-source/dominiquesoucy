@@ -5,38 +5,37 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { dict, type Locale } from "@/lib/i18n";
 function useComingSoon() {
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<{ label: string; x: number; y: number; width: number; height: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
   }, []);
-  function show(label: string) {
+  function show(label: string, target: HTMLElement) {
+    const rect = target.getBoundingClientRect();
     if (timer.current) clearTimeout(timer.current);
-    setNotice(label);
-    timer.current = setTimeout(() => setNotice(""), 2800);
+    setNotice({ label, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, width: rect.width, height: rect.height });
+    timer.current = setTimeout(() => setNotice(null), 2000);
   }
   return { notice, show };
 }
 
-function ComingSoon({ lang, notice }: { lang: Locale; notice: string }) {
+function ComingSoon({ lang, notice }: { lang: Locale; notice: ReturnType<typeof useComingSoon>["notice"] }) {
   if (!notice || typeof document === "undefined") return null;
   return createPortal(
-    <div role="status" className="nav-coming-soon">
-      <span className="nav-coming-soon-label">{notice}</span>
+    <div role="status" aria-label={`${notice.label}: ${lang === "fr" ? "À venir" : "Coming soon"}`} className="nav-coming-soon" style={{ left: `clamp(64px, ${notice.x}px, calc(100vw - 64px))`, top: notice.y, minWidth: Math.max(112, notice.width), minHeight: notice.height }}>
       <strong>{lang === "fr" ? "À VENIR" : "COMING SOON"}<span>.</span></strong>
       <style>{`
         .nav-coming-soon {
-          position: fixed; z-index: 10000; bottom: max(24px, env(safe-area-inset-bottom)); right: 24px;
-          width: max-content; max-width: calc(100vw - 48px); padding: 18px 28px;
+          position: fixed; z-index: 10000; transform: translate(-50%, -50%); display: grid; place-items: center; box-sizing: border-box;
+          width: max-content; max-width: calc(100vw - 24px); padding: 8px 16px;
           background: #0a0a0a; color: #f4f4ef; border: 1px solid #333;
-          border-left: 4px solid var(--accent, #ccff00);
+          border: 1px solid var(--accent, #ccff00);
           box-shadow: 0 12px 40px #0008; pointer-events: none;
           animation: nav-notice-in 200ms ease-out both;
         }
-        .nav-coming-soon-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #b5b5b5; }
-        .nav-coming-soon strong { display: block; font-family: var(--display, Impact, sans-serif); font-size: 38px; font-weight: 800; font-style: italic; line-height: 1; margin-top: 7px; }
+        .nav-coming-soon strong { display: block; font-family: var(--display, Impact, sans-serif); font-size: 24px; font-weight: 800; font-style: italic; line-height: 1; margin: 0; white-space: nowrap; }
         .nav-coming-soon strong span { color: var(--accent, #ccff00); }
-        @keyframes nav-notice-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes nav-notice-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
         @media (prefers-reduced-motion: reduce) { .nav-coming-soon { animation: none; } }
       `}</style>
     </div>, document.body
@@ -88,8 +87,7 @@ export function MobileNavigation({ lang }: { lang: Locale }) {
             aria-current={pathname === `/${lang}/${key}` ? "page" : undefined}
             onClick={(event) => {
               event.preventDefault();
-              show(label);
-              setOpen(false);
+              show(label, event.currentTarget);
             }}
           >
             {label}
@@ -135,7 +133,7 @@ export function DesktopNavigation({ lang }: { lang: Locale }) {
           href={`/${lang}/${key}`}
           onClick={(event) => {
             event.preventDefault();
-            show(label);
+            show(label, event.currentTarget);
           }}
           aria-current={
             pathname.startsWith(`/${lang}/${key}`) ? "page" : undefined
