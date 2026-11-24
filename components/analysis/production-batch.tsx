@@ -51,7 +51,7 @@ export function ProductionBatch({
     old.includes(format)?old.filter(x=>x!==format):[...old,format]);
   const toggleCapsule=(id:string)=>setSelected(old=>old.includes(id)?
     old.filter(x=>x!==id):[...old,id]);
-  const requested=createProductionPlan({capsules,selectedIds:selected,formats:selectedFormats,includeEpisode,duration});
+  const requested=createProductionPlan({capsules,selectedIds:selected,formats:selectedFormats,includeEpisode,duration,lang});
   const updateJob=(id:string,patch:Partial<JobStatus>)=>setJobs(old=>old.map(j=>
     j.job.id===id?{...j,...patch}:j));
 

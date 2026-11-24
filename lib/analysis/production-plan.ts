@@ -19,8 +19,9 @@ export function createProductionPlan(args:{
   duration:number;
   includeEpisode:boolean;
   formats:readonly OutputFormat[];
+  lang?:"fr"|"en";
 }):RenderJob[]{
-  const {capsules,selectedIds,duration,includeEpisode,formats}=args;
+  const {capsules,selectedIds,duration,includeEpisode,formats,lang="fr"}=args;
   const choice=new Set(selectedIds);
   const validFormats=[...new Set(formats)].filter(v=>["horizontal","vertical","square"].includes(v));
   const jobs:RenderJob[]=[];
@@ -28,13 +29,13 @@ export function createProductionPlan(args:{
     if(!choice.has(capsule.id)||!supported(capsule,duration)||!canProduceLegacyCapsule(capsule))continue;
     for(const format of validFormats)jobs.push({
       id:crypto.randomUUID(),kind:"capsule",capsuleId:capsule.id,
-      title:capsule.title||"Capsule",format,start:capsule.start,end:capsule.end,
+      title:capsule.title||(lang==="fr"?"Capsule":"Clip"),format,start:capsule.start,end:capsule.end,
     });
   }
   if(includeEpisode&&Number.isFinite(duration)&&duration>0&&duration<=7200){
     for(const format of validFormats)jobs.push({
       id:crypto.randomUUID(),kind:"episode",capsuleId:null,
-      title:"Émission complète",format,start:0,end:duration,
+      title:lang==="fr"?"Émission complète":"Full episode",format,start:0,end:duration,
     });
   }
   return jobs.slice(0,100);

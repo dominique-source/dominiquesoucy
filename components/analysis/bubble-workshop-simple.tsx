@@ -131,7 +131,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
     onChange({capsules:[...capsules,...drafts.map(c=>({
       ...c,keying:{...defaultChroma,enabled:false},background:"original" as const,
     }))],selectedCapsuleId:drafts[0].id,stage:"editing"});
-    onEvent("analysis",String(drafts.length)+" capsules préparées pour les bulles","success");
+    onEvent("analysis",fr?`${drafts.length} capsules préparées pour les bulles`:`${drafts.length} clips prepared for graphics`,"success");
     setInfo(fr?"Les extraits sont prêts. Choisis maintenant une bulle.":"Clips are ready. Choose your bubbles.");
   }
 
@@ -174,7 +174,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
       });
       downloadBubblePng(blob,"dom-soucy-bulle-"+selectedStyle+"-"+current.id.slice(0,8)+".png");
       setInfo(fr?"Bulle PNG transparente téléchargée : glisse-la directement sur ta piste vidéo dans Premiere.":"Transparent PNG downloaded: drag it directly onto your Premiere timeline.");
-      onEvent("export","Bulle PNG transparente exportée localement","success");
+      onEvent("export",fr?"Bulle PNG transparente exportée localement":"Transparent bubble PNG exported locally","success");
     }catch(error){
       setInfo(fr?"Impossible de créer le PNG. Vérifie le texte et la photo, puis réessaie.":"PNG creation failed. Check the text and photo, then retry.");
       onEvent("error","Export PNG impossible : "+(error instanceof Error?error.message:"UNKNOWN"),"failure");
@@ -242,14 +242,14 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
     {current&&<div className="studio-clip-review">
       <p role="status"><strong>{current.title}</strong><span>{reviewLabels[current.review??"pending"]}</span></p>
       <div className="studio-clip-review-actions">
-        <button type="button" className="analysis-primary" disabled={!timeValid||current.review==="approved"}
-          onClick={()=>reviewClip("approved")}>{fr?"APPROUVER L’EXTRAIT":"APPROVE CLIP"}</button>
-        <button type="button" className="analysis-secondary" disabled={current.review==="rejected"}
-          onClick={()=>reviewClip("rejected")}>{fr?"REJETER L’EXTRAIT":"REJECT CLIP"}</button>
+        {current.review==="approved"?<button type="button" className="analysis-primary"
+          onClick={onOpenExport}>{fr?"ALLER AUX EXPORTS →":"OPEN EXPORTS →"}</button>:
+          <button type="button" className="analysis-primary" disabled={!timeValid}
+            onClick={()=>reviewClip("approved")}>{fr?"APPROUVER L’EXTRAIT":"APPROVE CLIP"}</button>}
+        {current.review!=="rejected"&&<button type="button" className="analysis-secondary"
+          onClick={()=>reviewClip("rejected")}>{fr?"REJETER L’EXTRAIT":"REJECT CLIP"}</button>}
         {(current.review==="approved"||current.review==="rejected")&&<button type="button" className="analysis-secondary"
           onClick={()=>reviewClip("pending")}>{fr?"REMETTRE À VALIDER":"RESET REVIEW"}</button>}
-        {current.review==="approved"&&<button type="button" className="analysis-secondary"
-          onClick={onOpenExport}>{fr?"ALLER AUX EXPORTS →":"OPEN EXPORTS →"}</button>}
       </div>
       {!timeValid&&<small>{fr?"Vérifie les repères dans les options avancées avant d’approuver.":"Check timing in Advanced options before approving."}</small>}
     </div>}

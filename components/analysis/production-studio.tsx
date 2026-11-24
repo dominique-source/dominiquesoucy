@@ -298,7 +298,8 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       ...context,transcript,analysis:value,selectedMoment:0,stage:"editing",
       capsules,selectedCapsuleId:prepared.selectedCapsuleId||capsules[0]?.id||"",
     });
-    record("analysis","Analyse IA terminée : "+String(value.moments.length)+" extraits, "+String(drafts.length)+" capsules préparées","success");
+    record("analysis",fr?`Analyse IA terminée : ${value.moments.length} extraits, ${drafts.length} capsules préparées`:
+      `AI analysis complete: ${value.moments.length} highlights, ${drafts.length} clips prepared`,"success");
     setActiveSection("editing");
     setMessage(fr?"L'IA a trouvé "+String(value.moments.length)+" passages. Clique sur une bulle pour la voir sur ta vidéo.":
       "AI found "+String(value.moments.length)+" highlights. Choose a bubble to preview it on your video.");
@@ -347,7 +348,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
         duration:Math.min(7200,Math.max(10,Math.ceil(decoded.duration)))};
       modify({transcript,timedWords:words,analysis:null,selectedMoment:0,
         stage:"transcription",timeline});
-      record("transcription","Transcription horodatée générée en mémoire, sans Blob","success");
+      record("transcription",fr?"Transcription horodatée générée en mémoire, sans Blob":"Timed transcript generated in memory without Blob","success");
       setTranscriptionFailure(null);
       setBusy("analyze");
       setTranscriptionProgress(fr?"L'IA sélectionne maintenant les meilleurs moments…":
@@ -359,13 +360,13 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
         setError(fr?
           "Audio transcrit et conservé, mais l'analyse IA n'a pas abouti. Clique à nouveau sur Analyser pour réessayer.":
           "Audio was transcribed and saved, but AI analysis did not finish. Click Analyze to retry.");
-        record("error","Analyse IA échouée après transcription : "+(e instanceof Error?e.message:"UNKNOWN"),"failure");
+        record("error",(fr?"Analyse IA échouée après transcription : ":"AI analysis failed after transcription: ")+(e instanceof Error?e.message:"UNKNOWN"),"failure");
       }
     }catch(e){
       const code=(e instanceof Error?e.message:"UNKNOWN").slice(0,90);
       const detail=transcriptionFailureMessage(code,"transcribe",fr);
       setTranscriptionFailure({code,stage:"transcribe",detail});
-      record("error",`Échec transcription directe : ${code}`,"failure");
+      record("error",fr?`Échec transcription directe : ${code}`:`Transcription failed: ${code}`,"failure");
       setMessage("");
     }finally{setBusy("");setTranscriptionProgress("")}
   };
@@ -392,7 +393,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     setBusy("analyze");setError("");
     try{await analyzeTranscriptText(project.transcript)}
     catch{
-      record("error","Échec analyse IA","failure");
+    record("error",fr?"Échec analyse IA":"AI analysis failed","failure");
       setError(fr?"Analyse IA indisponible. Ta transcription est conservée.":"AI analysis unavailable. Your transcript is preserved.");
     }finally{setBusy("")}
   };
@@ -789,7 +790,8 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       <p className="analysis-note">{fr?"Les caméras et le montage multicaméra se font désormais dans Premiere. L’ancien éditeur navigateur reste disponible pour les anciens projets, sans remplacer le rendu HD.":"Multicam editing now happens in Premiere. The old browser editor remains for legacy projects and is not the HD renderer."}</p>
     </div>
     <section hidden={activeSection!=="production"} className="analysis-panel studio-step studio-simple-production">
-      <div className="analysis-panel-head"><h2>{fr?"04 / PRODUIRE EN HD":"04 / PRODUCE IN HD"}</h2><span>PREMIERE + STUDIO + MAC</span></div>
+      <details className="studio-simple-details">
+      <summary>{fr?"COMMENT PRODUIRE LE MP4 HD SUR MAC":"HOW TO RENDER THE HD MP4 ON MAC"}</summary>
       <p>{fr?"Les bulles se règlent dans le Studio. Elles sont placées automatiquement dans le MP4 par notre moteur HD local. Tu n’as pas besoin de les positionner dans Premiere.":"Set the bubbles in Studio. The local HD renderer automatically positions them in the MP4; you do not need to place them in Premiere."}</p>
       <div className="studio-simple-production-steps">
         <div><strong>01</strong><span>{fr?"EXPORTER master.mp4 DEPUIS PREMIERE":"EXPORT master.mp4 FROM PREMIERE"}</span></div>
@@ -804,6 +806,10 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
         {fr?"OUVRIR LE MOTEUR HD ET LES INSTRUCTIONS ↗":"OPEN THE HD RENDERER AND INSTRUCTIONS ↗"}
       </a>
       <p className="analysis-note">{fr?"Aujourd’hui, le Studio fournit un manifeste JSON par capsule. L’export HD en un clic directement sur le site reste à développer; aucun rendu n’est lancé ici automatiquement.":"Currently Studio downloads a JSON manifest for each capsule. One-click HD rendering from this page is not implemented; no render starts here automatically."}</p>
+      </details>
+      {approvedCapsules.length>0&&<button className="analysis-secondary" type="button" onClick={()=>quickNavigate("publish")}>
+        {fr?"PRÉPARER LA DIFFUSION →":"PREPARE PUBLICATION →"}
+      </button>}
     </section>
     <section hidden={activeSection!=="publish"} className="analysis-panel studio-step studio-simple-production">
       <div className="analysis-panel-head">
