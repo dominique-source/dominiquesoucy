@@ -45,7 +45,11 @@ export function MobileNavigation({ lang }: { lang: Locale }) {
             key={key}
             href={`/${lang}/${key}`}
             aria-current={pathname === `/${lang}/${key}` ? "page" : undefined}
-            onClick={() => setOpen(false)}
+            onClick={(event) => {
+              event.preventDefault();
+              window.alert(lang === "fr" ? "À venir" : "Coming soon");
+              setOpen(false);
+            }}
           >
             {label}
           </Link>
@@ -86,6 +90,10 @@ export function DesktopNavigation({ lang }: { lang: Locale }) {
         <Link
           key={key}
           href={`/${lang}/${key}`}
+          onClick={(event) => {
+            event.preventDefault();
+            window.alert(lang === "fr" ? "À venir" : "Coming soon");
+          }}
           aria-current={
             pathname.startsWith(`/${lang}/${key}`) ? "page" : undefined
           }
