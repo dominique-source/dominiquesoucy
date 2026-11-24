@@ -396,3 +396,84 @@
 .studio-session-reconnect{display:flex;align-items:center;justify-content:center;text-align:center;min-height:60px;background:#ccff00;color:#121510!important;text-decoration:none!important;border:0;border-radius:10px;font-weight:950;font-size:clamp(14px,1.6vw,21px);padding:15px 20px}
 .studio-session-reconnect:hover,.studio-session-reconnect:focus-visible{background:#e2ff87;outline:2px solid #f4f4ef;outline-offset:2px}
 @media(max-width:600px){.studio-session-recovery{padding:12px}.studio-session-reconnect{min-height:66px}}
+
+
+/* Premium visual bubble lab: Premier Pro supplies a finished camera master. */
+.studio-bubble-lab{max-width:1400px;margin:0 auto 28px;display:grid;gap:23px;background:#0b0d0b;color:#f4f4ef}
+.studio-bubble-lab-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
+.studio-bubble-lab-heading h2{font:950 italic clamp(32px,4vw,58px)/.99 "Barlow Condensed",Impact,sans-serif;letter-spacing:-.018em;color:#f4f4ef;margin:8px 0}
+.studio-bubble-lab-heading p{margin:0;color:#d2dbca;font-size:15px}
+.studio-bubble-lab-heading>span{font-weight:950;font-size:12px;color:#ccff00;border:1px solid #5b7a32;border-radius:8px;padding:13px 18px}
+.studio-bubble-lab-empty{padding:20px;border:1px solid #63873d;border-radius:10px;background:#182113;display:grid;gap:12px}
+.studio-bubble-lab-empty>strong{font-size:20px;font-weight:950;color:#ccff00}
+.studio-bubble-lab-empty>p{color:#e1e8da;line-height:1.45;margin:0}
+.studio-bubble-strip{display:grid;gap:11px}
+.studio-bubble-strip>strong,.studio-bubble-video-side>strong,.studio-bubble-choice-side>strong,.studio-bubble-editor-simple>strong{font:950 italic clamp(22px,2.3vw,34px)/1 "Barlow Condensed",Impact,sans-serif;color:#ccff00}
+.studio-bubble-strip-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:7px}
+.studio-bubble-strip-scroll button{flex:0 0 215px;min-height:95px;padding:13px 14px;border:1px solid #636a5b;border-radius:9px;background:#1b1f1b;color:#f4f4ef;text-align:left;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+.studio-bubble-strip-scroll button.active{border:2px solid #ccff00;background:#2a321e}
+.studio-bubble-strip-scroll span{font-weight:950;color:#ccff00;font-size:12px}
+.studio-bubble-strip-scroll strong{font-size:15px;line-height:1.15}
+.studio-bubble-strip-scroll small{color:#c9cfc6;font-size:10px;font-weight:850;letter-spacing:.05em}
+.studio-bubble-lab-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(260px,.8fr);gap:22px;align-items:start}
+.studio-bubble-video-side,.studio-bubble-choice-side{min-width:0;display:grid;gap:13px}
+.studio-bubble-preview{width:100%;position:relative;aspect-ratio:16/9;overflow:hidden;background:radial-gradient(circle at 57% 30%,#31352e 0%,#070907 70%);border:2px solid #738f46;border-radius:13px;color:#fff;isolation:isolate}
+.studio-bubble-preview.format-9-16{aspect-ratio:9/16;max-width:390px;margin:0 auto}
+.studio-bubble-preview.format-1-1{aspect-ratio:1/1;max-width:560px;margin:0 auto}
+.studio-bubble-preview>video{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;z-index:0}
+.studio-bubble-no-video{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;color:#d6e3cf;text-align:center;padding:15px}
+.studio-bubble-no-video>span{font-size:58px;color:#ccff00}
+.studio-bubble-no-video>strong{font-size:19px;font-weight:950}
+.studio-bubble-no-video>small{font-size:12px;max-width:250px}
+.studio-bubble-video-top,.studio-bubble-video-bottom,.studio-bubble-video-graphics{position:absolute;z-index:1;pointer-events:none}
+.studio-bubble-video-top{inset:4% 4% auto 4%;display:flex;justify-content:space-between;gap:8px;align-items:start}
+.studio-bubble-video-top b{font:950 italic clamp(15px,1.9vw,26px)/1 "Barlow Condensed",Impact,sans-serif;text-shadow:0 2px 8px #000}
+.studio-bubble-video-top em{color:#ccff00;font-style:italic}
+.studio-bubble-video-top>span{font-size:clamp(9px,1.05vw,14px);padding:5px 8px;color:#ccff00;background:#000b;border:1px solid #ccff00;border-radius:12px;font-weight:900;white-space:nowrap}
+.studio-bubble-video-bottom{bottom:4%;left:4%;font:900 italic clamp(14px,1.75vw,24px)/1 "Barlow Condensed",Impact,sans-serif;text-shadow:0 2px 8px #000}
+.studio-bubble-video-bottom>b{color:#ccff00}
+.studio-bubble-video-graphics{right:4%;top:26%;width:54%;max-height:63%;display:grid;place-items:center}
+.studio-bubble-preview.format-9-16 .studio-bubble-video-graphics,.studio-bubble-preview.format-1-1 .studio-bubble-video-graphics{width:90%;right:5%;top:auto;bottom:15%;max-height:43%}
+.ds-bubble-graphic{width:100%;font-family:"Barlow Condensed",Impact,"Arial Narrow",sans-serif}
+.ds-bubble-glass{position:relative;border-radius:14px;border:1px solid #dce6d6;background:linear-gradient(125deg,#17191ce9,#070708ed);box-shadow:0 0 21px #ccff0040,0 12px 26px #000b,inset -1px -1px #ccff00;padding:clamp(12px,2vw,22px);color:white;overflow:hidden}
+.ds-bubble-ribbon{display:inline-block;transform:skew(-11deg);background:#ccff00;color:#090909;font:950 italic clamp(11px,1.5vw,24px)/1 "Barlow Condensed",Impact,sans-serif;padding:6px 12px;margin-bottom:8px}
+.ds-bubble-prompt{color:#ddd;font-size:clamp(10px,1vw,15px);margin:5px 0}
+.ds-bubble-glass strong{display:block;font:900 italic clamp(15px,2.5vw,32px)/1.02 "Barlow Condensed",Impact,sans-serif;overflow-wrap:anywhere;text-shadow:0 2px 8px #000}
+.ds-bubble-glass small{display:block;margin-top:8px;font-size:clamp(8px,.8vw,11px);color:#dadada;line-height:1.2}
+.ds-bubble-rafale{display:grid;gap:7px}
+.ds-bubble-rafale .ds-bubble-glass{padding:9px;display:flex;align-items:center;gap:9px}
+.ds-bubble-rafale .ds-bubble-glass b{background:#ccff00;color:#090909;font-size:clamp(12px,1.7vw,23px);padding:4px 7px;font-style:italic}
+.ds-bubble-rafale .ds-bubble-glass strong{font-size:clamp(12px,1.5vw,22px)}
+.studio-bubble-video-graphics .ds-bubble-graphic{animation:studioBubbleIn .62s cubic-bezier(.18,.75,.26,1) both}
+@keyframes studioBubbleIn{from{opacity:0;transform:translateY(20px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+.studio-bubble-gallery{display:grid;grid-template-columns:1fr;gap:10px}
+.studio-bubble-gallery>button{border:1px solid #596352;border-radius:10px;background:#181d17;padding:9px;text-align:left;color:#f5f5f1;cursor:pointer;display:grid;gap:9px}
+.studio-bubble-gallery>button:hover,.studio-bubble-gallery>button:focus-visible{border-color:#ccff00}
+.studio-bubble-gallery>button.selected{border:2px solid #ccff00;background:#26301d}
+.studio-bubble-gallery-art{height:112px;background:radial-gradient(circle at center,#393f35,#0b0c0b);display:grid;place-items:center;padding:13px;overflow:hidden;border-radius:7px}
+.ds-bubble-graphic.mini .ds-bubble-glass{padding:9px;border-radius:8px}
+.ds-bubble-graphic.mini .ds-bubble-ribbon{font-size:11px;padding:3px 8px;margin-bottom:5px}
+.ds-bubble-graphic.mini .ds-bubble-glass strong{font-size:17px;line-height:1.02}
+.ds-bubble-graphic.mini .ds-bubble-prompt,.ds-bubble-graphic.mini .ds-bubble-glass small{font-size:9px;margin:3px 0}
+.ds-bubble-graphic.mini .ds-bubble-rafale{gap:4px}
+.ds-bubble-graphic.mini .ds-bubble-rafale .ds-bubble-glass{padding:6px}
+.ds-bubble-graphic.mini .ds-bubble-rafale .ds-bubble-glass strong{font-size:12px}
+.ds-bubble-graphic.mini .ds-bubble-rafale .ds-bubble-glass b{font-size:11px;padding:2px 5px}
+.studio-bubble-gallery>button>span{font:900 italic 19px/1.1 "Barlow Condensed",Impact,sans-serif;padding:2px 7px}
+.studio-bubble-gallery>button>span>b{color:#ccff00;margin-right:10px}
+.studio-bubble-gallery>button>small{padding:0 7px 4px;color:#ccff00;font-weight:900}
+.studio-bubble-editor-simple{display:grid;gap:12px;padding:20px;border:1px solid #6b8645;background:#151b11;border-radius:12px}
+.studio-bubble-editor-simple>label,.studio-bubble-editor-simple details label{display:grid;gap:9px;font-size:13px;font-weight:900;letter-spacing:.02em;color:#f4f4ef}
+.studio-bubble-editor-simple textarea,.studio-bubble-editor-simple input,.studio-bubble-editor-simple select{font-size:17px;color:#f4f4ef;background:#0a0e09;border:1px solid #8eaa61;border-radius:8px;padding:13px;width:100%;min-height:50px}
+.studio-bubble-editor-simple textarea{resize:vertical;line-height:1.3}
+.studio-bubble-format-controls{display:flex;gap:9px;flex-wrap:wrap}
+.studio-bubble-format-controls button{min-width:95px;padding:13px 16px;background:#0b0f09;border:1px solid #64744f;border-radius:8px;color:#e3e6e0;font-weight:950;cursor:pointer}
+.studio-bubble-format-controls button.active{background:#ccff00;border-color:#ccff00;color:#111}
+.studio-bubble-timing{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-bottom:15px}
+.studio-bubble-lab-big{font:900 italic clamp(23px,2.8vw,36px)/1 "Barlow Condensed",Impact,sans-serif!important;min-height:68px;width:100%}
+.studio-bubble-warning{margin:0;color:#ffcc8e;font-size:14px;line-height:1.5;border-left:3px solid #ffcc8e;padding:7px 12px}
+.studio-bubble-notice{padding:15px;background:#22301a;border:1px solid #b1db76;color:#f2f5ed;border-radius:10px}
+@media(min-width:1080px){.studio-bubble-gallery{grid-template-columns:1fr 1fr}.studio-bubble-gallery>button:last-child{grid-column:1/-1}.studio-bubble-gallery-art{height:135px}}
+@media(max-width:920px){.studio-bubble-lab-grid{grid-template-columns:1fr}.studio-bubble-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}.studio-bubble-gallery-art{height:105px}.studio-bubble-video-graphics{width:52%}}
+@media(max-width:650px){.studio-bubble-gallery{grid-template-columns:1fr}.studio-bubble-gallery-art{height:110px}.studio-bubble-video-graphics{width:61%}.studio-bubble-timing{grid-template-columns:1fr}.studio-bubble-editor-simple{padding:14px}}
+@media(prefers-reduced-motion:reduce){.studio-bubble-video-graphics .ds-bubble-graphic{animation:none}}
