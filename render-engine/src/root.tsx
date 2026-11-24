@@ -16,7 +16,8 @@ export const Root:React.FC=()=>(
       const size=dimensionsFor(data.format);
       return {
         fps:30,width:size.width,height:size.height,
-        durationInFrames:Math.max(1,Math.round((data.end-data.start)*30)),
+        durationInFrames:Math.max(1,Math.round((data.end-data.start)*30))+
+          (data.outroAsset?Math.round((data.outroDurationSeconds??2)*30):0),
       };
     }}
   />
