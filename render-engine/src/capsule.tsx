@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  AbsoluteFill,Audio,Img,OffthreadVideo,
+  AbsoluteFill,Audio,Img,OffthreadVideo,Sequence,
   interpolate,spring,staticFile,useCurrentFrame,useVideoConfig,
 } from "remotion";
 
@@ -15,6 +15,8 @@ export type HdCapsuleProps={
   masterAsset:string;foregroundAsset:string;audioAsset:string;
   backgroundAsset:string;portraitAsset:string;
   episodeLabel:string;
+  outroAsset?:string;
+  outroDurationSeconds?:number;
 };
 
 export const sampleProps:HdCapsuleProps={
@@ -203,7 +205,7 @@ function RafaleCard({props,vertical,frame}:{props:HdCapsuleProps;vertical:boolea
   </div>;
 }
 
-export const Capsule:React.FC<HdCapsuleProps>=(props)=>{
+const CapsuleBody:React.FC<HdCapsuleProps>=(props)=>{
   const frame=useCurrentFrame();
   const {width,height}=useVideoConfig();
   const vertical=props.format==="9:16";
@@ -245,5 +247,28 @@ export const Capsule:React.FC<HdCapsuleProps>=(props)=>{
     </AbsoluteFill>
     <div style={{position:"absolute",left:0,right:0,bottom:0,height:8,background:lime,
       boxShadow:`0 0 20px ${lime}`}}/>
+  </AbsoluteFill>;
+};
+
+/**
+ * The supplied DOM SOUCY 2s signature plays AFTER the last source-video frame.
+ * It is an independent clip with its original AAC audio; the main video's
+ * timeline, captions and sound never overlap it.
+ */
+export const Capsule:React.FC<HdCapsuleProps>=(props)=>{
+  const fps=useVideoConfig().fps;
+  const contentFrames=Math.max(1,Math.round((props.end-props.start)*fps));
+  const outro=props.outroAsset||"";
+  const outroFrames=outro?Math.round((props.outroDurationSeconds??2)*fps):0;
+  return <AbsoluteFill style={{background:"#000"}}>
+    <Sequence from={0} durationInFrames={contentFrames}>
+      <CapsuleBody {...props}/>
+    </Sequence>
+    {outroFrames>0&&<Sequence from={contentFrames} durationInFrames={outroFrames}>
+      <AbsoluteFill style={{background:"#000",alignItems:"center",justifyContent:"center"}}>
+        <OffthreadVideo src={staticFile(outro)}
+          volume={1} style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+      </AbsoluteFill>
+    </Sequence>}
   </AbsoluteFill>;
 };
