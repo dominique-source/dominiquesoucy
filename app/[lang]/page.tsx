@@ -1,17 +1,9 @@
 import { MediaLibrary } from "@/components/media-library";
 import { CinematicHero } from "@/components/cinematic-hero";
-import { PilotThumbnailCollection } from "@/components/pilot-thumbnail-collection";
-import { PurInstinctBridge } from "@/components/site";
-import { HomeSignature } from "@/components/home-editorial";
-import {
-  PilotFeature,
-  PremiumHomeEditorial,
-} from "@/components/premium-editorial";
-import { Reveal } from "@/components/reveal";
 import { locale, dict } from "@/lib/i18n";
-import { getEntries } from "@/lib/content";
 import { pageMetadata, jsonLd } from "@/lib/metadata";
 import { site } from "@/lib/config";
+import "./home-streamlined.css";
 export async function generateMetadata({
   params,
 }: {
@@ -33,7 +25,7 @@ export default async function Home({
   const lang = locale((await params).lang);
   const d = dict(lang);
   return (
-    <div className="home-v2">
+    <div className="home-v2 home-streamlined">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -48,17 +40,14 @@ export default async function Home({
       />
       <CinematicHero lang={lang} />
       <MediaLibrary lang={lang} />
-      <PilotThumbnailCollection lang={lang} />
-      <PilotFeature lang={lang} />
-      <PremiumHomeEditorial lang={lang} entries={getEntries(lang)} />
-      <div className="content-shell">
-        <Reveal>
-          <HomeSignature lang={lang} />
-        </Reveal>
-        <Reveal>
-          <PurInstinctBridge lang={lang} />
-        </Reveal>
-      </div>
+      <section className="content-shell home-connect" aria-labelledby="home-connect-title">
+        <p className="eyebrow accent">{lang==="fr"?"RESTONS CONNECTÉS":"STAY CONNECTED"}</p>
+        <h2 id="home-connect-title">{lang==="fr"?"La conversation continue.":"The conversation continues."}</h2>
+        <div className="home-connect-links">
+          {site.social.map(s=><a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer">{s.name} ↗</a>)}
+          <a href={site.purinstinct || "https://purinstinctgames.com"} target="_blank" rel="noopener noreferrer">PürInstinct ↗</a>
+        </div>
+      </section>
     </div>
   );
 }

@@ -42,7 +42,7 @@ export function CinematicHero({ lang }: { lang: Locale }) {
           <p className="reference-mission">{d.mission}</p>
           <p className="reference-description">{d.bio2}</p>
           <div className="reference-actions">
-            <a className="reference-primary" href="#pilote">
+            <a className="reference-primary" href="#conferences">
               <svg
                 viewBox="0 0 20 20"
                 width="14"
@@ -51,7 +51,7 @@ export function CinematicHero({ lang }: { lang: Locale }) {
               >
                 <path d="M4 2 18 10 4 18Z" fill="currentColor" />
               </svg>
-              {lang === "fr" ? "Regarder le pilote" : "Watch the pilot"}
+              {lang === "fr" ? "Découvrir les épisodes" : "Discover episodes"}
             </a>
             <Link className="reference-secondary" href={`/${lang}/reflexions`}>
               {d.explore}
