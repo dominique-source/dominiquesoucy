@@ -1,0 +1,4 @@
+export type Clip={id:string;title:string;url:string;visible:boolean};
+export type Conference=Clip&{shorts:Clip[]};
+export function youtubeId(value:string):string|null {try{const u=new URL(value);if(u.protocol!=="https:")return null;let id="";if(u.hostname==="youtu.be")id=u.pathname.slice(1);else if(["youtube.com","www.youtube.com","m.youtube.com"].includes(u.hostname))id=u.pathname==="/watch"?u.searchParams.get("v")||"":/^\/(shorts|embed|live)\//.test(u.pathname)?u.pathname.split("/")[2]:"";return /^[\w-]{11}$/.test(id)?id:null}catch{return null}}
+export function validCatalog(v:unknown):v is Conference[]{const clip=(x:any)=>x&&typeof x.id==="string"&&x.id.length<=80&&typeof x.title==="string"&&x.title.trim().length>0&&x.title.length<=250&&typeof x.url==="string"&&!!youtubeId(x.url)&&typeof x.visible==="boolean";return Array.isArray(v)&&v.length<=200&&v.every(x=>clip(x)&&Array.isArray(x.shorts)&&x.shorts.length<=200&&x.shorts.every(clip))}

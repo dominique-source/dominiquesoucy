@@ -66,6 +66,7 @@ export function StudioWorkspace({lang,provider,expires}:Props){
           <small>{fr?"Bibliothèque, capsules et archives MP4":"Projects, capsules and MP4 archives"}</small>
         </Link>
       </div>
+      <Link className="studio-workspace-tile" style={{display:"block",marginTop:16,borderColor:"#CCFF00"}} href={`/${lang}/studio-site`}><span className="studio-workspace-action-top">04 ↗</span><strong>{fr?"ORGANISER LE SITE WEB":"ORGANIZE WEBSITE"}</strong><small>{fr?"Conférences, vidéos principales et Shorts":"Conferences, main videos and Shorts"}</small></Link>
       <section className="studio-workspace-recent" aria-label={fr?"Projets récents":"Recent projects"}>
         <div className="studio-workspace-recent-heading">
           <div><span className="studio-workspace-eyebrow">{fr?"REPRISE RAPIDE":"QUICK RESUME"}</span>
