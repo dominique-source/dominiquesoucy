@@ -24,19 +24,27 @@ const options: {style:Style;number:string;fr:string;en:string}[] = [
   {style:"rafale",number:"03",fr:"RAFALE DE QUESTIONS",en:"QUESTION BURST"},
 ];
 
-function BubbleVisual({style,question,caption,mini=false,attribution="reconstructed"}:{style:Style;question:string;caption:string;mini?:boolean;attribution?:"verified"|"reconstructed"}){
+function BubbleVisual({style,question,caption,mini=false,attribution="reconstructed",journalistName="",journalistOutlet="",portraitUrl=""}:{style:Style;question:string;caption:string;mini?:boolean;attribution?:"verified"|"reconstructed";journalistName?:string;journalistOutlet?:string;portraitUrl?:string}){
   const lines = question.split("\n").map(v=>v.trim()).filter(Boolean).slice(0,3);
   const previewQuestion = question.trim() || "Votre question apparaîtra ici";
   const previewQuote = caption.trim() || "Votre citation apparaîtra ici";
   return <div className={"ds-bubble-graphic ds-bubble-"+style+(mini?" mini":"")}>
-    {style==="conversation"?<div className="ds-bubble-glass">
-      <div className="ds-bubble-ribbon">{attribution==="verified"?"QUESTION — JOURNALISTE":"QUESTION RECONSTRUITE"}</div>
-      <div className="ds-bubble-prompt">◉ {attribution==="verified"?"QUESTION ORIGINALE":"QUESTION PROPOSÉE"}</div>
-      <strong>« {previewQuestion.slice(0,175)} »</strong>
-      {attribution==="reconstructed"&&<small>RECONSTITUTION ÉDITORIALE</small>}
-    </div>:style==="quote"?<div className="ds-bubble-glass">
-      <div className="ds-bubble-ribbon">LA RÉPONSE</div>
-      <strong>« {previewQuote.slice(0,200)} »</strong>
+    {style==="conversation"?<div className="ds-bubble-glass ds-bubble-journalist-glass">
+      <div className="ds-bubble-journalist-layout">
+        <div className="ds-bubble-journalist-body">
+          <div className="ds-bubble-ribbon"><span aria-hidden="true">◉</span> {attribution==="verified"?"QUESTION — JOURNALISTE":"QUESTION — PROPOSÉE"}</div>
+          {(journalistName||journalistOutlet)&&<div className="ds-bubble-attribution">
+            {journalistName||"Journaliste"}{journalistOutlet&&<span> / {journalistOutlet}</span>}
+          </div>}
+          <strong>« {previewQuestion.slice(0,175)} »</strong>
+          {attribution==="reconstructed"&&<small>RECONSTITUTION ÉDITORIALE</small>}
+        </div>
+        <div className="ds-bubble-journalist-portrait" aria-hidden="true">
+          {portraitUrl?<img src={portraitUrl} alt=""/>:<span className="ds-bubble-portrait-icon">◉</span>}
+        </div>
+      </div>    </div>:style==="quote"?<div className="ds-bubble-glass">
+      <div className="ds-bubble-ribbon">{mini?"CITATION CHOC":"LA RÉPONSE"}</div>
+      <strong className="ds-bubble-quote-text">« {previewQuote.slice(0,200)} »</strong>
     </div>:<div className="ds-bubble-rafale">
       {(lines.length?lines:["Votre première question","Votre deuxième question","Votre troisième question"])
         .map((line,i)=><div className="ds-bubble-glass" key={i}>
@@ -52,7 +60,21 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
   const current=capsules.find(c=>c.id===project.selectedCapsuleId)||capsules[0];
   const [previewUrl,setPreviewUrl]=useState("");
   const [info,setInfo]=useState("");
+  const [journalistPhoto,setJournalistPhoto]=useState<File|null>(null);
+  const [journalistPhotoUrl,setJournalistPhotoUrl]=useState("");
+  const editorRef=useRef<HTMLTextAreaElement|null>(null);
   const videoRef=useRef<HTMLVideoElement|null>(null);
+  useEffect(()=>{setJournalistPhoto(null)},[current?.id]);
+  useEffect(()=>{
+    if(!journalistPhoto){setJournalistPhotoUrl("");return}
+    const url=URL.createObjectURL(journalistPhoto);
+    setJournalistPhotoUrl(url);
+    return()=>URL.revokeObjectURL(url);
+  },[journalistPhoto]);
+  const editBubble=()=>{
+    editorRef.current?.scrollIntoView({behavior:"smooth",block:"center"});
+    editorRef.current?.focus();
+  };
 
   useEffect(()=>{
     if(!master)return;
@@ -121,12 +143,14 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
         ...current,
         style:selectedStyle,
         keying:{...defaultChroma,enabled:false},background:"original",
-      },{transparentForeground:false,reporterPortrait:false});
+      },{transparentForeground:false,reporterPortrait:!!journalistPhoto&&selectedStyle==="conversation"});
       const url=URL.createObjectURL(new Blob([JSON.stringify(manifest,null,2)],{type:"application/json"}));
       const link=document.createElement("a");link.href=url;link.download=hdManifestFilename(current);
       document.body.appendChild(link);link.click();link.remove();
       window.setTimeout(()=>URL.revokeObjectURL(url),1500);
-      setInfo(fr?"Instructions HD téléchargées. Le moteur local sur ton Mac les appliquera à master.mp4.":"HD render instructions downloaded. The local Mac renderer applies them to master.mp4.");
+      setInfo(journalistPhoto&&selectedStyle==="conversation"?
+        (fr?"Instructions téléchargées. Pour conserver la photo au rendu HD, copie également son fichier sous le nom reporter.png dans le moteur local.":"Instructions downloaded. To keep the journalist photo in the HD render, copy it as reporter.png into the local render folder."):
+        (fr?"Instructions HD téléchargées. Le moteur local sur ton Mac les appliquera à master.mp4.":"HD render instructions downloaded. The local Mac renderer applies them to master.mp4."));
     }catch{
       setInfo(fr?"Cette capsule n'a pas encore de repères temporels valides.":"This clip has no valid time range yet.");
     }
@@ -182,14 +206,20 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
           <div className="studio-bubble-video-top" aria-hidden="true">
             <b>DOM SOUCY <em>MEDIA.</em></b><span>● EN DIRECT</span>
           </div>
-          <div className="studio-bubble-video-graphics" key={current?.id||"demo"}>
+          <button type="button" className="studio-bubble-video-graphics studio-bubble-click-to-edit"
+            key={current?.id||"demo"} onClick={editBubble}
+            title={fr?"Cliquer pour modifier le texte de cette bulle":"Click to edit this bubble's text"}
+            aria-label={fr?"Modifier le texte de la bulle affichée":"Edit the displayed bubble text"}>
             <BubbleVisual style={selectedStyle} question={current?.bubble||""}
-              caption={current?.caption||""} attribution={current?.questionAttribution}/>
-          </div>
+              caption={current?.caption||""} attribution={current?.questionAttribution}
+              journalistName={current?.journalistName||""}
+              journalistOutlet={current?.journalistOutlet||""}
+              portraitUrl={journalistPhotoUrl}/>
+          </button>
           <div className="studio-bubble-video-bottom" aria-hidden="true"><b> / </b> DOMINIQUE SOUCY</div>
         </div>
         <p className="analysis-note">{fr?
-          "Aperçu graphique interactif. Les mouvements définitifs sont générés par notre moteur HD local; le rendu final peut présenter de légères différences.":
+          "Clique directement sur la bulle pour modifier son texte. Cet aperçu reprend les dégradés, reflets et contours lime de nos maquettes. Le moteur HD produit les mouvements définitifs.":
           "Interactive graphic preview. Final animation is generated by the local HD renderer and may differ slightly."}</p>
       </div>
 
@@ -218,13 +248,49 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
       <label>{selectedStyle==="quote"?(fr?"LA CITATION AFFICHÉE":"DISPLAYED QUOTE"):
         selectedStyle==="rafale"?(fr?"UNE QUESTION PAR LIGNE (MAX. 3)":"ONE QUESTION PER LINE (MAX 3)"):
         fr?"LA QUESTION AFFICHÉE":"DISPLAYED QUESTION"}
-        <textarea rows={selectedStyle==="rafale"?4:2} maxLength={500}
+        <textarea ref={editorRef} rows={selectedStyle==="rafale"?4:2} maxLength={500}
           value={selectedStyle==="quote"?current.caption:current.bubble}
           placeholder={selectedStyle==="quote"?(fr?"Choisis la phrase à mettre en valeur…":"Choose the quote…"):
             fr?"Écris la question qui apparaît dans la bulle…":"Type the question for this bubble…"}
           onChange={e=>update(selectedStyle==="quote"?{caption:e.target.value}:{bubble:e.target.value})}/>
       </label>
-      {selectedStyle!=="quote"&&<p className="analysis-note">
+      {selectedStyle==="conversation"&&<div className="studio-bubble-journalist-editor">
+        <strong>{fr?"PHOTO ET IDENTIFICATION DU JOURNALISTE (FACULTATIF)":"JOURNALIST PHOTO AND DETAILS (OPTIONAL)"}</strong>
+        <div className="studio-bubble-journalist-identity">
+          <label>{fr?"Nom du journaliste":"Journalist name"}
+            <input value={current.journalistName||""} maxLength={100}
+              placeholder={fr?"Nom réel, si vérifié":"Real name, if verified"}
+              onChange={e=>update({journalistName:e.target.value})}/>
+          </label>
+          <label>{fr?"Média":"Outlet"}
+            <input value={current.journalistOutlet||""} maxLength={100}
+              placeholder={fr?"Organisation, si vérifiée":"Organization, if verified"}
+              onChange={e=>update({journalistOutlet:e.target.value})}/>
+          </label>
+        </div>
+        <label className="studio-bubble-portrait-upload">
+          <span>{fr?"AJOUTER UNE PHOTO (PNG)":"ADD PHOTO (PNG)"}</span>
+          <input type="file" accept="image/png" onChange={e=>{
+            const file=e.currentTarget.files?.[0];
+            if(!file)return;
+            if(file.type!=="image/png"||file.size>8_000_000){
+              setInfo(fr?"Photo PNG de 8 Mo maximum.":"PNG photo up to 8 MB.");
+              return;
+            }
+            setJournalistPhoto(file);
+          }}/>
+        </label>
+        {journalistPhoto&&<button type="button" className="analysis-secondary" onClick={()=>{
+          const url=URL.createObjectURL(journalistPhoto);
+          const link=document.createElement("a");link.href=url;link.download="reporter.png";
+          document.body.appendChild(link);link.click();link.remove();
+          window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+        }}>{fr?"↓ TÉLÉCHARGER LA PHOTO POUR LE RENDU HD":"↓ DOWNLOAD PHOTO FOR HD RENDER"}</button>}
+        {journalistPhoto&&<p className="analysis-note">{fr?
+          "La photo apparaît ici. Pour l'export HD local, il faudra aussi fournir son fichier sous le nom reporter.png. Les portraits ne sont pas envoyés sur Vercel.":
+          "Photo previews here. The local HD renderer also needs the file named reporter.png. Portraits are not uploaded to Vercel."}</p>}
+      </div>}
+            {selectedStyle!=="quote"&&<p className="analysis-note">
         {fr?"Les questions imaginées par l’IA restent identifiées comme des reconstitutions. Ne présente jamais une question inventée comme une vraie intervention journalistique.":"AI-generated questions are marked as reconstructions and must not be presented as real journalist statements."}
       </p>}
       <div className="studio-bubble-format-controls" role="group" aria-label={fr?"Format vidéo":"Video format"}>

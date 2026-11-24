@@ -61,9 +61,9 @@ function WordMark({vertical,episode}:{vertical:boolean;episode:string}){
 function GlowPanel({children,vertical,style}:{children:React.ReactNode;vertical:boolean;style?:React.CSSProperties}){
   return <div style={{
     position:"relative",borderRadius:vertical?28:36,
-    background:"linear-gradient(135deg,rgba(23,23,25,.90),rgba(5,5,6,.87))",
-    border:"2px solid rgba(238,255,226,.72)",
-    boxShadow:"inset -2px -2px 0 rgba(204,255,0,.45), 0 12px 60px rgba(0,0,0,.56), 5px 9px 29px rgba(204,255,0,.28)",
+    background:"linear-gradient(143deg,rgba(71,76,82,.93) 0%,rgba(24,27,29,.96) 28%,rgba(2,3,4,.97) 68%,rgba(35,43,17,.95) 100%)",
+    border:"2px solid rgba(238,255,226,.85)",
+    boxShadow:"inset 0 3px 28px rgba(244,244,239,.18),inset -5px -5px 24px rgba(204,255,0,.18),0 0 30px rgba(204,255,0,.45),0 14px 55px rgba(0,0,0,.66)",
     padding:vertical?34:44,boxSizing:"border-box",overflow:"hidden",...style,
   }}>
     <div style={{position:"absolute",pointerEvents:"none",bottom:0,right:0,height:4,width:"82%",
@@ -132,10 +132,7 @@ function QuestionCard({props,vertical,frame,small=false}:{props:HdCapsuleProps;v
         </span>
       </div>
     </div>
-    <div style={{display:"flex",alignItems:"center",gap:20}}>
-      {safe(props.portraitAsset)&&<Img src={staticFile(props.portraitAsset)}
-        style={{width:vertical?105:140,height:vertical?105:140,objectFit:"cover",
-          borderRadius:18,filter:"grayscale(.35)"}}/>}
+    <div style={{display:"flex",alignItems:"stretch",gap:20}}>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontFamily:font,fontSize:vertical?24:small?19:27,
           color:"#e9e9e9",fontStyle:"italic",marginBottom:10}}>
@@ -147,6 +144,16 @@ function QuestionCard({props,vertical,frame,small=false}:{props:HdCapsuleProps;v
           « {title.slice(0,230)} »
         </div>
       </div>
+      {safe(props.portraitAsset)&&<div style={{
+        alignSelf:"stretch",width:vertical?116:190,minHeight:vertical?150:260,
+        borderRadius:18,overflow:"hidden",border:"2px solid rgba(204,255,0,.7)",
+        background:"linear-gradient(135deg,#4b4e4e,#0b0b0c)",
+        boxShadow:"0 0 25px rgba(204,255,0,.18)",
+      }}>
+        <Img src={staticFile(props.portraitAsset)}
+          style={{width:"100%",height:"100%",objectFit:"cover",filter:"grayscale(1)",
+            maskImage:"linear-gradient(90deg,transparent,#000 20%)"}}/>
+      </div>}
     </div>
     {reconstructed&&<div style={{fontFamily:font,fontSize:vertical?19:21,color:"#c8c8c8",
       marginTop:16,letterSpacing:1.1}}>
