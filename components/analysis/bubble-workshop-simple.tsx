@@ -64,6 +64,7 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
   const [journalistPhotoUrl,setJournalistPhotoUrl]=useState("");
   const editorRef=useRef<HTMLTextAreaElement|null>(null);
   const videoRef=useRef<HTMLVideoElement|null>(null);
+  useEffect(()=>{setJournalistPhoto(null)},[current?.id]);
   useEffect(()=>{
     if(!journalistPhoto){setJournalistPhotoUrl("");return}
     const url=URL.createObjectURL(journalistPhoto);
@@ -268,12 +269,12 @@ export function BubbleWorkshopSimple({lang,project,master,onChange,onEvent}:Prop
           </label>
         </div>
         <label className="studio-bubble-portrait-upload">
-          <span>{fr?"AJOUTER UNE PHOTO (PNG / JPG)":"ADD PHOTO (PNG / JPG)"}</span>
-          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{
+          <span>{fr?"AJOUTER UNE PHOTO (PNG)":"ADD PHOTO (PNG)"}</span>
+          <input type="file" accept="image/png" onChange={e=>{
             const file=e.currentTarget.files?.[0];
             if(!file)return;
-            if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>8_000_000){
-              setInfo(fr?"Photo PNG/JPG/WebP de 8 Mo maximum.":"PNG/JPG/WebP photo up to 8 MB.");
+            if(!file.type==="image/png"||file.size>8_000_000){
+              setInfo(fr?"Photo PNG de 8 Mo maximum.":"PNG photo up to 8 MB.");
               return;
             }
             setJournalistPhoto(file);
