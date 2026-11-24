@@ -443,7 +443,21 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         "L’IA n’a pas trouvé un début et une fin fiables. Tu peux voir la bulle, mais le rendu sera bloqué jusqu’à correction des repères ci-dessus.":
         "AI has not found reliable start/end points. You can preview the bubble, but rendering is blocked until timestamps are fixed above."}</p>}
       {!textValid&&<p className="studio-bubble-warning">{fr?"Écris un texte court : 180 caractères maximum, ou 3 questions de 100 caractères. La vidéo garde son audio complet.":"Use a short text: 180 characters maximum, or 3 questions of 100 characters. The full video audio remains intact."}</p>}
-      {selectedStyle!=="none"&&<div className="studio-bubble-png-action">
+      <div className="studio-clip-review">
+      <p role="status"><strong>{current.title}</strong><span>{reviewLabels[current.review??"pending"]}</span></p>
+      <div className="studio-clip-review-actions">
+        {current.review==="approved"?<button type="button" className="analysis-primary"
+          onClick={onOpenExport}>{fr?"ALLER AUX EXPORTS →":"OPEN EXPORTS →"}</button>:
+          <button type="button" className="analysis-primary" disabled={!timeValid||!textValid}
+            onClick={()=>reviewClip("approved")}>{fr?"APPROUVER POUR EXPORTATION":"APPROVE FOR EXPORT"}</button>}
+        {current.review!=="rejected"&&<button type="button" className="analysis-secondary"
+          onClick={()=>reviewClip("rejected")}>{fr?"REJETER L’EXTRAIT":"REJECT CLIP"}</button>}
+        {(current.review==="approved"||current.review==="rejected")&&<button type="button" className="analysis-secondary"
+          onClick={()=>reviewClip("pending")}>{fr?"REMETTRE À VALIDER":"RESET REVIEW"}</button>}
+      </div>
+      {!timeValid&&<small>{fr?"Vérifie les repères ci-dessus avant d’approuver.":"Check timing above before approving."}</small>}
+    </div>
+      {selectedStyle!=="none"&&<details className="studio-simple-details"><summary>{fr?"TÉLÉCHARGEMENT PNG (FACULTATIF)":"PNG DOWNLOAD (OPTIONAL)"}</summary><div className="studio-bubble-png-action">
         <button type="button" className="analysis-primary studio-bubble-lab-big"
           disabled={!textValid||exportingPng} onClick={()=>{void exportTransparentPng()}}>
           {exportingPng?(fr?"CRÉATION DU PNG…":"CREATING PNG…"):
@@ -452,7 +466,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         <p className="analysis-note">{fr?
           "Bulle seule en 1600 × 900, fond transparent, sans vidéo. Prête à ajouter dans Premiere Pro. Aucun repère de temps requis.":
           "Standalone 1600 × 900 bubble, transparent background and no video. Ready for Premiere Pro. No timestamps required."}</p>
-      </div>}
+      </div></details>}
       <details className="studio-simple-details"><summary>{fr?"RENDU VIDÉO HD AUTOMATISÉ (AVANCÉ)":"AUTOMATED HD VIDEO RENDER (ADVANCED)"}</summary>
       <button type="button" className="analysis-primary studio-bubble-lab-big"
         disabled={current.review!=="approved"||!timeValid||!textValid} onClick={()=>exportPlan(current)}>
