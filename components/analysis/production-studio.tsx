@@ -255,9 +255,11 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     }
     const audioFromVideo=file.size<=600_000_000;
     const previous=latest.current;
-    setFiles(current=>({...current,main:file,...(audioFromVideo?{audio:file}:{})}));
+    setFiles(current=>({...current,main:file,audio:audioFromVideo?file:undefined}));
+    const safeMedia={...previous.localMedia};
+    if(!audioFromVideo)delete safeMedia.audio;
     modify({localMedia:{
-      ...previous.localMedia,
+      ...safeMedia,
       main:{filename:file.name.slice(0,180),bytes:file.size},
       ...(audioFromVideo?{audio:{filename:file.name.slice(0,180),bytes:file.size}}:{}),
     },timeline:{...previous.timeline,alignmentApproved:false,
