@@ -21,3 +21,44 @@
 .hotspot:hover,.hotspot[data-active="true"]{transform:translate(-50%,-50%) scale(1.06)}
 @media(max-width:900px){.handScene{min-height:unset}.hotspots{min-height:unset}.hotspot{max-width:130px}.hotspot small{display:none}}
 @media(max-width:540px){.handScene{aspect-ratio:4/5;background-size:contain;min-height:unset}.hotspots{min-height:unset}.hotspot{max-width:110px;padding:.3rem}.hotspot strong{font-size:1rem}.hotspot:nth-child(1){left:13%;top:52%}.hotspot:nth-child(2){left:32%;top:29%}.hotspot:nth-child(3){left:51%;top:26%}.hotspot:nth-child(4){left:71%;top:29%}.hotspot:nth-child(5){left:85%;top:44%}}
+
+/* Cinematic hand hub v2: master artwork, zero card UI. */
+.hub{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0;min-height:calc(100svh - 80px);padding:0 1.5rem 5rem;isolation:isolate}
+.hubHeading{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;text-align:center;max-width:none;padding:clamp(.7rem,2vh,1.5rem) 0 0}
+.hubHeading h1{font-size:clamp(2.25rem,5vw,4.5rem);margin:.3rem 0 .45rem;line-height:1}
+.hubHeading .eyebrow{margin:0}
+.hubHeading .hubHint{margin:0;color:#aaa;font-size:clamp(.78rem,1.1vw,.95rem);line-height:1.3}
+.handScene{position:relative;display:block;width:min(100%,min(1480px,calc((100svh - 195px)*16/9)));min-height:0;aspect-ratio:16/9;background:none!important;flex-shrink:0;overflow:visible;isolation:isolate}
+.handArtwork{position:absolute;inset:0;background:url("/mon-univers/05-main.svg") center center / 100% 100% no-repeat;filter:drop-shadow(0 0 35px #d1a88c12);transition:filter .5s ease}
+.handScene:has(.hotspot:hover) .handArtwork,.handScene:has(.hotspot:focus-visible) .handArtwork{filter:drop-shadow(0 0 48px #d1a88c29)}
+.hotspots{position:absolute;inset:0;min-height:0;width:100%;z-index:2}
+.hotspot{position:absolute;display:grid;place-items:center;width:clamp(37px,4vw,62px);height:clamp(37px,4vw,62px);max-width:none;padding:0;border:1px solid #f4f4ef94;border-radius:100%;background:#0a0a0a35;box-shadow:0 0 0 9px #f4f4ef0a,inset 0 0 15px #0005;color:var(--paper);transform:translate(-50%,-50%);backdrop-filter:none;transition:background .3s,border-color .3s,box-shadow .3s,transform .3s;overflow:visible}
+.hotspot:nth-child(1){left:18.4%;top:50.5%;right:auto}
+.hotspot:nth-child(2){left:36.1%;top:16.6%;right:auto}
+.hotspot:nth-child(3){left:50.5%;top:11.7%;right:auto}
+.hotspot:nth-child(4){left:65.6%;top:16.7%;right:auto}
+.hotspot:nth-child(5){left:76.8%;top:36.5%;right:auto}
+.hotspotPulse{display:block;width:8px;height:8px;border-radius:100%;background:#f4f4ef;box-shadow:0 0 8px #fff8;transition:background .3s,box-shadow .3s}
+.hotspot:hover,.hotspot:focus-visible,.hotspot[data-active="true"]{border-color:var(--lime);background:#0a0a0a88;box-shadow:0 0 0 10px #ccff0016,0 0 35px #ccff0055;transform:translate(-50%,-50%) scale(1.1)}
+.hotspot:hover .hotspotPulse,.hotspot:focus-visible .hotspotPulse,.hotspot[data-active="true"] .hotspotPulse{background:var(--lime);box-shadow:0 0 22px var(--lime)}
+.hotspotInfo{position:absolute;left:50%;bottom:calc(100% + 18px);transform:translate(-50%,8px);width:max-content;max-width:230px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:12px 15px;background:#0a0a0aeb;border:1px solid #ccff0077;border-radius:4px;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s,transform .22s,visibility .22s}
+.hotspot:hover .hotspotInfo,.hotspot:focus-visible .hotspotInfo,.hotspot[data-active="true"] .hotspotInfo{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.hotspotInfo strong{font-size:clamp(1.1rem,1.5vw,1.5rem);white-space:nowrap}
+.hotspotInfo small{display:block;font-size:.78rem;line-height:1.4;white-space:normal;color:#bbb}
+.hotspotNumber{font-size:.65rem}
+.replay{position:relative;left:auto;bottom:auto;margin-top:.3rem;font-size:.78rem;padding:.6rem 1rem;align-self:center;border-color:#4c4c4c}
+.mobileDestinations{display:none}
+.intro{padding:5rem 1.5rem 7rem}
+.introContent{position:relative;z-index:2;background:none;padding:1.3rem 2rem;text-shadow:0 3px 28px #000d}
+.introContent h1{font-size:clamp(2.6rem,6vw,6.8rem)}
+.ambient{background-position:center;background-size:cover;transition:filter 1.2s ease}
+.ambient[data-stage="0"]{animation:slowMacro 12s ease-out both}
+.ambient[data-stage="1"]{animation:slowPullBack 11s ease-out both}
+.ambient[data-stage="2"]{animation:slowPullBack 12s ease-out both}
+.ambient[data-stage="3"]{animation:slowPullBack 12s ease-out both}
+.ambient[data-stage="4"]{animation:slowMacro 12s ease-out both}
+@keyframes slowMacro{from{transform:scale(1.06)}to{transform:scale(1)}}
+@keyframes slowPullBack{from{transform:scale(1.09)}to{transform:scale(1)}}
+@media(max-width:900px){.hub{padding:1rem 1rem 4rem;min-height:calc(100svh - 80px)}.hubHeading h1{font-size:clamp(2.5rem,8vw,4rem)}.handScene{width:100%;min-height:0;aspect-ratio:16/9}.hotspots{min-height:0}.hotspot{width:clamp(30px,5vw,52px);height:clamp(30px,5vw,52px)}.hotspotInfo small{display:block}}
+@media(max-width:600px){.hub{justify-content:flex-start;padding:1.5rem .7rem 3.5rem;min-height:calc(100svh - 72px);gap:1rem}.hubHeading{padding:0}.hubHeading h1{font-size:clamp(2.3rem,11vw,3.7rem)}.hubHeading .hubHint{font-size:.82rem}.handScene{width:100%;aspect-ratio:16/9;min-height:0}.hotspot{width:25px;height:25px;box-shadow:0 0 0 5px #f4f4ef0a}.hotspotPulse{width:5px;height:5px}.hotspotInfo{display:none}.mobileDestinations{display:grid;width:min(100%,430px);gap:0;border-top:1px solid #444}.mobileDestinations button{display:flex;gap:1rem;align-items:center;width:100%;min-height:51px;padding:.7rem .4rem;background:transparent;color:var(--paper);border:0;border-bottom:1px solid #3b3b3b;text-align:left;font-family:var(--font-display),Impact,sans-serif!important;font-size:1.35rem;text-transform:uppercase;font-style:italic}.mobileDestinations button span:first-child{font:normal .75rem var(--font-sans),Arial,sans-serif;color:var(--lime)}.mobileDestinations button span:last-child{margin-left:auto;color:var(--lime)}.replay{margin-top:.5rem}.introContent{padding:.8rem}.introContent h1{font-size:clamp(2.6rem,11vw,4.5rem)}}
+@media(prefers-reduced-motion:reduce){.ambient{animation:none!important}.handArtwork,.hotspot,.hotspotPulse,.hotspotInfo{transition:none!important}}
