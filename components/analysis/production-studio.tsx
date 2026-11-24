@@ -8,7 +8,7 @@ import { EpisodeDashboard, type EpisodeRow } from "./episode-dashboard";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
 import { StudioBackdropPicker } from "./studio-backdrop-picker";
-import { CapsuleWorkshop } from "./capsule-workshop";
+import { BubbleWorkshopSimple } from "./bubble-workshop-simple";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, type StudioProject } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
@@ -248,6 +248,31 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       `${file.name} linked locally; nothing uploaded to Vercel.`);
     setError("");
   };
+  const choosePremiereMaster=(file:File)=>{
+    if(file.size<=0||file.size>MAX_PROJECT_MEDIA_BYTES||!/\.(mov|mp4|m4v)$/i.test(file.name)){
+      setError(fr?"Choisis un MP4 ou MOV de 5 Go maximum.":"Choose an MP4 or MOV up to 5 GB.");
+      return;
+    }
+    const audioFromVideo=file.size<=600_000_000;
+    const previous=latest.current;
+    setFiles(current=>({...current,main:file,...(audioFromVideo?{audio:file}:{})}));
+    modify({localMedia:{
+      ...previous.localMedia,
+      main:{filename:file.name.slice(0,180),bytes:file.size},
+      ...(audioFromVideo?{audio:{filename:file.name.slice(0,180),bytes:file.size}}:{}),
+    },timeline:{...previous.timeline,alignmentApproved:false,
+      offsets:{...previous.timeline.offsets,main:0,...(audioFromVideo?{audio:0}:{})},
+      visualClaps:{...previous.timeline.visualClaps,main:null},
+      audioSource:audioFromVideo?"audio":previous.timeline.audioSource,
+      finalAudioSource:audioFromVideo?"audio":previous.timeline.finalAudioSource,
+    }});
+    setMessage(audioFromVideo?(fr?
+      "Master Premiere importé. Une seule vidéo suffit pour l'aperçu et la transcription si le navigateur peut en lire l'audio.":
+      "Premiere master imported. One file is enough if your browser can decode its audio."):(fr?
+      "Vidéo importée. Pour analyser ce gros fichier, exporte une copie audio MP3/M4A depuis Premiere dans les options ci-dessous.":
+      "Video imported. For transcription, export an MP3/M4A from Premiere and select it below."));
+    setError("");setTranscriptionFailure(null);
+  };
   const transcribe=async()=>{
     const audio=files.audio;
     if(!audio||!consent||busy)return;
@@ -414,7 +439,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
   };
   const mainSteps=[
     {id:"import" as const,num:"01",icon:"↓",name:fr?"IMPORTER":"IMPORT",
-      detail:fr?"Audio + master Premiere":"Audio + Premiere master",ready:hasTranscript},
+      detail:fr?"Une seule vidéo MP4":"One MP4 video",ready:hasTranscript},
     {id:"analysis" as const,num:"02",icon:"✦",name:fr?"ANALYSER":"ANALYZE",
       detail:fr?"Transcription et meilleurs extraits":"Transcript and highlights",ready:hasAnalysis},
     {id:"editing" as const,num:"03",icon:"◉",name:fr?"MES CAPSULES":"MY CAPSULES",
@@ -564,9 +589,26 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         {fr?"TÉLÉCHARGER UNE COPIE DU PROJET (.JSON)":"DOWNLOAD PROJECT BACKUP (.JSON)"}
       </button>
     </>)}
-    {step(1,fr?"AUDIO PRINCIPAL":"MAIN AUDIO",files.audio?"✓ AUDIO LOCAL":"M4A / MP3",<>
-      <p>{fr?"Après le montage multicaméra dans Premiere, sélectionne ici l’audio du master. Aucune vidéo n’est envoyée sur Vercel.":"After editing in Premiere, select the master audio here. No videos are uploaded to Vercel."}</p>
-      {tile("audio")}
+    {step(1,fr?"DÉPOSER MA VIDÉO PREMIERE":"DROP MY PREMIERE VIDEO",files.main?"✓ VIDÉO PRÊTE":"MP4 / MOV",<>
+      <p>{fr?"Ton montage multicaméra, ton son et ton décor sont déjà terminés dans Premiere. Dépose simplement le master ici : aucune correction d'image n'est demandée.":"Your multicam edit, sound and backdrop are already finished in Premiere. Just drop the master here. No image adjustments are required."}</p>
+      <div className="studio-master-dropzone" onDragOver={e=>e.preventDefault()}
+        onDrop={e=>{e.preventDefault();const file=e.dataTransfer.files?.[0];if(file)choosePremiereMaster(file)}}>
+        <label className="studio-master-pick" htmlFor="studio-premiere-master">
+          <span aria-hidden="true">↓</span>
+          <strong>{files.main?(fr?"✓ VIDÉO PREMIERE IMPORTÉE":"✓ PREMIERE VIDEO IMPORTED"):
+            fr?"DÉPOSE TA VIDÉO ICI":"DROP YOUR VIDEO HERE"}</strong>
+          <small>{files.main?.name||(fr?"OU CLIQUE POUR CHOISIR UN MP4 / MOV":"OR CLICK TO CHOOSE AN MP4 / MOV")}</small>
+          <input type="file" id="studio-premiere-master" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v"
+            onChange={e=>{const file=e.currentTarget.files?.[0];if(file)choosePremiereMaster(file);e.currentTarget.value=""}}/>
+        </label>
+      </div>
+      <details className="studio-simple-details">
+        <summary>{fr?"MON MP4 EST TROP LOURD OU SON AUDIO N'EST PAS RECONNU":"MY VIDEO IS TOO LARGE OR AUDIO CAN'T BE READ"}</summary>
+        <p className="analysis-note">{fr?
+          "Si le MP4 dépasse 600 Mo ou si le navigateur ne sait pas décoder sa piste audio, exporte depuis Premiere un fichier M4A, MP3 ou WAV du même montage. Il servira seulement à l'analyse.":
+          "If your MP4 is over 600 MB or your browser cannot decode the audio track, export a matching M4A, MP3 or WAV from Premiere for analysis only."}</p>
+        {tile("audio")}
+      </details>
       <details className="studio-audio-optimized studio-simple-details"><summary>{fr?"OPTIONNEL — AMÉLIORER LA VOIX":"OPTIONAL — ENHANCE VOICE"}</summary>
         <h3>{fr?"PISTE AUDIO FINALE — VOIX OPTIMISÉE":"FINAL AUDIO — ENHANCED VOICE"}</h3>
         <p>{fr
@@ -612,7 +654,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       {transcriptionProgress&&<p role="status" className="analysis-note">{transcriptionProgress}</p>}
       <p className="analysis-note">{fr?"Transcription en segments de 90 secondes : pas de limite de 24 Mo sur le fichier original et aucune copie audio conservée sur Vercel Blob. Fichiers compatibles avec le décodeur du navigateur uniquement.":"90-second transcription chunks. No 24 MB original-file limit and no audio archived in Vercel Blob. Source must be decodable by the browser."}</p>
     </>)}
-    {step(2,fr?"TRANSCRIPTION":"TRANSCRIPT",`${project.transcript.length} / 26 000`,<>
+    {step(2,fr?"TRANSCRIPTION (FACULTATIF)":"TRANSCRIPT (OPTIONAL)",`${project.transcript.length} / 26 000`,<>
+      <details className="studio-simple-details"><summary>{fr?"VOIR OU CORRIGER LA TRANSCRIPTION (OPTIONNEL)":"VIEW OR EDIT TRANSCRIPT (OPTIONAL)"}</summary>
       <p>{fr?"Relis tes paroles. La transcription horodatée permet de découper automatiquement les capsules. Toute correction manuelle du texte invalide les anciens repères et nécessite une nouvelle transcription horodatée.":"Review the transcript. Word timestamps can create capsule cuts automatically. Editing the transcript invalidates previous timestamps and requires re-transcription."}</p>
       <p className="analysis-note">{fr?`${project.timedWords.length} mots horodatés`:`${project.timedWords.length} timed words`}</p>
       <textarea aria-label={fr?"Transcription":"Transcript"} rows={11} maxLength={26000}
@@ -622,6 +665,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         onClick={()=>download("dom-soucy-transcription.txt",project.transcript,"text/plain")}>
         {fr?"TÉLÉCHARGER LE TEXTE (.TXT)":"DOWNLOAD TEXT (.TXT)"}
       </button>
+      </details>
     </>)}
     {step(3,fr?"ANALYSE IA":"AI ANALYSIS",`${project.analysis?.moments.length||0} EXTRAITS`,<>
       <p>{fr?"L’analyse détecte des passages exacts, sans créer artificiellement des citations.":"AI finds exact excerpts, without inventing quotes."}</p>
@@ -684,18 +728,8 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         </button>
       </>}
     </>)}
-    {step(4,fr?"MASTER PREMIERE":"PREMIERE MASTER",files.main?(fr?"✓ MASTER PRÊT":"✓ MASTER READY"):(fr?"FACULTATIF":"OPTIONAL"),<>
-      <p>{fr?"Choisis ton master déjà monté et synchronisé dans Adobe Premiere Pro. Les trois caméras n’ont plus besoin d’être importées ici.":"Choose the edited and synchronized master from Adobe Premiere Pro. You no longer need to import each camera here."}</p>
-      {tile("main")}
-      <details className="studio-simple-details"><summary>{fr?"AVANCÉ — IMPORTER D’AUTRES ANGLES (OPTIONNEL)":"ADVANCED — IMPORT OTHER CAMERAS (OPTIONAL)"}</summary>
-        <div className="studio-video-grid">{(["vertical","secondary"] as SourceKey[]).map(k=><div key={k}>{tile(k)}</div>)}</div>
-      </details>
-      <p className="analysis-note">{fr
-        ?"Le Studio conserve les réglages et références des fichiers, pas les vidéos elles-mêmes. Tes fichiers restent dans Google Drive ou sur ton ordinateur."
-        :"The Studio stores edit decisions and filenames, not video bytes. Originals remain in Google Drive or on your computer."}</p>
-    </>)}
     <div hidden={activeSection!=="editing"} className="studio-phase5-capsules">
-      <CapsuleWorkshop lang={lang} project={project}
+      <BubbleWorkshopSimple lang={lang} project={project} master={files.main}
         onChange={patch=>modify(patch)} onEvent={record}/>
     </div>
 
