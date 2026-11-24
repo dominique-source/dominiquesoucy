@@ -15,22 +15,26 @@ if(props.schemaVersion!==1||!formats.includes(props.format)||!styles.includes(pr
   !Number.isFinite(props.start)||!Number.isFinite(props.end)||props.start<0||
   props.end<=props.start||props.end-props.start>600)
   abort("Manifest invalid: schemaVersion, format, style or timecodes. Max 10 minutes per capsule.");
-const optional=["foregroundAsset","audioAsset","backgroundAsset","portraitAsset"];
+const optional=["foregroundAsset","audioAsset","backgroundAsset","portraitAsset","outroAsset"];
 for(const key of ["masterAsset",...optional]){
   const value=props[key];
   if(typeof value!=="string"||value&&(!/^[a-zA-Z0-9_.-]{1,120}$/.test(value)||basename(value)!==value))
     abort(key+" doit contenir uniquement un nom de fichier local simple (pas de chemin)");
 }
 if(!props.masterAsset)abort("masterAsset requis (ex. master.mp4)");
+if(props.outroAsset!==undefined&&props.outroAsset!==""&&
+  (!Number.isFinite(props.outroDurationSeconds)||props.outroDurationSeconds<=0||props.outroDurationSeconds>15))
+  abort("outroDurationSeconds doit être une durée positive de 15 secondes maximum.");
+
 for(const key of ["title","caption","bubble","journalistName","journalistOutlet","episodeLabel"]){
   if(typeof props[key]!=="string")abort(key+" doit être du texte");
 }
 if(props.questionAttribution!=="verified"&&props.questionAttribution!=="reconstructed")
   abort("questionAttribution doit être verified ou reconstructed");
 const publicDir=join(root,"public");
-for(const key of ["masterAsset","foregroundAsset","audioAsset","backgroundAsset","portraitAsset"]){
+for(const key of ["masterAsset","foregroundAsset","audioAsset","backgroundAsset","portraitAsset","outroAsset"]){
   if(props[key]&&!existsSync(join(publicDir,props[key])))
-    abort("Fichier "+props[key]+" absent du dossier render-engine/public");
+    abort("Fichier "+props[key]+" absent du dossier render-engine/public. Pour la signature, choisis les MP4 originaux dans RENDU-HD.command ou copie-les sous le nom attendu.");
 }
 if(props.foregroundAsset&&!props.audioAsset&&!existsSync(join(publicDir,"audio.wav")))
   abort("Avec une vidéo détourée, ajoute audio.wav ou renseigne audioAsset dans le manifeste");
@@ -44,6 +48,7 @@ const output=join(root,"out",safeName+"-"+props.format.replace(":","x")+".mp4");
 mkdirSync(dirname(output),{recursive:true});
 console.log("DOM SOUCY HD — ",props.format,props.start,"à",props.end,"s");
 console.log("Sources locales uniquement : aucune vidéo transmise à Vercel.");
+if(props.outroAsset)console.log("Signature finale automatique : "+props.outroAsset+" ("+props.outroDurationSeconds+" s)");
 const result=spawnSync("npx",[
   "--no-install","remotion","render","src/index.tsx","DomSoucyCapsuleHD",output,
   "--props="+manifestFile,"--codec=h264","--crf=18","--concurrency=2",
