@@ -23,6 +23,16 @@ type Props = {
     status?: StudioProject["events"][number]["status"]) => void;
 };
 
+const reporters=[
+  {id:"marie-eve-gagnon",name:"Marie-Ève Gagnon",beat:"Société / Éducation"},
+  {id:"julie-martin",name:"Julie Martin",beat:"Société"},
+  {id:"marc-tremblay",name:"Marc Tremblay",beat:"Économie"},
+  {id:"anne-richard",name:"Anne Richard",beat:"Éducation"},
+  {id:"sofia-mendes",name:"Sofia Mendes",beat:"Culture"},
+  {id:"malik-laurent",name:"Malik Laurent",beat:"Sport et performance"},
+  {id:"naomi-diallo",name:"Naomi Diallo",beat:"Jeunesse"},
+  {id:"alex-nguyen",name:"Alex Nguyen",beat:"Innovation"},
+] as const;
 const options: {style:Style;number:string;fr:string;en:string}[] = [
   {style:"none",number:"00",fr:"SANS BULLE",en:"NO BUBBLE"},
   {style:"conversation",number:"01",fr:"QUESTION JOURNALISTE",en:"JOURNALIST QUESTION"},
@@ -43,7 +53,7 @@ function BubbleVisual({fr,style,question,caption,mini=false,attribution="reconst
           {(journalistName||journalistOutlet)&&<div className="ds-bubble-attribution">
             {journalistName||(fr?"Journaliste":"Journalist")}{journalistOutlet&&<span> / {journalistOutlet}</span>}
           </div>}
-          <strong style={{fontSize:undefined}} data-length={previewQuestion.length>120?"long":"short"}>« {previewQuestion} »</strong>
+          <strong data-length={previewQuestion.length>120?"long":"short"}>« {previewQuestion} »</strong>
           {attribution==="reconstructed"&&<small>{fr?"RECONSTITUTION ÉDITORIALE":"EDITORIAL RECONSTRUCTION"}</small>}
         </div>
         {portraitUrl&&<div className="ds-bubble-journalist-portrait" aria-hidden="true">
@@ -67,7 +77,9 @@ function workshopStyle(capsule?:Capsule):Style {
 }
 
 function hasBubbleText(capsule:Capsule) {
-  return workshopStyle(capsule)==="none" || (workshopStyle(capsule)==="quote"?capsule.caption:capsule.bubble).trim().length>0;
+  const style=workshopStyle(capsule);
+  const text=(style==="quote"?capsule.caption:capsule.bubble).trim();
+  return style==="none" || (text.length>0 && (style==="rafale"?text.split("\n").filter(s=>s.trim()).length<=3&&text.split("\n").every(s=>s.length<=100):text.length<=180));
 }
 
 function hasValidTiming(capsule:Capsule,duration:number) {
@@ -81,6 +93,9 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   const [previewUrl,setPreviewUrl]=useState("");
   const [info,setInfo]=useState("");
   const [portraits,setPortraits]=useState<Record<string,File>>({});
+  const [reporterFiles,setReporterFiles]=useState<Record<string,File>>({});
+  const [reporterUrls,setReporterUrls]=useState<Record<string,string>>({});
+  useEffect(()=>{const urls=Object.fromEntries(Object.entries(reporterFiles).map(([id,file])=>[id,URL.createObjectURL(file)]));setReporterUrls(urls);return()=>Object.values(urls).forEach(url=>URL.revokeObjectURL(url));},[reporterFiles]);
   const journalistPhoto=current?portraits[current.id]||null:null;
   const [rendering,setRendering]=useState<{id:string;progress:number}|null>(null);
   const [outputs,setOutputs]=useState<Record<string,{url:string;filename:string}>>({});
@@ -122,6 +137,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
 
   function update(patch:Partial<Capsule>){
     if(!current)return;
+    setOutputs(old=>{const next={...old};delete next[current.id];return next});
     onChange({capsules:capsules.map(c=>c.id===current.id?{
       ...c,...patch,status:"draft" as const,
       review:reviewAfterTimingChange(c,patch),
@@ -363,6 +379,12 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
       </label>}
       {selectedStyle==="conversation"&&<div className="studio-bubble-journalist-editor">
         <strong>{fr?"PHOTO ET IDENTIFICATION DU JOURNALISTE (FACULTATIF)":"JOURNALIST PHOTO AND DETAILS (OPTIONAL)"}</strong>
+        <div className="studio-fictional-roster">
+          <strong>{fr?"BANQUE DE JOURNALISTES FICTIFS":"FICTIONAL JOURNALIST LIBRARY"}</strong>
+          <p className="analysis-note">{fr?"Décompresse la banque de portraits et importe ses huit PNG en une fois. Les photos restent sur ton appareil pendant cette session.":"Unzip the portrait pack and import the eight PNG files together. Photos stay on your device during this session."}</p>
+          <label>{fr?"IMPORTER LES PORTRAITS":"IMPORT PORTRAITS"}<input type="file" multiple accept="image/png" onChange={e=>{const files=Array.from(e.currentTarget.files||[]);setReporterFiles(old=>{const next={...old};for(const file of files){const id=file.name.replace(/\.png$/i,"");if(reporters.some(r=>r.id===id)&&file.type==="image/png"&&file.size<8_000_000)next[id]=file;}return next;});}}/></label>
+          <div className="studio-fictional-roster-grid">{reporters.map(r=><button type="button" key={r.id} disabled={!reporterFiles[r.id]} aria-pressed={current.journalistName===r.name&&current.journalistOutlet==="Personnage fictif"} onClick={()=>{setPortraits(old=>({...old,[current.id]:reporterFiles[r.id]}));update({journalistName:r.name,journalistOutlet:"Personnage fictif",questionAttribution:"reconstructed"});}}>{reporterUrls[r.id]?<img src={reporterUrls[r.id]} alt=""/>:<span className="studio-fictional-roster-placeholder">—</span>}<b>{r.name}</b><small>{r.beat} · {fr?"Fictif":"Fictional"}</small></button>)}</div>
+        </div>
         <div className="studio-bubble-journalist-identity">
           <label>{fr?"Nom du journaliste":"Journalist name"}
             <input value={current.journalistName||""} maxLength={100}
@@ -418,14 +440,14 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
           <select value={current.questionAttribution||"reconstructed"}
             onChange={e=>update({questionAttribution:e.target.value as "reconstructed"|"verified"})}>
             <option value="reconstructed">{fr?"Question reconstituée (IA)":"Reconstructed question (AI)"}</option>
-            <option value="verified">{fr?"Question enregistrée et vérifiée":"Recorded, verified question"}</option>
+            <option value="verified" disabled={current.journalistOutlet==="Personnage fictif"}>{fr?"Question enregistrée et vérifiée":"Recorded, verified question"}</option>
           </select>
         </label>}
       </details>
       {!timeValid&&<p className="studio-bubble-warning">{fr?
         "L’IA n’a pas trouvé un début et une fin fiables. Tu peux voir la bulle, mais le rendu sera bloqué jusqu’à correction des repères dans « Options avancées ».":
         "AI has not found reliable start/end points. You can preview the bubble, but rendering is blocked until timestamps are fixed in Advanced options."}</p>}
-      {!textValid&&<p className="studio-bubble-warning">{fr?"Ajoute le texte de la bulle avant de préparer le rendu.":"Add bubble text before preparing rendering."}</p>}
+      {!textValid&&<p className="studio-bubble-warning">{fr?"Écris un texte court : 180 caractères maximum, ou 3 questions de 100 caractères. La vidéo garde son audio complet.":"Use a short text: 180 characters maximum, or 3 questions of 100 characters. The full video audio remains intact."}</p>}
       {selectedStyle!=="none"&&<div className="studio-bubble-png-action">
         <button type="button" className="analysis-primary studio-bubble-lab-big"
           disabled={!textValid||exportingPng} onClick={()=>{void exportTransparentPng()}}>

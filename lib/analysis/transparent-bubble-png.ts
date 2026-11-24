@@ -43,17 +43,18 @@ function fitLines(c:CanvasRenderingContext2D,t:string,w:number,maxLines:number,s
   const next=line?line+" "+word:word;
   if(c.measureText(next).width<=w)line=next;
   else{if(line)lines.push(line);line=word;}
-  if(lines.length>=maxLines)break;
+
  }
- if(line&&lines.length<maxLines)lines.push(line);
- return lines;
+ if(line)lines.push(line);
+ return lines.length>maxLines?[]:lines;
 }
 function writing(c:CanvasRenderingContext2D,t:string,x:number,y:number,w:number,h:number,start:number){
  let size=start,lines:string[]=[];
  for(;size>30;size-=3){
   lines=fitLines(c,t,w,6,size);
-  if(lines.length*size*1.15<h&&lines.every(l=>c.measureText(l).width<=w))break;
+  if(lines.length&&lines.length*size*1.15<h&&lines.every(l=>c.measureText(l).width<=w))break;
  }
+ if(!lines.length||lines.length*size*1.15>=h)throw Error("BUBBLE_TEXT_TOO_LONG");
  c.fillStyle="#F4F4EF";c.font="italic 750 "+size+"px "+FONT;
  c.textBaseline="top";c.shadowColor="#080808";c.shadowBlur=9;
  lines.forEach((l,i)=>c.fillText(l,x,y+i*size*1.14,w));

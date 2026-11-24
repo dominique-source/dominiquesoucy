@@ -587,3 +587,5 @@
 .studio-bubble-preview .ds-bubble-rafale .ds-bubble-glass strong{font-size:2.1cqw}
 .studio-bubble-preview.format-9-16 .ds-bubble-rafale .ds-bubble-glass strong{font-size:3.2cqw}
 .ds-bubble-none-label{padding:16px;color:#ccff00;font-weight:700;letter-spacing:.08em}
+
+.studio-fictional-roster-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0}.studio-fictional-roster-grid button{display:grid;gap:4px;text-align:left;background:#141618;color:#f4f4ef;border:1px solid #515650;border-radius:10px;padding:7px;overflow:hidden}.studio-fictional-roster-grid button[aria-pressed=true]{border-color:#ccff00;box-shadow:0 0 12px #ccff0033}.studio-fictional-roster-grid button:disabled{opacity:.55;cursor:not-allowed}.studio-fictional-roster-grid img,.studio-fictional-roster-placeholder{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px}.studio-fictional-roster-placeholder{display:grid;place-items:center;background:#282a29}.studio-fictional-roster-grid small{font-size:11px;color:#b9bcb5}@media(max-width:650px){.studio-fictional-roster-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
