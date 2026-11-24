@@ -255,10 +255,15 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
     }
     const audioFromVideo=file.size<=600_000_000;
     const previous=latest.current;
+    const different=!!previous.localMedia.main&&(previous.localMedia.main.filename!==file.name||previous.localMedia.main.bytes!==file.size);
+    if(different&&(previous.transcript||previous.capsules.length)&&!window.confirm(fr?
+      "Changer de vidéo invalidera les anciens extraits et leurs repères. Créer une nouvelle analyse pour ce master?":
+      "Changing the video invalidates previous clips and their timing. Start a new analysis for this master?"))return;
     setFiles(current=>({...current,main:file,audio:audioFromVideo?file:undefined}));
     const safeMedia={...previous.localMedia};
     if(!audioFromVideo)delete safeMedia.audio;
-    modify({localMedia:{
+    modify({...(different?{transcript:"",analysis:null,timedWords:[],capsules:[],selectedCapsuleId:"",stage:"recording" as const}:{}),
+      localMedia:{
       ...safeMedia,
       main:{filename:file.name.slice(0,180),bytes:file.size},
       ...(audioFromVideo?{audio:{filename:file.name.slice(0,180),bytes:file.size}}:{}),
@@ -767,7 +772,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
         onChange={patch=>modify(patch)} onEvent={record}/>
     </div>
 
-    <div hidden={activeSection!=="editing"} className="studio-simple-technical">
+    <div hidden={activeSection!=="advanced"} className="studio-simple-technical">
       <button type="button" className="analysis-secondary" onClick={()=>setShowTechnicalMontage(v=>!v)}>
         {showTechnicalMontage?(fr?"MASQUER L’ANCIEN ÉDITEUR TECHNIQUE":"HIDE LEGACY TECHNICAL EDITOR"):
           fr?"OPTIONS AVANCÉES — ANCIEN ÉDITEUR VIDÉO":"ADVANCED — LEGACY VIDEO EDITOR"}
@@ -791,7 +796,7 @@ export function ProductionStudio({lang}:{lang:"fr"|"en"}){
       </a>
       <p className="analysis-note">{fr?"Aujourd’hui, le Studio fournit un manifeste JSON par capsule. L’export HD en un clic directement sur le site reste à développer; aucun rendu n’est lancé ici automatiquement.":"Currently Studio downloads a JSON manifest for each capsule. One-click HD rendering from this page is not implemented; no render starts here automatically."}</p>
     </section>
-    {showTechnicalMontage&&activeSection==="editing"&&<div className="studio-phase5-editor">
+    {showTechnicalMontage&&activeSection==="advanced"&&<div className="studio-phase5-editor">
     <MultiCamEditor key={project.id}
       autoSyncEnabled={ready&&!!files.audio&&(["main","vertical","secondary"] as SourceKey[]).some(k=>!!files[k])}
       projectId={project.id} capsules={project.capsules}
