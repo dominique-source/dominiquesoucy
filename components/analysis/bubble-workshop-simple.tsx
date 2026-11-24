@@ -34,7 +34,14 @@ const reporters=[
   {id:"alex-nguyen",name:"Alex Nguyen",beat:"Innovation"},
 ] as const;
 function builtinReporter(capsule?: Capsule) {
-  return capsule?.journalistOutlet==="Personnage fictif" ? reporters.find(r=>r.name===capsule.journalistName) : undefined;
+  return capsule?.questionAttribution!=="verified" ? reporters.find(r=>r.name===capsule?.journalistName) : undefined;
+}
+function TimeField({value,onChange}:{value:number;onChange:(v:number)=>void}){
+ const format=(v:number)=>{const n=Math.max(0,Math.round(v*10)/10);return String(Math.floor(n/60)).padStart(2,"0")+":"+String(Math.floor(n%60)).padStart(2,"0")+(n%1? "."+Math.round(n%1*10):"")};
+ const [draft,setDraft]=useState(format(value));
+ useEffect(()=>setDraft(format(value)),[value]);
+ const commit=()=>{const m=draft.trim().match(/^(\d+):([0-5]?\d)(?:[.,](\d{1,3}))?$/);if(m){const n=Number(m[1])*60+Number(m[2])+Number("0."+(m[3]||"0"));if(n<=7200){onChange(n);setDraft(format(n));return;}}setDraft(format(value));};
+ return <input type="text" inputMode="text" placeholder="01:15" value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.currentTarget.blur();}}}/>;
 }
 function reporterUrl(id:string){return "/assets/studio/reporters/"+id+".png"}
 const options: {style:Style;number:string;fr:string;en:string}[] = [
@@ -377,7 +384,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         <div className="studio-fictional-roster">
           <strong>{fr?"BANQUE DE JOURNALISTES FICTIFS":"FICTIONAL JOURNALIST LIBRARY"}</strong>
           <p className="analysis-note">{fr?"Choisis un personnage : son portrait et son nom sont associés à cette capsule. Aucun import nécessaire.":"Choose a character: the portrait and name are assigned to this clip. No import needed."}</p>
-          <div className="studio-fictional-roster-grid">{reporters.map(r=><button type="button" key={r.id} aria-pressed={builtinReporter(current)?.id===r.id} onClick={()=>{setPortraits(old=>{const next={...old};delete next[current.id];return next});update({journalistName:r.name,journalistOutlet:"Personnage fictif",questionAttribution:"reconstructed"});}}><img src={reporterUrl(r.id)} alt=""/><b>{r.name}</b><small>{r.beat} · {fr?"Fictif":"Fictional"}</small></button>)}</div>
+          <div className="studio-fictional-roster-grid">{reporters.map(r=><button type="button" key={r.id} aria-pressed={builtinReporter(current)?.id===r.id} onClick={()=>{setPortraits(old=>{const next={...old};delete next[current.id];return next});update({journalistName:r.name,journalistOutlet:current.journalistOutlet&&current.journalistOutlet!=="Personnage fictif"?current.journalistOutlet:"Journaliste fictif",questionAttribution:"reconstructed"});}}><img src={reporterUrl(r.id)} alt=""/><b>{r.name}</b><small>{r.beat} · {fr?"Fictif":"Fictional"}</small></button>)}</div>
         </div>
         <div className="studio-bubble-journalist-identity">
           <label>{fr?"Nom du journaliste":"Journalist name"}
@@ -423,19 +430,17 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
           onClick={()=>update({format:v})}>{v}</button>)}
       </div>
       <strong>{fr?"5. VÉRIFIE LE DÉBUT ET LA FIN":"5. CHECK START AND END"}</strong>
-        <p className="analysis-note">{fr?"Les repères viennent normalement de la transcription. Ne change les secondes que si l’extrait n’a pas été reconnu.":"Timing normally comes from transcription. Only adjust seconds if the clip wasn't matched."}</p>
+        <p className="analysis-note">{fr?"Les repères viennent normalement de la transcription. Ne change les repères que si l’extrait n’a pas été reconnu.":"Timing normally comes from transcription. Only adjust timestamps if the clip wasn't matched."}</p>
         <div className="studio-bubble-timing">
-          <label>{fr?"Début (secondes)":"Start (seconds)"}<input type="number" min={0} max={7200} step={.1}
-            value={current.start} onChange={e=>update({start:Number(e.target.value)||0})}/></label>
-          <label>{fr?"Fin (secondes)":"End (seconds)"}<input type="number" min={0} max={7200} step={.1}
-            value={current.end} onChange={e=>update({end:Number(e.target.value)||0})}/></label>
+          <label>{fr?"Début (min:sec)":"Start (min:sec)"}<TimeField key={current.id+"-start"} value={current.start} onChange={start=>update({start})}/></label>
+          <label>{fr?"Fin (min:sec)":"End (min:sec)"}<TimeField key={current.id+"-end"} value={current.end} onChange={end=>update({end})}/></label>
         </div>
       <details className="studio-simple-details"><summary>{fr?"OPTIONS AVANCÉES":"ADVANCED OPTIONS"}</summary>
         {selectedStyle!=="quote"&&selectedStyle!=="none"&&<label>{fr?"Origine de la question":"Question source"}
           <select value={current.questionAttribution||"reconstructed"}
             onChange={e=>update({questionAttribution:e.target.value as "reconstructed"|"verified"})}>
             <option value="reconstructed">{fr?"Question reconstituée (IA)":"Reconstructed question (AI)"}</option>
-            <option value="verified" disabled={current.journalistOutlet==="Personnage fictif"}>{fr?"Question enregistrée et vérifiée":"Recorded, verified question"}</option>
+            <option value="verified" disabled={!!builtinReporter(current)}>{fr?"Question enregistrée et vérifiée":"Recorded, verified question"}</option>
           </select>
         </label>}
       </details>
