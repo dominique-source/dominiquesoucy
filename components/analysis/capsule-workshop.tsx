@@ -13,7 +13,7 @@ type EventKind=StudioProject["events"][number]["type"];
 type EventStatus=StudioProject["events"][number]["status"];
 
 const variants:Record<Capsule["style"],string>={
- classic:"PORTRAIT / CLASSIQUE",quote:"CITATION PERCUTANTE",
+ none:"SANS BULLE",classic:"PORTRAIT / CLASSIQUE",quote:"CITATION PERCUTANTE",
  conversation:"QUESTION JOURNALISTIQUE",rafale:"RAFALE DE QUESTIONS",editorial:"ANALYSE / ÉDITORIAL",
 };
 const backdrops:Record<Capsule["background"],string>={

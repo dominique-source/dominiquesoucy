@@ -5,7 +5,7 @@ import {
 } from "remotion";
 
 export type HdFormat="16:9"|"9:16"|"1:1";
-export type HdStyle="journalist"|"rafale"|"quote"|"editorial"|"classic";
+export type HdStyle="journalist"|"rafale"|"quote"|"editorial"|"classic"|"none";
 export type HdCapsuleProps={
   schemaVersion:1; projectId:string;capsuleId:string;title:string;
   start:number;end:number;format:HdFormat;style:HdStyle;
@@ -63,10 +63,10 @@ function WordMark({vertical,episode}:{vertical:boolean;episode:string}){
 function GlowPanel({children,vertical,style}:{children:React.ReactNode;vertical:boolean;style?:React.CSSProperties}){
   return <div style={{
     position:"relative",borderRadius:vertical?28:36,
-    background:"linear-gradient(143deg,rgba(71,76,82,.93) 0%,rgba(24,27,29,.96) 28%,rgba(2,3,4,.97) 68%,rgba(35,43,17,.95) 100%)",
-    border:"2px solid rgba(238,255,226,.85)",
-    boxShadow:"inset 0 3px 28px rgba(244,244,239,.18),inset -5px -5px 24px rgba(204,255,0,.18),0 0 30px rgba(204,255,0,.45),0 14px 55px rgba(0,0,0,.66)",
-    padding:vertical?34:44,boxSizing:"border-box",overflow:"hidden",...style,
+    background:"radial-gradient(ellipse at 100% 100%,#536c1950,transparent 45%) padding-box,linear-gradient(145deg,#42464bd9,#131416f5 26%,#08090af5 65%,#262f12e8) padding-box,linear-gradient(145deg,#e9ece9,#73787e 33%,#676c69 56%,#ccff00 90%,#d8ff8a) border-box",
+    border:"2px solid transparent",
+    boxShadow:"inset 0 1px 12px #ffffff20,4px 6px 20px #bfff0033,0 12px 28px #0009",
+    padding:vertical?26:32,boxSizing:"border-box",overflow:"hidden",...style,
   }}>
     <div style={{position:"absolute",pointerEvents:"none",bottom:0,right:0,height:4,width:"82%",
       background:"linear-gradient(90deg,transparent,#CCFF00)",filter:"blur(1px)",
@@ -105,7 +105,7 @@ function PresenterMedia({props,vertical}:{props:HdCapsuleProps;vertical:boolean}
           style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center"}}/>
       </AbsoluteFill>
     }
-    <AbsoluteFill style={{pointerEvents:"none",background:vertical?
+    <AbsoluteFill style={{pointerEvents:"none",background:props.style==="none"?"transparent":vertical?
       "linear-gradient(180deg,transparent 39%,rgba(0,0,0,.2) 57%,rgba(0,0,0,.94) 86%)":
       "linear-gradient(90deg,rgba(0,0,0,.06) 0%,rgba(0,0,0,.08) 41%,rgba(0,0,0,.80) 68%,rgba(0,0,0,.86) 100%)"}}/>
   </>;
@@ -119,7 +119,7 @@ function QuestionCard({props,vertical,frame,small=false}:{props:HdCapsuleProps;v
   return <GlowPanel vertical={vertical} style={{
     opacity:interpolate(reveal,[0,1],[0,1]),
     transform:`translateY(${interpolate(reveal,[0,1],[50,0])}px) rotate(-1deg)`,
-    width:"100%",minHeight:small?110:vertical?260:360,
+    width:"100%",
   }}>
     <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:vertical?18:24}}>
       <div style={{width:small?42:vertical?58:62,height:small?42:vertical?58:62,
@@ -140,8 +140,8 @@ function QuestionCard({props,vertical,frame,small=false}:{props:HdCapsuleProps;v
           color:"#e9e9e9",fontStyle:"italic",marginBottom:10}}>
           {attribution}{props.journalistOutlet?` · ${props.journalistOutlet}`:""}
         </div>
-        <div style={{fontFamily:font,fontWeight:900,fontStyle:"italic",color:"#fff",
-          fontSize:small?32:vertical?49:titleSize(title,67,38),lineHeight:.99,
+        <div style={{fontFamily:font,fontWeight:750,fontStyle:"italic",color:"#fff",
+          fontSize:small?29:vertical?titleSize(title,52,30):titleSize(title,57,28),lineHeight:1.06,
           overflowWrap:"anywhere",textShadow:"0 2px 8px #000"}}>
           « {title.slice(0,230)} »
         </div>
@@ -176,8 +176,8 @@ function QuoteCard({props,vertical,frame}:{props:HdCapsuleProps;vertical:boolean
       <span style={{transform:"skewX(12deg)",display:"block",fontFamily:font,fontSize:vertical?35:39,
         fontStyle:"italic",fontWeight:950,color:"#070707"}}>LA RÉPONSE</span>
     </div>
-    <div style={{fontFamily:font,fontSize:vertical?58:titleSize(caption,83,48),
-      fontWeight:900,fontStyle:"italic",lineHeight:.97,overflowWrap:"anywhere",
+    <div style={{fontFamily:font,fontSize:vertical?titleSize(caption,56,29):titleSize(caption,65,30),
+      fontWeight:750,fontStyle:"italic",lineHeight:1.06,overflowWrap:"anywhere",
       color:"white",textShadow:"0 2px 6px #000"}}>
       « {caption.slice(0,250)} »
     </div>
@@ -213,7 +213,7 @@ const CapsuleBody:React.FC<HdCapsuleProps>=(props)=>{
   const showQuestion=props.style==="journalist"||props.style==="classic";
   const showRafale=props.style==="rafale";
   const pad=vertical?55:square?42:68;
-  const cardWidth=vertical?"100%":square?"53%":"49%";
+  const cardWidth=vertical?"96%":square?"65%":"45%";
   return <AbsoluteFill style={{background:"#080809",color:"#fff"}}>
     <PresenterMedia props={props} vertical={vertical}/>
     <AbsoluteFill style={{padding:pad,pointerEvents:"none",
@@ -232,7 +232,7 @@ const CapsuleBody:React.FC<HdCapsuleProps>=(props)=>{
         paddingTop:vertical?height*.49:45,
       }}>
         <div style={{width:cardWidth,maxWidth:vertical?width-90:1000}}>
-          {showRafale?<RafaleCard props={props} vertical={vertical} frame={frame}/>:
+          {props.style==="none"?null:showRafale?<RafaleCard props={props} vertical={vertical} frame={frame}/>:
             showQuestion?<QuestionCard props={props} vertical={vertical} frame={frame}/>:
             <QuoteCard props={props} vertical={vertical} frame={frame}/>}
         </div>

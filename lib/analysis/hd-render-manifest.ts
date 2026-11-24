@@ -5,7 +5,7 @@ export type HdRenderManifest={
   schemaVersion:1;
   projectId:string;capsuleId:string;title:string;
   start:number;end:number;format:"16:9"|"9:16"|"1:1";
-  style:"journalist"|"rafale"|"quote"|"editorial"|"classic";
+  style:"journalist"|"rafale"|"quote"|"editorial"|"classic"|"none";
   caption:string;bubble:string;
   journalistName:string;journalistOutlet:string;
   questionAttribution:"verified"|"reconstructed";
@@ -25,7 +25,7 @@ export function buildHdRenderManifest(
     end<=start||end-start>600||end>project.timeline.duration+.01)
     throw Error("INVALID_CAPSULE_TIMECODES");
   const style=capsule.style==="conversation"?"journalist":capsule.style;
-  const allowed=["journalist","rafale","quote","editorial","classic"];
+  const allowed=["journalist","rafale","quote","editorial","classic","none"];
   if(!allowed.includes(style))throw Error("INVALID_CAPSULE_STYLE");
   return {
     schemaVersion:1,

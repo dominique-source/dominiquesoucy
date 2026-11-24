@@ -118,6 +118,7 @@ export function drawStudioFrame(
  ctx.font=`900 italic ${Math.round(width*.035)}px Impact,Arial,sans-serif`;
  ctx.fillStyle="#ccff00";
  ctx.fillText("DOM SOUCY MEDIA",pad,pad+25);
+ if(visual.style==="none"){ctx.restore();return;}
  const main=(visual.caption||"").trim().slice(0,230);
  if(main){
   const y=visual.textPosition==="top"?Math.round(height*.22):visual.textPosition==="center"?Math.round(height*.46):Math.round(height*.72);

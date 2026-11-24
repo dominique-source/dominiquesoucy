@@ -49,7 +49,7 @@ export const capsuleSchema=z.object({
   start:z.number().finite().min(0).max(7200),
   end:z.number().finite().min(0).max(7200),
   format:z.enum(["16:9","9:16","1:1"]),
-  style:z.enum(["classic","quote","conversation","editorial","rafale"]),
+  style:z.enum(["classic","quote","conversation","editorial","rafale","none"]),
   caption:z.string().max(500),
   bubble:z.string().max(500),
   journalistName:z.string().max(100).optional(),

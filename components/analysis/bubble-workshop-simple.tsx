@@ -8,7 +8,7 @@ import { buildHdRenderManifest, hdManifestFilename } from "@/lib/analysis/hd-ren
 import { createTransparentBubblePng,downloadBubblePng } from "@/lib/analysis/transparent-bubble-png";
 
 type Capsule = StudioProject["capsules"][number];
-type Style = "conversation" | "quote" | "rafale";
+type Style = "conversation" | "quote" | "rafale" | "none";
 type Format = Capsule["format"];
 type Props = {
   lang: "fr" | "en";
@@ -23,32 +23,34 @@ type Props = {
 };
 
 const options: {style:Style;number:string;fr:string;en:string}[] = [
+  {style:"none",number:"00",fr:"SANS BULLE",en:"NO BUBBLE"},
   {style:"conversation",number:"01",fr:"QUESTION JOURNALISTE",en:"JOURNALIST QUESTION"},
   {style:"quote",number:"02",fr:"CITATION PERCUTANTE",en:"POWERFUL QUOTE"},
   {style:"rafale",number:"03",fr:"RAFALE DE QUESTIONS",en:"QUESTION BURST"},
 ];
 
 function BubbleVisual({fr,style,question,caption,mini=false,attribution="reconstructed",journalistName="",journalistOutlet="",portraitUrl=""}:{fr:boolean;style:Style;question:string;caption:string;mini?:boolean;attribution?:"verified"|"reconstructed";journalistName?:string;journalistOutlet?:string;portraitUrl?:string}){
+  if(style==="none")return mini?<div className="ds-bubble-none-label">{fr?"VIDÉO ÉPURÉE":"CLEAN VIDEO"}</div>:null;
   const lines = question.split("\n").map(v=>v.trim()).filter(Boolean).slice(0,3);
   const previewQuestion = question.trim() || (fr?"Votre question apparaîtra ici":"Your question appears here");
   const previewQuote = caption.trim() || (fr?"Votre citation apparaîtra ici":"Your quote appears here");
   return <div className={"ds-bubble-graphic ds-bubble-"+style+(mini?" mini":"")}>
     {style==="conversation"?<div className="ds-bubble-glass ds-bubble-journalist-glass">
-      <div className="ds-bubble-journalist-layout">
+      <div className={"ds-bubble-journalist-layout"+(portraitUrl?" has-portrait":"")}>
         <div className="ds-bubble-journalist-body">
           <div className="ds-bubble-ribbon"><span aria-hidden="true">◉</span> {attribution==="verified"?(fr?"QUESTION — JOURNALISTE":"JOURNALIST QUESTION"):(fr?"QUESTION — PROPOSÉE":"SUGGESTED QUESTION")}</div>
           {(journalistName||journalistOutlet)&&<div className="ds-bubble-attribution">
             {journalistName||(fr?"Journaliste":"Journalist")}{journalistOutlet&&<span> / {journalistOutlet}</span>}
           </div>}
-          <strong>« {previewQuestion.slice(0,175)} »</strong>
+          <strong style={{fontSize:undefined}} data-length={previewQuestion.length>120?"long":"short"}>« {previewQuestion} »</strong>
           {attribution==="reconstructed"&&<small>{fr?"RECONSTITUTION ÉDITORIALE":"EDITORIAL RECONSTRUCTION"}</small>}
         </div>
-        <div className="ds-bubble-journalist-portrait" aria-hidden="true">
+        {portraitUrl&&<div className="ds-bubble-journalist-portrait" aria-hidden="true">
           {portraitUrl?<img src={portraitUrl} alt=""/>:<span className="ds-bubble-portrait-icon">◉</span>}
-        </div>
+        </div>}
       </div>    </div>:style==="quote"?<div className="ds-bubble-glass">
       <div className="ds-bubble-ribbon">{mini?(fr?"CITATION CHOC":"POWERFUL QUOTE"):(fr?"LA RÉPONSE":"THE ANSWER")}</div>
-      <strong className="ds-bubble-quote-text">« {previewQuote.slice(0,200)} »</strong>
+      <strong className="ds-bubble-quote-text" data-length={previewQuote.length>100?"long":"short"}>« {previewQuote} »</strong>
     </div>:<div className="ds-bubble-rafale">
       {(lines.length?lines:fr?["Votre première question","Votre deuxième question","Votre troisième question"]:
         ["Your first question","Your second question","Your third question"])
@@ -60,11 +62,11 @@ function BubbleVisual({fr,style,question,caption,mini=false,attribution="reconst
 }
 
 function workshopStyle(capsule?:Capsule):Style {
-  return capsule?.style==="conversation"||capsule?.style==="rafale"?capsule.style:"quote";
+  return capsule?.style==="conversation"||capsule?.style==="rafale"||capsule?.style==="none"?capsule.style:"quote";
 }
 
 function hasBubbleText(capsule:Capsule) {
-  return (workshopStyle(capsule)==="quote"?capsule.caption:capsule.bubble).trim().length>0;
+  return workshopStyle(capsule)==="none" || (workshopStyle(capsule)==="quote"?capsule.caption:capsule.bubble).trim().length>0;
 }
 
 function hasValidTiming(capsule:Capsule,duration:number) {
@@ -150,7 +152,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   const format:Format=current?.format||"16:9";
   const timeValid=!!current&&hasValidTiming(current,project.timeline.duration);
   const textValid=!!current&&hasBubbleText(current);
-  const approved=capsules.filter(c=>c.review==="approved");
+
   const reviewLabels=fr?{pending:"À valider",approved:"Approuvée",rejected:"Rejetée"}:
     {pending:"Needs review",approved:"Approved",rejected:"Rejected"};
 
@@ -162,7 +164,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
 
   const [exportingPng,setExportingPng]=useState(false);
   async function exportTransparentPng(){
-    if(!current||!textValid||exportingPng)return;
+    if(!current||!textValid||exportingPng||selectedStyle==="none")return;
     setExportingPng(true);setInfo("");
     try{
       const blob=await createTransparentBubblePng({
@@ -269,7 +271,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
           <div className="studio-bubble-video-top" aria-hidden="true">
             <b>DOM SOUCY <em>MEDIA.</em></b><span>● {fr?"EN DIRECT":"LIVE"}</span>
           </div>
-          <button type="button" className="studio-bubble-video-graphics studio-bubble-click-to-edit"
+          {selectedStyle!=="none"&&<button type="button" className="studio-bubble-video-graphics studio-bubble-click-to-edit"
             key={current?.id||"demo"} onClick={editBubble}
             title={fr?"Cliquer pour modifier le texte de cette bulle":"Click to edit this bubble's text"}
             aria-label={fr?"Modifier le texte de la bulle affichée":"Edit the displayed bubble text"}>
@@ -278,7 +280,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
               journalistName={current?.journalistName||""}
               journalistOutlet={current?.journalistOutlet||""}
               portraitUrl={journalistPhotoUrl}/>
-          </button>
+          </button>}
           <div className="studio-bubble-video-bottom" aria-hidden="true"><b> / </b> DOMINIQUE SOUCY</div>
         </div>
         <p className="analysis-note">{fr?
@@ -309,15 +311,15 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
 
     {current&&<div className="studio-bubble-editor-simple">
       <strong>{fr?"4. PERSONNALISE LE MESSAGE":"4. CUSTOMIZE THE MESSAGE"}</strong>
-      <label>{selectedStyle==="quote"?(fr?"LA CITATION AFFICHÉE":"DISPLAYED QUOTE"):
+      {selectedStyle!=="none"&&<label>{selectedStyle==="quote"?(fr?"LA CITATION AFFICHÉE":"DISPLAYED QUOTE"):
         selectedStyle==="rafale"?(fr?"UNE QUESTION PAR LIGNE (MAX. 3)":"ONE QUESTION PER LINE (MAX 3)"):
         fr?"LA QUESTION AFFICHÉE":"DISPLAYED QUESTION"}
-        <textarea ref={editorRef} rows={selectedStyle==="rafale"?4:2} maxLength={500}
+        <textarea ref={editorRef} rows={selectedStyle==="rafale"?4:2} maxLength={selectedStyle==="rafale"?300:180}
           value={selectedStyle==="quote"?current.caption:current.bubble}
           placeholder={selectedStyle==="quote"?(fr?"Choisis la phrase à mettre en valeur…":"Choose the quote…"):
             fr?"Écris la question qui apparaît dans la bulle…":"Type the question for this bubble…"}
           onChange={e=>update(selectedStyle==="quote"?{caption:e.target.value}:{bubble:e.target.value})}/>
-      </label>
+      </label>}
       {selectedStyle==="conversation"&&<div className="studio-bubble-journalist-editor">
         <strong>{fr?"PHOTO ET IDENTIFICATION DU JOURNALISTE (FACULTATIF)":"JOURNALIST PHOTO AND DETAILS (OPTIONAL)"}</strong>
         <div className="studio-bubble-journalist-identity">
@@ -354,7 +356,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
           "La photo apparaît ici. Pour l'export HD local, il faudra aussi fournir son fichier sous le nom reporter.png. Les portraits ne sont pas envoyés sur Vercel.":
           "Photo previews here. The local HD renderer also needs the file named reporter.png. Portraits are not uploaded to Vercel."}</p>}
       </div>}
-            {selectedStyle!=="quote"&&<p className="analysis-note">
+            {selectedStyle!=="quote"&&selectedStyle!=="none"&&<p className="analysis-note">
         {fr?"Les questions imaginées par l’IA restent identifiées comme des reconstitutions. Ne présente jamais une question inventée comme une vraie intervention journalistique.":"AI-generated questions are marked as reconstructions and must not be presented as real journalist statements."}
       </p>}
       <div className="studio-bubble-format-controls" role="group" aria-label={fr?"Format vidéo":"Video format"}>
@@ -371,7 +373,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
           <label>{fr?"Fin (secondes)":"End (seconds)"}<input type="number" min={0} max={7200} step={.1}
             value={current.end} onChange={e=>update({end:Number(e.target.value)||0})}/></label>
         </div>
-        {selectedStyle!=="quote"&&<label>{fr?"Origine de la question":"Question source"}
+        {selectedStyle!=="quote"&&selectedStyle!=="none"&&<label>{fr?"Origine de la question":"Question source"}
           <select value={current.questionAttribution||"reconstructed"}
             onChange={e=>update({questionAttribution:e.target.value as "reconstructed"|"verified"})}>
             <option value="reconstructed">{fr?"Question reconstituée (IA)":"Reconstructed question (AI)"}</option>
@@ -383,7 +385,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         "L’IA n’a pas trouvé un début et une fin fiables. Tu peux voir la bulle, mais le rendu sera bloqué jusqu’à correction des repères dans « Options avancées ».":
         "AI has not found reliable start/end points. You can preview the bubble, but rendering is blocked until timestamps are fixed in Advanced options."}</p>}
       {!textValid&&<p className="studio-bubble-warning">{fr?"Ajoute le texte de la bulle avant de préparer le rendu.":"Add bubble text before preparing rendering."}</p>}
-      <div className="studio-bubble-png-action">
+      {selectedStyle!=="none"&&<div className="studio-bubble-png-action">
         <button type="button" className="analysis-primary studio-bubble-lab-big"
           disabled={!textValid||exportingPng} onClick={()=>{void exportTransparentPng()}}>
           {exportingPng?(fr?"CRÉATION DU PNG…":"CREATING PNG…"):
@@ -392,7 +394,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         <p className="analysis-note">{fr?
           "Bulle seule en 1600 × 900, fond transparent, sans vidéo. Prête à ajouter dans Premiere Pro. Aucun repère de temps requis.":
           "Standalone 1600 × 900 bubble, transparent background and no video. Ready for Premiere Pro. No timestamps required."}</p>
-      </div>
+      </div>}
       <details className="studio-simple-details"><summary>{fr?"RENDU VIDÉO HD AUTOMATISÉ (AVANCÉ)":"AUTOMATED HD VIDEO RENDER (ADVANCED)"}</summary>
       <button type="button" className="analysis-primary studio-bubble-lab-big"
         disabled={current.review!=="approved"||!timeValid||!textValid} onClick={()=>exportPlan(current)}>
@@ -412,16 +414,16 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
       String(validList.length)+" clips with valid timing. No keying, background or camera controls are required."}</p>}
   </section>
   <section hidden={view!=="export"} className="analysis-panel studio-step">
-    <div className="analysis-panel-head"><h2>{fr?"04 / EXPORTER":"04 / EXPORT"}</h2><span>{fr?"CAPSULES APPROUVÉES":"APPROVED CLIPS"}</span></div>
-    {approved.length?<ul className="studio-approved-clips">
-      {approved.map(c=>{
-        const ready=hasValidTiming(c,project.timeline.duration)&&hasBubbleText(c);
+    <div className="analysis-panel-head"><h2>{fr?"04 / EXPORTER":"04 / EXPORT"}</h2><span>{fr?"TOUTES LES CAPSULES":"ALL CLIPS"}</span></div>
+    {capsules.length?<ul className="studio-approved-clips">
+      {capsules.map(c=>{
+        const ready=c.review==="approved"&&hasValidTiming(c,project.timeline.duration)&&hasBubbleText(c);
         return <li key={c.id}>
-          <div><strong>{c.title}</strong><span>{c.format}</span></div>
+          <div><strong>{c.title}</strong><span>{c.format} · {Math.max(0,Math.round(c.end-c.start))} s · {reviewLabels[c.review??"pending"]}</span></div>
           <button className="analysis-primary" type="button" onClick={()=>{
             if(ready){exportPlan(c);return}
             onChange({selectedCapsuleId:c.id});onReviewClips();
-          }}>{ready?(fr?"TÉLÉCHARGER LE JSON HD":"DOWNLOAD HD JSON"):(fr?"TERMINER LA BULLE":"FINISH BUBBLE")}</button>
+          }}>{ready?(fr?"TÉLÉCHARGER LE JSON HD":"DOWNLOAD HD JSON"):(fr?"MODIFIER / APPROUVER":"EDIT / APPROVE")}</button>
         </li>;
       })}
     </ul>:<p className="analysis-note">{fr?"Approuve un extrait dans Créer les bulles pour le préparer au rendu HD.":

@@ -10,7 +10,7 @@ if(!existsSync(manifestFile))abort("Fichier manifeste introuvable : "+manifestFi
 let props;
 try{props=JSON.parse(readFileSync(manifestFile,"utf8"))}
 catch{abort("Le manifeste n'est pas un JSON valide")}
-const formats=["16:9","9:16","1:1"],styles=["journalist","rafale","quote","editorial","classic"];
+const formats=["16:9","9:16","1:1"],styles=["journalist","rafale","quote","editorial","classic","none"];
 if(props.schemaVersion!==1||!formats.includes(props.format)||!styles.includes(props.style)||
   !Number.isFinite(props.start)||!Number.isFinite(props.end)||props.start<0||
   props.end<=props.start||props.end-props.start>600)

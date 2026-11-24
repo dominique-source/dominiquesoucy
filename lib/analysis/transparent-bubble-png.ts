@@ -14,13 +14,13 @@ function rounded(c:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,
  c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();
 }
 function glass(c:CanvasRenderingContext2D,x:number,y:number,w:number,h:number){
- c.save();rounded(c,x,y,w,h,48);c.shadowColor="rgba(204,255,0,.60)";c.shadowBlur=40;
- c.lineWidth=6;c.strokeStyle="#CCFF00";c.stroke();c.shadowBlur=0;
+ c.save();rounded(c,x,y,w,h,48);c.shadowColor="rgba(204,255,0,.60)";c.shadowBlur=22;
+ c.lineWidth=3;c.strokeStyle="#CCFF00";c.stroke();c.shadowBlur=0;
  const g=c.createLinearGradient(x,y,x+w,y+h);
  g.addColorStop(0,"rgba(92,97,105,.94)");g.addColorStop(.24,"rgba(30,33,38,.97)");
  g.addColorStop(.66,"rgba(2,3,4,.98)");g.addColorStop(1,"rgba(33,47,12,.97)");
  rounded(c,x,y,w,h,48);c.fillStyle=g;c.fill();
- rounded(c,x+3,y+3,w-6,h-6,45);c.lineWidth=3;c.strokeStyle="rgba(244,244,239,.77)";c.stroke();
+ rounded(c,x+3,y+3,w-6,h-6,45);c.lineWidth=3;const edge=c.createLinearGradient(x,y,x+w,y+h);edge.addColorStop(0,"#e9ece9");edge.addColorStop(.5,"#73787e");edge.addColorStop(1,"#ccff00");c.strokeStyle=edge;c.stroke();
  c.clip();
  const sheen=c.createLinearGradient(x,y,x+w*.65,y+h*.75);
  sheen.addColorStop(0,"rgba(255,255,255,.34)");
@@ -37,7 +37,7 @@ function ribbon(c:CanvasRenderingContext2D,t:string,x:number,y:number,w:number){
  c.fillText(t,20,38,w-36);c.restore();
 }
 function fitLines(c:CanvasRenderingContext2D,t:string,w:number,maxLines:number,size:number){
- c.font="italic 900 "+size+"px "+FONT;
+ c.font="italic 750 "+size+"px "+FONT;
  const lines:string[]=[];let line="";
  for(const word of t.replace(/\s+/g," ").trim().split(" ")){
   const next=line?line+" "+word:word;
@@ -54,7 +54,7 @@ function writing(c:CanvasRenderingContext2D,t:string,x:number,y:number,w:number,
   lines=fitLines(c,t,w,6,size);
   if(lines.length*size*1.15<h&&lines.every(l=>c.measureText(l).width<=w))break;
  }
- c.fillStyle="#F4F4EF";c.font="italic 900 "+size+"px "+FONT;
+ c.fillStyle="#F4F4EF";c.font="italic 750 "+size+"px "+FONT;
  c.textBaseline="top";c.shadowColor="#080808";c.shadowBlur=9;
  lines.forEach((l,i)=>c.fillText(l,x,y+i*size*1.14,w));
  c.shadowBlur=0;
