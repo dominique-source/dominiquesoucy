@@ -9,6 +9,18 @@ const headers={"Cache-Control":"private, no-store","X-Robots-Tag":"noindex"};
 const json=(value:unknown,status=200)=>NextResponse.json(value,{status,headers});
 
 /**
+ * Lightweight session check before clients decode and upload audio chunks.
+ * This endpoint does not receive media and does not expose session tokens.
+ */
+export async function GET(){
+  try{
+    return (await session())?json({authenticated:true}):json({error:"UNAUTHORIZED"},401);
+  }catch{
+    return json({error:"AUTH_STORE_UNAVAILABLE"},503);
+  }
+}
+
+/**
  * Transcribe short audio chunks sent directly to the function in memory.
  * IMPORTANT: Vercel Functions cannot receive full 25 MB recordings directly.
  * Client sends <= 90 s mono 16 kHz WAV, <= 3.6 MB per request.
@@ -16,7 +28,9 @@ const json=(value:unknown,status=200)=>NextResponse.json(value,{status,headers})
  */
 export async function POST(request:Request){
   if(!sameOrigin(request))return json({error:"ORIGIN_DENIED"},403);
-  const user=await session().catch(()=>null);
+  let user:Awaited<ReturnType<typeof session>>;
+  try{user=await session()}
+  catch{return json({error:"AUTH_STORE_UNAVAILABLE"},503)}
   if(!user)return json({error:"UNAUTHORIZED"},401);
   if(!process.env.OPENAI_API_KEY)return json({error:"AI_NOT_CONFIGURED"},503);
   const length=Number(request.headers.get("content-length")||0);
