@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "projectId": "00000000-0000-4000-8000-000000000000",
+  "capsuleId": "11111111-2222-4333-8444-555555555555",
+  "title": "Question journaliste — pilote",
+  "start": 0,
+  "end": 2,
+  "format": "16:9",
+  "style": "journalist",
+  "caption": "Le sport commence à l'école.",
+  "bubble": "Pourquoi investir dans les écoles?",
+  "journalistName": "",
+  "journalistOutlet": "",
+  "questionAttribution": "reconstructed",
+  "masterAsset": "master.mp4",
+  "foregroundAsset": "",
+  "audioAsset": "",
+  "backgroundAsset": "",
+  "portraitAsset": "",
+  "episodeLabel": "ÉP. 01",
+  "outroAsset": "signature-horizontal.mp4",
+  "outroDurationSeconds": 2
+}

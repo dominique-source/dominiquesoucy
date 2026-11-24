@@ -47,3 +47,13 @@ jobs:
         run: |
           npm run render -- sample-manifest.json
           test -s out/Question-journaliste-pilote-16x9.mp4
+      - name: Generate a synthetic two-second signature and validate appended MP4
+        working-directory: render-engine
+        run: |
+          ffmpeg -hide_banner -loglevel error -y \
+            -f lavfi -i "color=c=0x050505:size=1920x1080:rate=30:duration=2" \
+            -f lavfi -i "sine=frequency=880:sample_rate=48000:duration=2" \
+            -c:v libx264 -preset veryfast -pix_fmt yuv420p \
+            -c:a aac -shortest public/signature-horizontal.mp4
+          npm run render -- sample-manifest-with-outro.json
+          node -e 'const fs=require("node:fs"); const {execFileSync}=require("node:child_process"); const p="out/Question-journaliste-pilote-16x9.mp4"; const d=Number(execFileSync("ffprobe",["-v","error","-show_entries","format=duration","-of","default=noprint_wrappers=1:nokey=1",p]).toString());if(!fs.statSync(p).size||d<3.95||d>4.1)process.exit(1);'
