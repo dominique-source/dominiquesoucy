@@ -321,7 +321,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
       <div className="studio-bubble-video-side">
         <strong>{fr?"2. APERÇU SUR TA VIDÉO":"2. PREVIEW ON YOUR VIDEO"}</strong>
         {mediaDuration>0&&<p className="analysis-note">{fr?"Vidéo source : ":"Source video: "}{Math.floor(mediaDuration/60)}:{String(Math.floor(mediaDuration%60)).padStart(2,"0")}{Math.abs(mediaDuration-project.timeline.duration)>2&&(fr?" · Durée différente du projet : vérifie le fichier source.":" · Project duration differs: check source file.")}</p>}
-        {current&&current.end>current.start&&mediaDuration>0&&current.end>mediaDuration&&<p role="alert">{fr?"Cet extrait dépasse la vidéo chargée. Importe le master complet.":"This clip exceeds the loaded video. Import the full master."}</p>
+        {current&&current.end>current.start&&mediaDuration>0&&current.end>mediaDuration&&<p role="alert">{fr?"Cet extrait dépasse la vidéo chargée. Importe le master complet.":"This clip exceeds the loaded video. Import the full master."}</p>}
         <div className={"studio-bubble-preview format-"+format.replace(":","-")}>
           {previewUrl?<video ref={videoRef} src={previewUrl} controls playsInline preload="metadata"
             onLoadedMetadata={e=>{const duration=e.currentTarget.duration;if(Number.isFinite(duration)&&duration>0)setMediaDuration(duration)}}/>:<div className="studio-bubble-no-video">
