@@ -2,6 +2,7 @@
 import {readFileSync,existsSync,mkdirSync} from "node:fs";
 import {resolve,basename,join,dirname} from "node:path";
 import {spawnSync} from "node:child_process";
+import {extractReporters} from "../../scripts/extract-reporters.mjs";
 
 const root=resolve(import.meta.dirname,"..");
 const manifestFile=resolve(process.argv[2]||join(root,"capsule.json"));
@@ -32,6 +33,10 @@ for(const key of ["title","caption","bubble","journalistName","journalistOutlet"
 if(props.questionAttribution!=="verified"&&props.questionAttribution!=="reconstructed")
   abort("questionAttribution doit être verified ou reconstructed");
 const publicDir=join(root,"public");
+const builtinPortraits=["marie-eve-gagnon","julie-martin","marc-tremblay","anne-richard","sofia-mendes","malik-laurent","naomi-diallo","alex-nguyen"].map(id=>id+".png");
+if(builtinPortraits.includes(props.portraitAsset)&&!existsSync(join(publicDir,props.portraitAsset))){
+  try{extractReporters(join(root,"..","DOM-SOUCY-MEDIA-journalistes-fictifs.zip"),publicDir)}catch(error){abort("Banque de portraits indisponible : "+error.message)}
+}
 for(const key of ["masterAsset","foregroundAsset","audioAsset","backgroundAsset","portraitAsset","outroAsset"]){
   if(props[key]&&!existsSync(join(publicDir,props[key])))
     abort("Fichier "+props[key]+" absent du dossier render-engine/public. Pour la signature, choisis les MP4 originaux dans RENDU-HD.command ou copie-les sous le nom attendu.");

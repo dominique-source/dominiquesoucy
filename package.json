@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts tests/*.test.tsx",
     "content:check": "node --import tsx scripts/check-content.ts",
-    "prebuild": "npm run content:check",
+    "predev": "node scripts/extract-reporters.mjs",
+    "prebuild": "node scripts/extract-reporters.mjs && npm run content:check",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

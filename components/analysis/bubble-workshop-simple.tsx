@@ -33,6 +33,10 @@ const reporters=[
   {id:"naomi-diallo",name:"Naomi Diallo",beat:"Jeunesse"},
   {id:"alex-nguyen",name:"Alex Nguyen",beat:"Innovation"},
 ] as const;
+function builtinReporter(capsule?: Capsule) {
+  return capsule?.journalistOutlet==="Personnage fictif" ? reporters.find(r=>r.name===capsule.journalistName) : undefined;
+}
+function reporterUrl(id:string){return "/assets/studio/reporters/"+id+".png"}
 const options: {style:Style;number:string;fr:string;en:string}[] = [
   {style:"none",number:"00",fr:"SANS BULLE",en:"NO BUBBLE"},
   {style:"conversation",number:"01",fr:"QUESTION JOURNALISTE",en:"JOURNALIST QUESTION"},
@@ -93,9 +97,13 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   const [previewUrl,setPreviewUrl]=useState("");
   const [info,setInfo]=useState("");
   const [portraits,setPortraits]=useState<Record<string,File>>({});
-  const [reporterFiles,setReporterFiles]=useState<Record<string,File>>({});
-  const [reporterUrls,setReporterUrls]=useState<Record<string,string>>({});
-  useEffect(()=>{const urls=Object.fromEntries(Object.entries(reporterFiles).map(([id,file])=>[id,URL.createObjectURL(file)]));setReporterUrls(urls);return()=>Object.values(urls).forEach(url=>URL.revokeObjectURL(url));},[reporterFiles]);
+  async function portraitFor(capsule:Capsule):Promise<File|null>{
+    const reporter=builtinReporter(capsule);
+    if(!reporter)return portraits[capsule.id]||null;
+    const response=await fetch(reporterUrl(reporter.id));
+    if(!response.ok)throw Error("REPORTER_PORTRAIT_UNAVAILABLE");
+    return new File([await response.blob()],reporter.id+".png",{type:"image/png"});
+  }
   const journalistPhoto=current?portraits[current.id]||null:null;
   const [rendering,setRendering]=useState<{id:string;progress:number}|null>(null);
   const [outputs,setOutputs]=useState<Record<string,{url:string;filename:string}>>({});
@@ -195,7 +203,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         journalistName:current.journalistName,
         journalistOutlet:current.journalistOutlet,
         questionAttribution:current.questionAttribution,
-        portraitFile:selectedStyle==="conversation"?journalistPhoto:null,
+        portraitFile:selectedStyle==="conversation"?await portraitFor(current):null,
       });
       downloadBubblePng(blob,"dom-soucy-bulle-"+selectedStyle+"-"+current.id.slice(0,8)+".png");
       setInfo(fr?"Bulle PNG transparente téléchargée : glisse-la directement sur ta piste vidéo dans Premiere.":"Transparent PNG downloaded: drag it directly onto your Premiere timeline.");
@@ -209,18 +217,20 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   function exportPlan(capsule:Capsule){
     if(capsule.review!=="approved"||!hasValidTiming(capsule,project.timeline.duration)||!hasBubbleText(capsule))return;
     const style=workshopStyle(capsule);
-    const hasPortrait=!!portraits[capsule.id]&&style==="conversation";
+    const reporter=style==="conversation"?builtinReporter(capsule):undefined;
+    const hasPortrait=style==="conversation"&&(!!reporter||!!portraits[capsule.id]);
     try{
       const manifest=buildHdRenderManifest(project,{
         ...capsule,
         style,
         keying:{...defaultChroma,enabled:false},background:"original",
       },{transparentForeground:false,reporterPortrait:hasPortrait});
+      if(reporter)manifest.portraitAsset=reporter.id+".png";
       const url=URL.createObjectURL(new Blob([JSON.stringify(manifest,null,2)],{type:"application/json"}));
       const link=document.createElement("a");link.href=url;link.download=hdManifestFilename(capsule);
       document.body.appendChild(link);link.click();link.remove();
       window.setTimeout(()=>URL.revokeObjectURL(url),1500);
-      setInfo(hasPortrait?
+      setInfo(reporter?(fr?"Instructions HD téléchargées. Le portrait fictif est inclus dans la banque du moteur local à jour.":"HD instructions downloaded. The fictional portrait is included in the updated local renderer."):hasPortrait?
         (fr?"Instructions téléchargées. Pour conserver la photo au rendu HD, copie également son fichier sous le nom reporter.png dans le moteur local.":"Instructions downloaded. To keep the journalist photo in the HD render, copy it as reporter.png into the local render folder."):
         (fr?"Instructions HD téléchargées. Le moteur local sur ton Mac les appliquera à master.mp4.":"HD render instructions downloaded. The local Mac renderer applies them to master.mp4."));
     }catch{
@@ -243,7 +253,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
       const style=workshopStyle(capsule);
       let graphic:ImageBitmap|undefined;
       try{
-        if(style!=="none")graphic=await createImageBitmap(await createTransparentBubblePng({style,question:capsule.bubble,caption:capsule.caption,journalistName:capsule.journalistName,journalistOutlet:capsule.journalistOutlet,questionAttribution:capsule.questionAttribution,portraitFile:portraits[capsule.id]}));
+        if(style!=="none")graphic=await createImageBitmap(await createTransparentBubblePng({style,question:capsule.bubble,caption:capsule.caption,journalistName:capsule.journalistName,journalistOutlet:capsule.journalistOutlet,questionAttribution:capsule.questionAttribution,portraitFile:style==="conversation"?await portraitFor(capsule):null}));
         const blob=await renderLocalMp4({nodes:{main:video},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},audioSource:"main",cuts:[],fallback:"main",duration:video.duration,start:capsule.start,end:capsule.end,format:capsule.format,visual:{style,background:"original",caption:"",bubble:"",textPosition:"bottom",keying:{...defaultChroma,enabled:false},graphic},onProgress:progress=>setRendering({id:capsule.id,progress})});
         const filename=hdManifestFilename(capsule).replace(/\.json$/,".mp4");
         const result=URL.createObjectURL(blob);outputUrls.current.push(result);
@@ -336,7 +346,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
               caption={current?.caption||""} attribution={current?.questionAttribution}
               journalistName={current?.journalistName||""}
               journalistOutlet={current?.journalistOutlet||""}
-              portraitUrl={journalistPhotoUrl}/>
+              portraitUrl={builtinReporter(current)?reporterUrl(builtinReporter(current)!.id):journalistPhotoUrl}/>
           </button>}
           <div className="studio-bubble-video-bottom" aria-hidden="true"><b> / </b> DOMINIQUE SOUCY</div>
         </div>
@@ -381,9 +391,8 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         <strong>{fr?"PHOTO ET IDENTIFICATION DU JOURNALISTE (FACULTATIF)":"JOURNALIST PHOTO AND DETAILS (OPTIONAL)"}</strong>
         <div className="studio-fictional-roster">
           <strong>{fr?"BANQUE DE JOURNALISTES FICTIFS":"FICTIONAL JOURNALIST LIBRARY"}</strong>
-          <p className="analysis-note">{fr?"Décompresse la banque de portraits et importe ses huit PNG en une fois. Les photos restent sur ton appareil pendant cette session.":"Unzip the portrait pack and import the eight PNG files together. Photos stay on your device during this session."}</p>
-          <label>{fr?"IMPORTER LES PORTRAITS":"IMPORT PORTRAITS"}<input type="file" multiple accept="image/png" onChange={e=>{const files=Array.from(e.currentTarget.files||[]);setReporterFiles(old=>{const next={...old};for(const file of files){const id=file.name.replace(/\.png$/i,"");if(reporters.some(r=>r.id===id)&&file.type==="image/png"&&file.size<8_000_000)next[id]=file;}return next;});}}/></label>
-          <div className="studio-fictional-roster-grid">{reporters.map(r=><button type="button" key={r.id} disabled={!reporterFiles[r.id]} aria-pressed={current.journalistName===r.name&&current.journalistOutlet==="Personnage fictif"} onClick={()=>{setPortraits(old=>({...old,[current.id]:reporterFiles[r.id]}));update({journalistName:r.name,journalistOutlet:"Personnage fictif",questionAttribution:"reconstructed"});}}>{reporterUrls[r.id]?<img src={reporterUrls[r.id]} alt=""/>:<span className="studio-fictional-roster-placeholder">—</span>}<b>{r.name}</b><small>{r.beat} · {fr?"Fictif":"Fictional"}</small></button>)}</div>
+          <p className="analysis-note">{fr?"Choisis un personnage : son portrait et son nom sont associés à cette capsule. Aucun import nécessaire.":"Choose a character: the portrait and name are assigned to this clip. No import needed."}</p>
+          <div className="studio-fictional-roster-grid">{reporters.map(r=><button type="button" key={r.id} aria-pressed={builtinReporter(current)?.id===r.id} onClick={()=>{setPortraits(old=>{const next={...old};delete next[current.id];return next});update({journalistName:r.name,journalistOutlet:"Personnage fictif",questionAttribution:"reconstructed"});}}><img src={reporterUrl(r.id)} alt=""/><b>{r.name}</b><small>{r.beat} · {fr?"Fictif":"Fictional"}</small></button>)}</div>
         </div>
         <div className="studio-bubble-journalist-identity">
           <label>{fr?"Nom du journaliste":"Journalist name"}
@@ -407,6 +416,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
               return;
             }
             setPortraits(old=>({...old,[current.id]:file}));
+            if(builtinReporter(current))update({journalistName:"",journalistOutlet:"",questionAttribution:"reconstructed"});
           }}/>
         </label>
         {journalistPhoto&&<button type="button" className="analysis-secondary" onClick={()=>{
