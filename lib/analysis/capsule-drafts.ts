@@ -36,7 +36,7 @@ export function createDraftsFromAnalysis(project:StudioProject):Capsule[]{
         caption:m.excerpt.slice(0,500),bubble:m.model_id===1?m.excerpt.slice(0,160):"",
         journalistName:"",journalistOutlet:"",questionAttribution:"reconstructed" as const,
         background:"dark" as const,keying:{...defaultChroma},
-        textPosition:"bottom" as const,status:"draft" as const,
+        textPosition:"bottom" as const,status:"draft" as const,review:"pending" as const,
       };
     });
 }

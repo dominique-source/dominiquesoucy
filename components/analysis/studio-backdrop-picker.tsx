@@ -1,6 +1,6 @@
 "use client";
 import type { StudioProject } from "@/lib/analysis/project";
-import { backdropById,resolveBackdrop,studioBackgrounds,type BackdropId,type BackdropMode } from "@/lib/analysis/studio-backdrops";
+import { backdropLabel,resolveBackdrop,studioBackgrounds,type BackdropId,type BackdropMode } from "@/lib/analysis/studio-backdrops";
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 type Props={lang:"fr"|"en";project:StudioProject;onChange:(patch:Partial<StudioProject>)=>void};
 export function StudioBackdropPicker({lang,project,onChange}:Props){
@@ -28,7 +28,7 @@ export function StudioBackdropPicker({lang,project,onChange}:Props){
     <button type="button" className={mode==="topic"?"is-selected":""} onClick={()=>update("topic")}>{fr?"SELON LE SUJET":"BY TOPIC"}</button>
   </div>
   <p className="studio-sport-wall-current" role="status">
-    {fr?"DÉCOR ACTUEL":"CURRENT BACKDROP"} : <strong>{selected.label}</strong>
+    {fr?"DÉCOR ACTUEL":"CURRENT BACKDROP"} : <strong>{backdropLabel(selected,lang)}</strong>
     {mode==="random"&&(fr?" · Le choix reste identique pour cet épisode.":" · Fixed for this episode.")}
     {mode==="topic"&&(fr?" · Si aucun sport n’est détecté, choix aléatoire.":" · Random fallback if no sport detected.")}
   </p>
@@ -39,9 +39,9 @@ export function StudioBackdropPicker({lang,project,onChange}:Props){
       aria-pressed={selected.id===item.id}>
       <div className="studio-sport-wall-image">
         {/* Same-origin repo assets; no external URL or invented image is substituted. */}
-        <img src={item.file} alt={fr?`Décor DOM SOUCY MEDIA — ${item.label}`:`DOM SOUCY MEDIA ${item.label} backdrop`} loading="lazy"/>
+        <img src={item.file} alt="" loading="lazy"/>
       </div>
-      <span>{item.label}{selected.id===item.id?" ✓":""}</span>
+      <span>{backdropLabel(item,lang)}{selected.id===item.id?" ✓":""}</span>
     </button>)}
   </div>
   <p className="analysis-note">{fr

@@ -3,6 +3,7 @@ import { locale } from "@/lib/i18n";
 import { session } from "@/lib/studio/auth";
 import { StudioGate } from "@/components/studio/gate";
 import { ProductionStudio } from "@/components/analysis/production-studio";
+import { freshProject } from "@/lib/analysis/project";
 import "./analysis.css";
 
 export const dynamic = "force-dynamic";
@@ -19,5 +20,5 @@ export default async function AnalysisPage({
   let authorized = false;
   try { authorized = !!(await session()); } catch { /* fail closed */ }
   if (!authorized) return <StudioGate lang={lang} />;
-  return <ProductionStudio lang={lang} />;
+  return <ProductionStudio lang={lang} initialProject={freshProject(lang)} />;
 }

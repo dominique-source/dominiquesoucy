@@ -5,3 +5,8 @@ out/
 !.env.example
 *.tsbuildinfo
 .DS_Store
+
+# Private Studio references (local originals and backup copies).
+/DOM_SOUCY_CODEX_REFERENCES.zip
+/DOM_SOUCY_signatures_officielles.zip
+/.studio-references/

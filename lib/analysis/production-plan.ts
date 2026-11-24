@@ -1,4 +1,4 @@
-import type { StudioProject } from "./project";
+import { canProduceLegacyCapsule, type StudioProject } from "./project";
 import type { OutputFormat,OutputKind } from "./outputs";
 
 export type RenderJob = {
@@ -25,7 +25,7 @@ export function createProductionPlan(args:{
   const validFormats=[...new Set(formats)].filter(v=>["horizontal","vertical","square"].includes(v));
   const jobs:RenderJob[]=[];
   for(const capsule of capsules){
-    if(!choice.has(capsule.id)||!supported(capsule,duration))continue;
+    if(!choice.has(capsule.id)||!supported(capsule,duration)||!canProduceLegacyCapsule(capsule))continue;
     for(const format of validFormats)jobs.push({
       id:crypto.randomUUID(),kind:"capsule",capsuleId:capsule.id,
       title:capsule.title||"Capsule",format,start:capsule.start,end:capsule.end,

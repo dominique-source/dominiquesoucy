@@ -3,10 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderLocalMp4 } from "./local-mp4";
 import { ProductionBatch } from "./production-batch";
 import { drawStudioFrame,preloadStudioBackground } from "./canvas-overlays";
-import type { StudioProject } from "@/lib/analysis/project";
+import { canProduceLegacyCapsule, type StudioProject } from "@/lib/analysis/project";
 import { alignCameraAudio, type CameraSyncResult, type ScanRegion } from "@/lib/analysis/browser-audio-fingerprint";
 import {
-  activeCamera, cameraKeys, edl, labels, offsetFromClap,
+  activeCamera, cameraKeys, edl, englishLabels, labels as frenchLabels, offsetFromClap,
   safeCutTime, sourceTime, timeCode, proposeMulticamCuts,
   type CameraKey, type Cut, type SourceFiles, type SourceKey
 } from "@/lib/analysis/multicam";
@@ -32,6 +32,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   backdrops?:Record<string,string>;
 }) {
   const fr = lang === "fr";
+  const labels = fr ? frenchLabels : englishLabels;
   const videos = cameraKeys.filter(key=>!!sources[key] || !!remoteUrls?.[key]);
   const availableAudio: SourceKey[] = [ ...(sources.audio || remoteUrls?.audio ? ["audio" as const] : []), ...(sources.enhanced || remoteUrls?.enhanced ? ["enhanced" as const] : []), ...videos ];
   const [audioSource, setAudioSource] = useState<SourceKey>(savedTimeline?.audioSource || "audio");
@@ -359,6 +360,7 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
   }
   async function exportMp4(){
     if(rendering||!realCamera||!realAudioSource)return;
+    if(capsule&&!canProduceLegacyCapsule(capsule))return;
     const renderStart=capsule?capsule.start:clipStart;
     const renderEnd=capsule?capsule.end:clipEnd;
     if(renderEnd<=renderStart || renderEnd>duration){setError(fr?"Choisis un début et une fin de clip valides.":"Choose a valid clip start and end.");return}
@@ -735,15 +737,18 @@ export function MultiCamEditor({ sources, remoteUrls, mediaMetadata, name, lang,
         <label className="analysis-multi-render-format">{fr?"FORMAT DU CLIP":"CLIP FORMAT"}
           <select value={capsule?.format||format||"16:9"} onChange={e=>capsule?onCapsuleChange?.(capsule.id,{format:e.target.value as "16:9"|"9:16"|"1:1"}):onFormatChange?.(e.target.value as "16:9"|"9:16"|"1:1")}>
             <option value="16:9">16:9 · YouTube</option><option value="9:16">9:16 · Reels / Shorts</option>
-            <option value="1:1">1:1 · Square</option>
+            <option value="1:1">1:1 · {fr?"Carré":"Square"}</option>
           </select>
         </label>
-        <button type="button" disabled={rendering} className="analysis-primary" onClick={exportMp4}>
+        <button type="button" disabled={rendering||!!capsule&&!canProduceLegacyCapsule(capsule)} className="analysis-primary" onClick={exportMp4}>
           {rendering?`EXPORT MP4… ${renderPercent}%`:(fr?(capsule?"EXPORTER CETTE CAPSULE MP4 · BÊTA":"EXPORTER MP4 · BÊTA"):(capsule?"EXPORT SELECTED CAPSULE · BETA":"EXPORT MP4 · BETA"))}
         </button>
         <button type="button" onClick={markCut} className="analysis-secondary">{fr?"MARQUER L’ANGLE ACTUEL":"MARK CURRENT ANGLE"}</button>
         <button type="button" onClick={exportEdl} className="analysis-secondary">{fr?"TÉLÉCHARGER LE PLAN DE MONTAGE (.JSON)":"DOWNLOAD EDIT PLAN (.JSON)"}</button>
       </div>
+      {capsule&&!canProduceLegacyCapsule(capsule)&&<p className="analysis-note">{fr?
+        "Approuve cet extrait dans Créer les bulles avant de l’exporter.":
+        "Approve this clip in Create Bubbles before exporting."}</p>}
     </div>
     {projectId&&<ProductionBatch key={projectId} projectId={projectId} lang={lang} name={name}
       capsules={capsules} duration={duration} mediaFiles={sources} offsets={offsets}
