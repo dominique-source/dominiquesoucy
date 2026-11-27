@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { ImpactSection } from "@/components/impact-section";
 import { MediaLibrary } from "@/components/media-library";
 import { CinematicHero } from "@/components/cinematic-hero";
@@ -40,6 +42,27 @@ export default async function Home({
         }}
       />
       <CinematicHero lang={lang} />
+      <section className="home-era" aria-labelledby="home-era-title">
+        <div className="home-era-inner">
+          <p className="home-era-past">{lang === "fr" ? "Hier." : "Yesterday."}</p>
+          <div className="home-era-bridge">
+            <svg viewBox="0 0 1000 140" preserveAspectRatio="none" aria-hidden="true">
+              <path pathLength="1" d="M-20 90 Q200 5 390 72 T710 65 T1020 28" />
+              <path pathLength="1" d="M-20 100 Q200 15 390 82 T710 75 T1020 38" />
+            </svg>
+            <p>{lang === "fr" ? "Le regard évolue. La curiosité demeure." : "Perspectives evolve. Curiosity remains."}</p>
+          </div>
+          <div className="home-era-present">
+            <div><h2 id="home-era-title">{lang === "fr" ? "Aujourd’hui." : "Today."}</h2>
+            <p>{d.eyebrow}</p></div>
+            <div className="home-era-portraits">
+              {["788","789","791","803","804"].filter(id => existsSync(join(process.cwd(),"public","assets","today",`portrait_${id}.jpg`))).map(id => (
+                <img key={id} src={`/assets/today/portrait_${id}.jpg`} alt="Dominique Soucy" width={2048} height={1365} loading="lazy" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
       <MediaLibrary lang={lang} />
       <ImpactSection lang={lang} />
       <section className="content-shell home-connect" aria-labelledby="home-connect-title">
