@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { locale, dict } from "@/lib/i18n";
 import { site } from "@/lib/config";
-import { Header, Footer } from "@/components/site";
+import { Header } from "@/components/site";
 import { LocaleProvider } from "@/components/locale-provider";
 export function generateStaticParams() {
   return [{ lang: "fr" }, { lang: "en" }];
@@ -59,7 +59,6 @@ export default async function Layout({
       </a>
       <Header lang={lang} />
       <main id="main">{children}</main>
-      <Footer lang={lang} />
     </LocaleProvider>
   );
 }
