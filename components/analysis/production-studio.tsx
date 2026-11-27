@@ -323,6 +323,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     record("analysis",fr?`Analyse IA terminée : ${value.moments.length} extraits, ${drafts.length} capsules préparées`:
       `AI analysis complete: ${value.moments.length} highlights, ${drafts.length} clips prepared`,"success");
     setActiveSection("editing");
+    window.setTimeout(()=>document.getElementById("studio-phase5-current")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
     setMessage(fr?"L'IA a trouvé "+String(value.moments.length)+" passages. Clique sur une bulle pour la voir sur ta vidéo.":
       "AI found "+String(value.moments.length)+" highlights. Choose a bubble to preview it on your video.");
   }
@@ -429,9 +430,9 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     if(!consent||project.transcript.length<100||busy)return;
     setBusy("analyze");setError("");
     try{await analyzeTranscriptText(project.transcript)}
-    catch{
+    catch(e){
     record("error",fr?"Échec analyse IA":"AI analysis failed","failure");
-      setError(fr?"Analyse IA indisponible. Ta transcription est conservée.":"AI analysis unavailable. Your transcript is preserved.");
+      setError((fr?"Analyse IA indisponible. Ta transcription est conservée. Code : ":"AI analysis unavailable. Your transcript is preserved. Code: ")+(e instanceof Error?e.message:"UNKNOWN"));
     }finally{setBusy("")}
   };
   const openProject=async(id:string)=>{
@@ -505,7 +506,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
   const hasTranscript=project.transcript.trim().length>=100;
   const hasAnalysis=!!project.analysis?.moments.length;
   const approvedCapsules=project.capsules.filter(c=>c.review==="approved");
-  const suggestedNext=approvedCapsules.length?"production":project.capsules.length?"editing":
+  const suggestedNext=approvedCapsules.length?"production":hasAnalysis&&project.capsules.length?"editing":
     !files.main&&!files.audio&&!hasTranscript?"import":!hasAnalysis?"analysis":"editing";
   const quickNavigate=(tab:typeof activeSection)=>{
     setActiveSection(tab);
@@ -514,7 +515,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
   const mainSteps=[
     {id:"import" as const,num:"01",icon:"↓",name:fr?"IMPORTER":"IMPORT",
       detail:fr?"Choisir les médias sources":"Choose source media",ready:!!files.main||!!files.audio||hasTranscript},
-    {id:"analysis" as const,num:"02",icon:"✦",name:fr?"ANALYSER":"ANALYZE",
+    {id:"analysis" as const,num:"02",icon:"✦",name:fr?"ANALYSER & DÉCOUPER":"ANALYZE & CUT",
       detail:fr?"Transcription et meilleurs extraits":"Transcript and highlights",ready:hasAnalysis},
     {id:"editing" as const,num:"03",icon:"◉",name:fr?"CRÉER LES BULLES":"CREATE BUBBLES",
       detail:fr?"Valider les extraits et créer les bulles":"Review clips and create graphics",ready:approvedCapsules.length>0},
@@ -702,7 +703,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
 
       <p className="analysis-note">{fr?"Transcription en segments de 90 secondes : pas de limite de 24 Mo sur le fichier original et aucune copie audio conservée sur Vercel Blob. Fichiers compatibles avec le décodeur du navigateur uniquement.":"90-second transcription chunks. No 24 MB original-file limit and no audio archived in Vercel Blob. Source must be decodable by the browser."}</p>
     </>)}
-    {step(2,fr?"TRANSCRIPTION (FACULTATIF)":"TRANSCRIPT (OPTIONAL)",`${project.transcript.length} / 26 000`,<>
+    {step(2,fr?"TRANSCRIPTION":"TRANSCRIPT",`${project.transcript.length} / 26 000`,<>
       <details className="studio-simple-details"><summary>{fr?"VOIR OU CORRIGER LA TRANSCRIPTION (OPTIONNEL)":"VIEW OR EDIT TRANSCRIPT (OPTIONAL)"}</summary>
       <p>{fr?"Relis tes paroles. La transcription horodatée permet de découper automatiquement les capsules. Toute correction manuelle du texte invalide les anciens repères et nécessite une nouvelle transcription horodatée.":"Review the transcript. Word timestamps can create capsule cuts automatically. Editing the transcript invalidates previous timestamps and requires re-transcription."}</p>
       <p className="analysis-note">{fr?`${project.timedWords.length} mots horodatés`:`${project.timedWords.length} timed words`}</p>
@@ -716,17 +717,19 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       </details>
     </>)}
     {step(3,fr?"ANALYSE IA":"AI ANALYSIS",`${project.analysis?.moments.length||0} ${fr?"EXTRAITS":"CLIPS"}`,<>
-      <p>{fr?"L’analyse détecte des passages exacts, sans créer artificiellement des citations.":"AI finds exact excerpts, without inventing quotes."}</p>
+      <p>{fr?"Un seul clic : transcription si nécessaire, analyse, découpage et bulles de citations authentiques.":"One click: transcription if needed, analysis, cuts and authentic quote graphics."}</p>
+      <p role="status">{hasTranscript?(fr?"✓ Transcription conservée — aucune nouvelle transcription nécessaire.":"✓ Transcript saved — no need to transcribe again."):(fr?"Transcription à faire":"Transcript needed")} · {project.timedWords.length} {fr?"mots horodatés":"timed words"}</p>
+      {hasTranscript&&!project.timedWords.length&&<p role="alert">{fr?"Cette transcription ne contient pas de repères temporels. Une transcription horodatée est nécessaire pour découper automatiquement.":"This transcript has no timestamps. Timed transcription is required for automatic cuts."}</p>}
       {transcriptionProgress&&<p role="status" className="analysis-note">{transcriptionProgress}</p>}
       <label className="analysis-consent"><input type="checkbox" checked={consent}
         onChange={e=>setConsent(e.target.checked)}/>
         <span>{fr?"J'autorise la transcription et l'analyse privées par l'IA.":"I consent to private AI transcription and analysis."}</span>
       </label>
       <button type="button" className="analysis-primary studio-simple-primary"
-        disabled={!consent||(!files.audio&&project.transcript.trim().length<100)||!!busy}
-        onClick={()=>{if(project.transcript.trim().length>=100)void analyze();else void transcribe()}}>
+        disabled={!consent||(!files.audio&&(!hasTranscript||!project.timedWords.length))||!!busy}
+        onClick={()=>{if(hasTranscript&&project.timedWords.length)void analyze();else void transcribe()}}>
         {busy?(fr?"✦ ANALYSE EN COURS…":"✦ ANALYZING…"):
-          fr?"✦ ANALYSER MA VIDÉO":"✦ ANALYZE MY VIDEO"}
+          hasTranscript&&project.timedWords.length?(fr?"✦ ANALYSER ET CRÉER MES CAPSULES →":"✦ ANALYZE AND CREATE MY CLIPS →"):(fr?"✦ TRANSCRIRE, ANALYSER ET CRÉER MES CAPSULES →":"✦ TRANSCRIBE, ANALYZE AND CREATE MY CLIPS →")}
       </button>
       {!files.audio&&project.transcript.length<100&&<p className="analysis-note">{fr?
         "Dépose d'abord le master Premiere. Pour une vidéo de plus de 600 Mo, ajoute sa petite piste audio dans l'étape Importer.":
@@ -798,8 +801,8 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
           setActiveSection("editing");
           window.setTimeout(()=>document.getElementById("studio-capsule-workshop")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
         }}>
-          {fr?`CRÉER MES ${project.analysis.moments.length} CAPSULES →`:
-            `CREATE MY ${project.analysis.moments.length} CAPSULES →`}
+          {fr?`OUVRIR MES CAPSULES ET BULLES →`:
+            `OPEN MY CLIPS AND GRAPHICS →`}
         </button>
       </div><p className="analysis-synopsis">{project.analysis.synopsis}</p>
         <div className="analysis-tags">{project.analysis.themes.map((t,i)=><span key={i}>{t}</span>)}</div>
