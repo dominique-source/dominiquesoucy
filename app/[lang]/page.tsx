@@ -40,18 +40,10 @@ export default async function Home({
         }}
       />
       <CinematicHero lang={lang} />
-      <section aria-label={lang === "fr" ? "30 ans sur le terrain" : "30 years on the field"} style={{background:"#0a0a0a",width:"100%"}}>
-        <iframe src="/journey-prototype-v3.html" title="The Journey" loading="lazy" style={{display:"block",width:"100%",height:"100svh",border:0}} />
-      </section>
       <MediaLibrary lang={lang} />
       <ImpactSection lang={lang} />
-      <section className="content-shell home-connect" aria-labelledby="home-connect-title">
-        <p className="eyebrow accent">{lang==="fr"?"RESTONS CONNECTÉS":"STAY CONNECTED"}</p>
-        <h2 id="home-connect-title">{lang==="fr"?"La conversation continue.":"The conversation continues."}</h2>
-        <div className="home-connect-links">
-          {site.social.map(s=><a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer">{s.name} ↗</a>)}
-          <a href={site.purinstinct || "https://purinstinctgames.com"} target="_blank" rel="noopener noreferrer">PürInstinct ↗</a>
-        </div>
+      <section aria-label={lang === "fr" ? "30 ans sur le terrain" : "30 years on the field"} style={{background:"#0a0a0a",width:"100%"}}>
+        <iframe src="/journey-prototype-v3.html" title="The Journey" loading="lazy" style={{display:"block",width:"100%",height:"100svh",border:0}} />
       </section>
     </div>
   );
