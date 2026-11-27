@@ -17,8 +17,22 @@ export function drawSpokenTitle(ctx:CanvasRenderingContext2D,width:number,height
  const y=height*.16+(1-alpha)*12;ctx.fillStyle="#0a0a0a";ctx.fillRect(width*.04,y-size*.65,width*.92,rows.length*size*1.12+size*.3);
  rows.forEach((row,i)=>{ctx.fillStyle=i===0?"#ccff00":"#f4f4ef";ctx.fillText(row,width/2,y+i*size*1.12,width*.86)});ctx.restore();
 }
+export type SubtitleWord={word:string;start:number;end:number};
+const stopWords=new Set("le la les un une des de du et ou à au aux en je tu il elle on nous vous ils elles ce ces se que qui quoi pour par dans est sont a as the a an and or to of in is are you i we it that".split(" "));
+export function subtitleFrame(words:readonly SubtitleWord[],t:number){
+ const index=words.findIndex(w=>t>=w.start&&t<w.end);if(index<0)return [];
+ const first=Math.floor(index/4)*4;
+ return words.slice(first,first+4).map((w,i)=>({word:w.word,accent:first+i===index&&(!stopWords.has(w.word.toLowerCase().replace(/[^\p{L}]/gu,"")))}));
+}
+function drawSubtitles(ctx:CanvasRenderingContext2D,width:number,height:number,t:number,words:readonly SubtitleWord[]){
+ const frame=subtitleFrame(words,t);if(!frame.length)return;
+ ctx.save();let size=Math.round(Math.min(width*.055,height*.065));ctx.font=`900 ${size}px Arial,sans-serif`;
+ const full=frame.map(w=>w.word).join(" ");const measured=ctx.measureText(full).width;if(measured>width*.86){size=Math.floor(size*width*.86/measured);ctx.font=`900 ${size}px Arial,sans-serif`;}
+ const total=ctx.measureText(full).width;let x=(width-total)/2;const y=height*.91;ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillStyle="rgba(0,0,0,.88)";ctx.fillRect(x-10,y-size*.8,total+20,size*1.6);
+ for(const w of frame){ctx.fillStyle=w.accent?"#ccff00":"#f4f4ef";ctx.fillText(w.word,x,y);x+=ctx.measureText(w.word+" ").width;}ctx.restore();
+}
 type Capsule=StudioProject["capsules"][number];
-export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap;motion?:MotionLevel;spokenTitle?:SpokenTitle};
+export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap;motion?:MotionLevel;spokenTitle?:SpokenTitle;subtitleWords?:SubtitleWord[]};
 const backgroundCache=new Map<string,HTMLImageElement>();
 export async function preloadStudioBackground(url:string){
   if(!url.startsWith("/assets/studio/backdrops/"))throw Error("INVALID_STUDIO_BACKGROUND");
@@ -128,6 +142,7 @@ export function drawStudioFrame(
  }
  if(!visual)return;
  drawSpokenTitle(ctx,width,height,t,visual.spokenTitle);
+ if(visual.subtitleWords)drawSubtitles(ctx,width,height,t,visual.subtitleWords);
  const u=Math.max(0,t-start);
  const fade=Math.min(1,u/.55);
  const size=Math.max(22,Math.round(width*.047));
