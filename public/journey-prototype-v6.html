@@ -93,47 +93,29 @@ html{scroll-behavior:smooth} .chapter{display:block;position:relative;padding:0;
   {
     "date": "2023",
     "title": "Quartier Sportif",
-    "desc": "39 photographies • Le sport au cœur du quartier.",
+    "desc": "21 photographies • Le sport au cœur du quartier.",
     "photos": [
-      "/assets/journey-v6/07-01.png",
-      "/assets/journey-v6/07-02.png",
-      "/assets/journey-v6/07-03.png",
-      "/assets/journey-v6/07-04.png",
-      "/assets/journey-v6/07-05.png",
-      "/assets/journey-v6/07-06.png",
-      "/assets/journey-v6/07-07.png",
-      "/assets/journey-v6/07-08.png",
-      "/assets/journey-v6/07-09.png",
-      "/assets/journey-v6/07-10.png",
-      "/assets/journey-v6/07-11.png",
-      "/assets/journey-v6/07-12.png",
-      "/assets/journey-v6/07-13.png",
-      "/assets/journey-v6/07-14.png",
-      "/assets/journey-v6/07-15.png",
-      "/assets/journey-v6/07-16.png",
-      "/assets/journey-v6/07-17.png",
-      "/assets/journey-v6/07-18.png",
-      "/assets/journey-v6/07-19.png",
-      "/assets/journey-v6/07-20.png",
-      "/assets/journey-v6/07-21.png",
-      "/assets/journey-v6/07-22.png",
-      "/assets/journey-v6/07-23.png",
-      "/assets/journey-v6/07-24.png",
-      "/assets/journey-v6/07-25.png",
-      "/assets/journey-v6/07-26.png",
-      "/assets/journey-v6/07-27.png",
-      "/assets/journey-v6/07-28.png",
-      "/assets/journey-v6/07-29.png",
-      "/assets/journey-v6/07-30.png",
-      "/assets/journey-v6/07-31.png",
-      "/assets/journey-v6/07-32.png",
-      "/assets/journey-v6/07-33.webp",
-      "/assets/journey-v6/07-34.webp",
-      "/assets/journey-v6/07-35.webp",
-      "/assets/journey-v6/07-36.webp",
-      "/assets/journey-v6/07-37.webp",
-      "/assets/journey-v6/07-38.webp",
-      "/assets/journey-v6/07-39.webp"
+      "/assets/journey-v6/quartier-sportif-517935205.jpg",
+      "/assets/journey-v6/quartier-sportif-518111413.jpg",
+      "/assets/journey-v6/quartier-sportif-518179350.jpg",
+      "/assets/journey-v6/quartier-sportif-518069445.jpg",
+      "/assets/journey-v6/quartier-sportif-517375015.jpg",
+      "/assets/journey-v6/quartier-sportif-517351883.jpg",
+      "/assets/journey-v6/quartier-sportif-518318471.jpg",
+      "/assets/journey-v6/quartier-sportif-516721970.jpg",
+      "/assets/journey-v6/quartier-sportif-518077983.jpg",
+      "/assets/journey-v6/quartier-sportif-518237094.jpg",
+      "/assets/journey-v6/quartier-sportif-518285507.jpg",
+      "/assets/journey-v6/quartier-sportif-517916832.jpg",
+      "/assets/journey-v6/quartier-sportif-515918162.jpg",
+      "/assets/journey-v6/quartier-sportif-517395985.jpg",
+      "/assets/journey-v6/quartier-sportif-516872121.jpg",
+      "/assets/journey-v6/quartier-sportif-516745095.jpg",
+      "/assets/journey-v6/quartier-sportif-517399887.jpg",
+      "/assets/journey-v6/quartier-sportif-517386500.jpg",
+      "/assets/journey-v6/quartier-sportif-516918757.jpg",
+      "/assets/journey-v6/quartier-sportif-518722588.jpg",
+      "/assets/journey-v6/quartier-sportif-518720778.jpg"
     ]
   },
   {
@@ -166,9 +148,10 @@ html{scroll-behavior:smooth} .chapter{display:block;position:relative;padding:0;
     ]
   }
 ];const english = new URLSearchParams(location.search).get('lang') === 'en';
+const quartierPhotoCount = data[6].photos.length;
 const labels = english
-  ? { scroll: 'SCROLL TO EXPLORE', gallery: 'See all 39 photos', galleryTitle: 'Memories from the neighbourhood.', galleryLabel: 'QUARTIER SPORTIF / 39 PHOTOS', parks: 'Radio-Canada: smart parks', community: 'Radio-Canada: English-speaking community', image: 'Archive photograph', missing: 'Photo unavailable' }
-  : { scroll: 'DÉFILER POUR EXPLORER', gallery: 'Voir les 39 photos', galleryTitle: 'Les souvenirs du quartier.', galleryLabel: 'QUARTIER SPORTIF / 39 PHOTOS', parks: 'Radio-Canada : parcs intelligents', community: 'Radio-Canada : communauté anglophone', image: 'Photographie d’archive', missing: 'Photo indisponible' };
+  ? { scroll: 'SCROLL TO EXPLORE', gallery: `See all ${quartierPhotoCount} photos`, galleryTitle: 'Memories from the neighbourhood.', galleryLabel: `QUARTIER SPORTIF / ${quartierPhotoCount} PHOTOS`, parks: 'Radio-Canada: smart parks', community: 'Radio-Canada: English-speaking community', image: 'Archive photograph', missing: 'Photo unavailable' }
+  : { scroll: 'DÉFILER POUR EXPLORER', gallery: `Voir les ${quartierPhotoCount} photos`, galleryTitle: 'Les souvenirs du quartier.', galleryLabel: `QUARTIER SPORTIF / ${quartierPhotoCount} PHOTOS`, parks: 'Radio-Canada : parcs intelligents', community: 'Radio-Canada : communauté anglophone', image: 'Photographie d’archive', missing: 'Photo indisponible' };
 if (english) {
   document.documentElement.lang = 'en';
   document.title = '30 Years on the Field';
@@ -188,7 +171,7 @@ if (english) {
     ['Uganda', 'Watoto Child Care Ministry', 'Sport, encounters and community.'],
     ['Public service', 'Politics', 'Civic engagement and political life.'],
     ['Creating', 'PürInstinct', 'Create a sport. Bring athletes together. Share the joy of playing.'],
-    ['2023', 'Quartier Sportif', '39 photographs • Sport at the heart of the neighbourhood.'],
+    ['2023', 'Quartier Sportif', `${quartierPhotoCount} photographs • Sport at the heart of the neighbourhood.`],
     ['2024', 'Festival Arts Sportifs', 'Where sport meets culture.'],
     ['2026', 'DominiqueSoucy.com', 'A new chapter.']
   ].forEach(([date, title, desc], i) => Object.assign(data[i], {date, title, desc}));
