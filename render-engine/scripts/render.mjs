@@ -16,6 +16,11 @@ if(props.schemaVersion!==1||!formats.includes(props.format)||!styles.includes(pr
   !Number.isFinite(props.start)||!Number.isFinite(props.end)||props.start<0||
   props.end<=props.start||props.end-props.start>600)
   abort("Manifest invalid: schemaVersion, format, style or timecodes. Max 10 minutes per capsule.");
+if(props.editing!==undefined){
+ const e=props.editing;
+ const timed=v=>v&&Number.isFinite(v.start)&&Number.isFinite(v.end)&&v.end>v.start&&v.start>=props.start-.1&&v.end<=props.end+3;
+ if(!e||!["calm","dynamic","intense"].includes(e.motion)||!Array.isArray(e.editorialCues)||!Array.isArray(e.subtitleWords)||e.editorialCues.length>6000||e.subtitleWords.length>6000||!e.editorialCues.every(c=>timed(c)&&["question","contrast","emphasis","number"].includes(c.kind)&&typeof c.text==="string")||!e.subtitleWords.every(w=>timed(w)&&typeof w.word==="string")||(e.spokenTitle&&(!timed(e.spokenTitle)||typeof e.spokenTitle.text!=="string"))||(e.graphicBreak&&(!timed(e.graphicBreak)||typeof e.graphicBreak.text!=="string"||!["lime","black"].includes(e.graphicBreak.theme))))abort("Plan de montage dynamique invalide");
+}
 const optional=["foregroundAsset","audioAsset","backgroundAsset","portraitAsset","outroAsset"];
 for(const key of ["masterAsset",...optional]){
   const value=props[key]??"";
