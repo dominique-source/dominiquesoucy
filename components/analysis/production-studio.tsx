@@ -126,6 +126,27 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     });
     setStatus("pending");
   },[]);
+  // Read the actual displayed video dimensions (including browser rotation metadata).
+  // Re-linking a master also repairs inherited draft formats from older projects.
+  useEffect(()=>{
+    const master=files.main;
+    if(!master)return;
+    const projectId=latest.current.id;
+    const url=URL.createObjectURL(master);
+    const video=document.createElement("video");
+    video.preload="metadata";
+    video.onloadedmetadata=()=>{
+      const {videoWidth:w,videoHeight:h}=video;
+      if(!w||!h||latest.current.id!==projectId)return;
+      const format:StudioProject["format"]=Math.abs(w/h-1)<0.03?"1:1":w<h?"9:16":"16:9";
+      const current=latest.current;
+      if(current.format===format)return;
+      modify({format,capsules:current.capsules.map(c=>
+        c.status==="draft"&&c.review!=="approved"&&c.format===current.format?{...c,format}:c)});
+    };
+    video.src=url;
+    return()=>{video.onloadedmetadata=null;video.removeAttribute("src");video.load();URL.revokeObjectURL(url)};
+  },[files.main,modify]);
   const record=useCallback((kind:StudioProject["events"][number]["type"],note:string,outcome:StudioProject["events"][number]["status"]="info")=>{
     setProject(prev=>{
       const next={...prev,events:[eventFor(kind,note,outcome),...prev.events].slice(0,100)};
