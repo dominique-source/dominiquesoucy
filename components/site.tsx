@@ -4,9 +4,7 @@ import { brand } from "@/lib/brand-copy";
 import { dict, type Locale } from "@/lib/i18n";
 import { site } from "@/lib/config";
 import {
-  DesktopNavigation,
   LanguageToggle,
-  MobileNavigation,
 } from "./navigation";
 export function Header({ lang }: { lang: Locale }) {
   return (
@@ -18,7 +16,6 @@ export function Header({ lang }: { lang: Locale }) {
       >
         <picture><source media="(max-width: 640px)" srcSet="/assets/logos/05_DS_MEDIA.png" /><img src="/assets/logos/01_DS_Dom_Soucy_Media.png" alt="Dom Soucy Média" style={{width:"clamp(100px, 15vw, 220px)",height:48,objectFit:"contain",objectPosition:"left center"}} /></picture>
       </Link>
-      <DesktopNavigation lang={lang} />
       <div className="header-actions">
         <Link className="studio-header-link" href={`/${lang}/studio-live`}>
           <svg
@@ -38,7 +35,6 @@ export function Header({ lang }: { lang: Locale }) {
           </span>
         </Link>
         <LanguageToggle lang={lang} />
-        <MobileNavigation key={lang} lang={lang} />
       </div>
     </header>
   );
@@ -170,17 +166,6 @@ export function Footer({ lang }: { lang: Locale }) {
         </Link>
         <div>
           <p className="eyebrow">{d.eyebrow}</p>
-          <nav
-            aria-label={
-              lang === "fr" ? "Navigation de pied de page" : "Footer navigation"
-            }
-          >
-            {Object.entries(d.nav).map(([key, label]) => (
-              <Link key={key} href={`/${lang}/${key}`}>
-                {label}
-              </Link>
-            ))}
-          </nav>
         </div>
         {site.social.length > 0 && (
           <nav aria-label={lang === "fr" ? "Réseaux sociaux" : "Social media"}>
