@@ -1,8 +1,10 @@
 import type { StudioProject } from "./project";
 
-export type HdManifestOptions={transparentForeground:boolean;reporterPortrait:boolean};
+export type HdEditing={motion:"calm"|"dynamic"|"intense";editorialCues:{start:number;end:number;kind:"question"|"contrast"|"emphasis"|"number";text:string}[];spokenTitle?:{text:string;start:number;end:number};subtitleWords:{word:string;start:number;end:number}[];graphicBreak?:{text:string;start:number;end:number;theme:"lime"|"black"}};
+export type HdManifestOptions={transparentForeground:boolean;reporterPortrait:boolean;editing?:HdEditing};
 export type HdRenderManifest={
   schemaVersion:1;
+  editing?:HdEditing;
   projectId:string;capsuleId:string;title:string;
   start:number;end:number;format:"16:9"|"9:16"|"1:1";
   style:"journalist"|"rafale"|"quote"|"editorial"|"classic"|"none";
@@ -29,6 +31,7 @@ export function buildHdRenderManifest(
   if(!allowed.includes(style))throw Error("INVALID_CAPSULE_STYLE");
   return {
     schemaVersion:1,
+    ...(options.editing?{editing:options.editing}:{}),
     projectId:project.id,capsuleId:capsule.id,title:capsule.title,
     start:Math.round(start*1000)/1000,end:Math.round(end*1000)/1000,
     format:capsule.format,style:style as HdRenderManifest["style"],
