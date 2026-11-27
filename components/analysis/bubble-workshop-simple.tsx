@@ -6,7 +6,7 @@ import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { buildHdRenderManifest, hdManifestFilename } from "@/lib/analysis/hd-render-manifest";
 import { findQuotedRange } from "@/lib/analysis/timed-excerpts";
-import { motionFrame, titleOpacity, subtitleFrame, type SpokenTitle, type MotionLevel } from "./canvas-overlays";
+import { motionFrame, titleOpacity, subtitleFrame, graphicBreakFor, type SpokenTitle, type MotionLevel } from "./canvas-overlays";
 import { renderLocalMp4 } from "./local-mp4";
 import { createTransparentBubblePng,downloadBubblePng } from "@/lib/analysis/transparent-bubble-png";
 
@@ -103,6 +103,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   const fr=lang==="fr";
   const capsules=project.capsules;
   const current=capsules.find(c=>c.id===project.selectedCapsuleId)||capsules[0];
+  const [breaksEnabled,setBreaksEnabled]=useState(true);
   const [subtitlesEnabled,setSubtitlesEnabled]=useState(true);
   const [titlesEnabled,setTitlesEnabled]=useState(true);
   const [motion,setMotion]=useState<MotionLevel>("dynamic");
@@ -209,6 +210,12 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
     const offset=project.timeline.offsets[project.timeline.audioSource];
     return project.timedWords.map(w=>({...w,start:w.start-offset,end:w.end-offset})).filter(w=>w.start>=c.start-.05&&w.end<=c.end+.05).sort((a,b)=>a.start-b.start);
   }
+  function graphicBreak(c:Capsule){
+    if(!breaksEnabled)return;
+    const offset=project.timeline.offsets[project.timeline.audioSource];
+    return graphicBreakFor(project.timedWords.map(w=>({...w,start:w.start-offset,end:w.end-offset})).sort((a,b)=>a.start-b.start),c.start,c.end,motion);
+  }
+  const activeBreak=current?graphicBreak(current):undefined;
   const activeSubtitles=current?subtitleFrame(subtitleWords(current),playTime):[];
   const activeTitle=current?spokenTitle(current):undefined;
   const selectedStyle=workshopStyle(current);
@@ -287,7 +294,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
       let graphic:ImageBitmap|undefined;
       try{
         if(style!=="none")graphic=await createImageBitmap(await createTransparentBubblePng({style,question:capsule.bubble,caption:capsule.caption,journalistName:capsule.journalistName,journalistOutlet:capsule.journalistOutlet,questionAttribution:capsule.questionAttribution,portraitFile:style==="conversation"?await portraitFor(capsule):null}));
-        const blob=await renderLocalMp4({nodes:{main:video},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},audioSource:"main",cuts:[],fallback:"main",duration:video.duration,start:capsule.start,end:capsule.end,format:capsule.format,visual:{style,background:"original",caption:"",bubble:"",textPosition:"bottom",keying:{...defaultChroma,enabled:false},graphic,motion,spokenTitle:spokenTitle(capsule),subtitleWords:subtitleWords(capsule)},onProgress:progress=>setRendering({id:capsule.id,progress})});
+        const blob=await renderLocalMp4({nodes:{main:video},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},audioSource:"main",cuts:[],fallback:"main",duration:video.duration,start:capsule.start,end:capsule.end,format:capsule.format,visual:{style,background:"original",caption:"",bubble:"",textPosition:"bottom",keying:{...defaultChroma,enabled:false},graphic,motion,spokenTitle:spokenTitle(capsule),subtitleWords:subtitleWords(capsule),graphicBreak:graphicBreak(capsule)},onProgress:progress=>setRendering({id:capsule.id,progress})});
         const filename=hdManifestFilename(capsule).replace(/\.json$/,".mp4");
         const result=URL.createObjectURL(blob);outputUrls.current.push(result);
         setOutputs(old=>({...old,[capsule.id]:{url:result,filename}}));
@@ -347,6 +354,8 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         {mediaDuration>0&&<p className="analysis-note">{fr?"Vidéo source : ":"Source video: "}{Math.floor(mediaDuration/60)}:{String(Math.floor(mediaDuration%60)).padStart(2,"0")}{Math.abs(mediaDuration-project.timeline.duration)>2&&(fr?" · Durée différente du projet : vérifie le fichier source.":" · Project duration differs: check source file.")}</p>}
         {current&&current.end>current.start&&mediaDuration>0&&current.end>mediaDuration&&<p role="alert">{fr?"Cet extrait dépasse la vidéo chargée. Importe le master complet.":"This clip exceeds the loaded video. Import the full master."}</p>}
         <div className="studio-bubble-editor-simple"><strong>{fr?"RYTHME DU MONTAGE":"EDITING PACE"}</strong><div role="group" aria-label={fr?"Intensité":"Intensity"}>{(["calm","dynamic","intense"] as const).map(level=><button key={level} type="button" className={motion===level?"analysis-primary":"analysis-secondary"} aria-pressed={motion===level} onClick={()=>{setMotion(level);setOutputs({})}}>{level==="calm"?(fr?"SOBRE":"CALM"):level==="dynamic"?(fr?"DYNAMIQUE":"DYNAMIC"):"INTENSE"}</button>)}</div><p className="analysis-note">{fr?"Zooms automatiques sur la vidéo, sans modifier les bulles. Appliqués au MP4 navigateur.":"Automatic video zooms without changing graphics. Applied to browser MP4."}</p></div>
+        <label><input type="checkbox" checked={breaksEnabled} onChange={e=>{setBreaksEnabled(e.target.checked);setOutputs({})}}/> {fr?"Interruptions graphiques plein écran":"Full-screen graphic breaks"}</label>
+        {breaksEnabled&&current&&<p className="analysis-note">{activeBreak?`${activeBreak.text} · ${activeBreak.start.toFixed(1)}–${activeBreak.end.toFixed(1)} s`:(fr?"Aucun chiffre horodaté admissible (mode dynamique ou intense).":"No eligible timed number (dynamic or intense mode).")}</p>}
         <label><input type="checkbox" checked={subtitlesEnabled} onChange={e=>{setSubtitlesEnabled(e.target.checked);setOutputs({})}}/> {fr?"Sous-titres synchronisés / mots lime":"Synced subtitles / lime emphasis"}</label>
         {subtitlesEnabled&&current&&!subtitleWords(current).length&&<p className="analysis-note">{fr?"Aucun mot horodaté dans cet extrait.":"No timed words in this clip."}</p>}
         <label><input type="checkbox" checked={titlesEnabled} onChange={e=>{setTitlesEnabled(e.target.checked);setOutputs({})}}/> {fr?"Titre animé synchronisé":"Animated spoken title"}</label>
@@ -374,6 +383,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
           </button>}
           {!!activeSubtitles.length&&<div aria-hidden="true" style={{position:"absolute",top:"91%",left:"50%",transform:"translate(-50%,-50%)",maxWidth:"90%",width:"max-content",background:"rgba(0,0,0,.88)",padding:"3px 7px",fontFamily:"Arial,sans-serif",fontWeight:900,fontSize:"clamp(10px, 1.6vw, 22px)",textAlign:"center",pointerEvents:"none",zIndex:4}}>{activeSubtitles.map((w,i)=><span key={i} style={{color:w.accent?"#ccff00":"#f4f4ef"}}>{w.word}{i<activeSubtitles.length-1?" ":""}</span>)}</div>}
           <div className="studio-bubble-video-bottom" aria-hidden="true"><b> / </b> DOMINIQUE SOUCY</div>
+          {activeBreak&&playTime>=activeBreak.start&&playTime<activeBreak.end&&<div aria-hidden="true" style={{position:"absolute",inset:0,zIndex:20,background:"#ccff00",color:"#0a0a0a",display:"flex",alignItems:"center",justifyContent:"center",padding:"7%",textAlign:"center",fontFamily:"Impact, Arial, sans-serif",fontWeight:900,fontStyle:"italic",fontSize:"clamp(24px, 5vw, 64px)",textTransform:"uppercase",overflowWrap:"anywhere",pointerEvents:"none"}}><small style={{position:"absolute",top:"7%",fontSize:"12px"}}>DOM SOUCY MEDIA.</small>{activeBreak.text}</div>}
         </div>
         <p className="analysis-note">{fr?
           "Clique directement sur la bulle pour modifier son texte. Cet aperçu reprend les dégradés, reflets et contours lime de nos maquettes. Le moteur HD produit les mouvements définitifs.":
