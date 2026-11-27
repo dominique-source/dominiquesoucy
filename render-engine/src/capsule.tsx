@@ -6,7 +6,9 @@ import {
 
 export type HdFormat="16:9"|"9:16"|"1:1";
 export type HdStyle="journalist"|"rafale"|"quote"|"editorial"|"classic"|"none";
+type Editing={motion:"calm"|"dynamic"|"intense";editorialCues:{start:number;end:number;kind:"question"|"contrast"|"emphasis"|"number";text:string}[];spokenTitle?:{text:string;start:number;end:number};subtitleWords:{word:string;start:number;end:number}[];graphicBreak?:{text:string;start:number;end:number;theme:"lime"|"black"}};
 export type HdCapsuleProps={
+  editing?:Editing;
   schemaVersion:1; projectId:string;capsuleId:string;title:string;
   start:number;end:number;format:HdFormat;style:HdStyle;
   caption:string;bubble:string;
@@ -76,7 +78,12 @@ function GlowPanel({children,vertical,style}:{children:React.ReactNode;vertical:
 }
 
 function PresenterMedia({props,vertical}:{props:HdCapsuleProps;vertical:boolean}){
+  const frame=useCurrentFrame();
   const fps=30;
+  const t=props.start+frame/fps;
+  const cue=props.editing?.editorialCues.find(c=>t>=c.start&&t<c.end);
+  const amount=props.editing?.motion==="calm"?.08:props.editing?.motion==="intense"?.35:.22;
+  const zoom=cue?1+amount*(cue.kind==="question"?.55:cue.kind==="contrast"?.75:1):1;
   const trimBefore=Math.max(0,Math.round(props.start*fps));
   const durationInFrames=Math.max(1,Math.round((props.end-props.start)*fps));
   const containsForeground=safe(props.foregroundAsset);
@@ -94,7 +101,7 @@ function PresenterMedia({props,vertical}:{props:HdCapsuleProps;vertical:boolean}
           <OffthreadVideo src={staticFile(props.foregroundAsset)}
             trimBefore={trimBefore} durationInFrames={durationInFrames} transparent muted
             style={{height:vertical?"75%":"115%",width:vertical?"100%":"68%",objectFit:"contain",
-              objectPosition:"center center",transform:vertical?"translateY(-12%)":"translateX(-1%)"}}/>
+              objectPosition:"center center",transform:`${vertical?"translateY(-12%)":"translateX(-1%)"} scale(${zoom})`}}/>
         </AbsoluteFill>
         <Audio src={staticFile(safe(props.audioAsset)?props.audioAsset:"audio.wav")}
           trimBefore={trimBefore} volume={1}/>
@@ -102,7 +109,7 @@ function PresenterMedia({props,vertical}:{props:HdCapsuleProps;vertical:boolean}
       <AbsoluteFill style={{overflow:"hidden"}}>
         <OffthreadVideo src={staticFile(props.masterAsset)}
           trimBefore={trimBefore} durationInFrames={durationInFrames} volume={1}
-          style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center"}}/>
+          style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center",transform:`scale(${zoom})`}}/>
       </AbsoluteFill>
     }
     <AbsoluteFill style={{pointerEvents:"none",background:props.style==="none"?"transparent":vertical?
@@ -205,6 +212,15 @@ function RafaleCard({props,vertical,frame}:{props:HdCapsuleProps;vertical:boolea
   </div>;
 }
 
+const stopWords=new Set("le la les un une des de du et ou à au aux en je tu il elle on nous vous ils elles ce ces se que qui quoi pour par dans est sont a as the a an and or to of in is are you i we it that".split(" "));
+function EditorialOverlay({props}:{props:HdCapsuleProps}){
+ const frame=useCurrentFrame();const {fps,width,height}=useVideoConfig();const t=props.start+frame/fps;const e=props.editing;if(!e)return null;
+ const card=e.graphicBreak;if(card&&t>=card.start&&t<card.end)return <AbsoluteFill style={{background:card.theme==="lime"?lime:"#0a0a0a",color:card.theme==="lime"?"#0a0a0a":"#f4f4ef",justifyContent:"center",alignItems:"center",padding:width*.07,textAlign:"center",fontFamily:font,fontWeight:950,fontStyle:"italic",fontSize:Math.min(width*.14,height*.18),overflowWrap:"anywhere"}}><div style={{position:"absolute",top:"7%",fontSize:width*.035}}>DOM SOUCY MEDIA.</div>{upper(card.text)}</AbsoluteFill>;
+ const title=e.spokenTitle;const alpha=title?Math.max(0,Math.min(1,(t-title.start)/.18,(title.end-t)/.22)):0;
+ const i=e.subtitleWords.findIndex(w=>t>=w.start&&t<w.end);const first=Math.floor(i/4)*4;const group=i<0?[]:e.subtitleWords.slice(first,first+4);
+ return <AbsoluteFill style={{pointerEvents:"none"}}>{title&&alpha>0&&<div style={{position:"absolute",top:"16%",left:"4%",width:"92%",background:"#0a0a0a",color:lime,textAlign:"center",fontFamily:font,fontWeight:950,fontStyle:"italic",fontSize:Math.min(width*.075,height*.085),opacity:alpha,transform:`translateY(${(1-alpha)*12}px)`,overflowWrap:"anywhere"}}>{upper(title.text)}</div>}{group.length>0&&<div style={{position:"absolute",top:"91%",left:"50%",transform:"translate(-50%,-50%)",background:"rgba(0,0,0,.88)",padding:"8px 16px",maxWidth:"90%",width:"max-content",textAlign:"center",fontFamily:"Arial,sans-serif",fontWeight:900,fontSize:Math.min(width*.055,height*.065)}}>{group.map((w,j)=><span key={j} style={{color:first+j===i&&!stopWords.has(w.word.toLowerCase().replace(/[^\p{L}]/gu,""))?lime:"#f4f4ef"}}>{w.word} </span>)}</div>}</AbsoluteFill>;
+}
+
 const CapsuleBody:React.FC<HdCapsuleProps>=(props)=>{
   const frame=useCurrentFrame();
   const {width,height}=useVideoConfig();
@@ -247,6 +263,7 @@ const CapsuleBody:React.FC<HdCapsuleProps>=(props)=>{
     </AbsoluteFill>
     <div style={{position:"absolute",left:0,right:0,bottom:0,height:8,background:lime,
       boxShadow:`0 0 20px ${lime}`}}/>
+    <EditorialOverlay props={props}/>
   </AbsoluteFill>;
 };
 
