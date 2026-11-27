@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
 import "./impact-section.css";
@@ -14,9 +15,9 @@ const copy = {
   fr: {
     kicker: "Au-delà des mots",
     title: "De la parole à l’action",
-    lead: "Une vidéo. Une mobilisation. Un changement.",
+    lead: "On a soulevé un problème. La Ville a changé ses pratiques.",
     intro:
-      "Quand une idée, une vidéo et une mobilisation citoyenne contribuent à un changement concret.",
+      "Cette photo a circulé avec la dénonciation du refus d’accès au patinage libre pour des jeunes à Québec. La Ville a appris la situation sur Facebook et a ajusté ses consignes.",
     file: "Dossier",
     caseTitle: "Le droit de jouer",
     date: "26 novembre 2026",
@@ -55,14 +56,16 @@ const copy = {
     ],
     previous: "Dossiers précédents",
     next: "Dossiers suivants",
-    note: "Image d’illustration",
+    photoAlt:
+      "Dominique Soucy à la patinoire, avec des jeunes qui patinent derrière lui.",
+    note: "Photo de la publication originale",
   },
   en: {
     kicker: "Beyond words",
     title: "From words to action",
-    lead: "One video. One community response. One change.",
+    lead: "We spoke up. The City changed its practices.",
     intro:
-      "An idea, a video and a community response can help bring about concrete change.",
+      "This photo circulated as people spoke out about young skaters being turned away in Québec City. The City learned about the issue on Facebook and updated its instructions.",
     file: "Case",
     caseTitle: "The right to play",
     date: "November 26, 2026",
@@ -101,7 +104,8 @@ const copy = {
     ],
     previous: "Previous cases",
     next: "Next cases",
-    note: "Illustrative image",
+    photoAlt: "Dominique Soucy at the rink with young skaters behind him.",
+    note: "Photo from the original post",
   },
 };
 
@@ -166,10 +170,18 @@ export function ImpactSection({ lang }: { lang: Locale }) {
           </p>
           <p>{t.intro}</p>
         </div>
-        <a className="impact-play" href={clip} aria-label={t.watch}>
-          <span className="impact-triangle" aria-hidden="true" />
-        </a>
-        <small className="impact-image-note">{t.note}</small>
+        <figure className="impact-photo">
+          <Image
+            src="/assets/impact/dominique-patinoire.webp"
+            alt={t.photoAlt}
+            fill
+            sizes="(max-width: 760px) 100vw, 52vw"
+          />
+          <a className="impact-play" href={clip} aria-label={t.watch}>
+            <span className="impact-triangle" aria-hidden="true" />
+          </a>
+          <figcaption className="impact-image-note">{t.note}</figcaption>
+        </figure>
       </header>
 
       <article

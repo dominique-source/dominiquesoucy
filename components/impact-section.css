@@ -23,15 +23,10 @@
   position: relative;
   isolation: isolate;
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  align-items: center;
-  min-height: clamp(350px, 38vw, 510px);
-  padding: clamp(24px, 5vw, 70px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: stretch;
   border: 1px solid #3e452f;
-  background:
-    linear-gradient(90deg, #0a0c0a 3%, #0a0c0aee 35%, #0a0c0a18 80%),
-    #181c17 url("/assets/impact/public-skating.webp") center 47% / cover
-      no-repeat;
+  background: linear-gradient(120deg, #10130d, #090909);
 }
 .impact-banner::after {
   content: "";
@@ -59,6 +54,8 @@
 .impact-banner-copy {
   display: grid;
   gap: 14px;
+  align-content: center;
+  padding: clamp(24px, 4vw, 60px);
 }
 .impact-kicker,
 .impact-badge {
@@ -84,6 +81,15 @@
 .impact-banner-copy p {
   max-width: 39ch;
 }
+.impact-photo {
+  position: relative;
+  min-height: clamp(350px, 42vw, 580px);
+  margin: 0;
+}
+.impact-photo img {
+  object-fit: cover;
+  object-position: center 42%;
+}
 .impact-image-note {
   position: absolute;
   bottom: 12px;
@@ -93,7 +99,9 @@
   font-size: 0.68rem;
 }
 .impact-play {
-  justify-self: center;
+  position: absolute;
+  right: 24px;
+  bottom: 44px;
   display: grid;
   place-items: center;
   width: clamp(54px, 7vw, 90px);
@@ -253,7 +261,7 @@
   border-color: var(--impact-lime);
   background:
     linear-gradient(0deg, #0a0c0a 0%, #0a0c0aa0 100%),
-    url("/assets/impact/public-skating.webp") right center / cover;
+    url("/assets/impact/dominique-patinoire.webp") center 43% / cover;
 }
 .impact-rail li > :is(a, div) {
   display: grid;
@@ -322,29 +330,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .impact-banner {
-    min-height: 490px;
     grid-template-columns: minmax(0, 1fr);
-    align-content: end;
-    gap: 18px;
-    background-position:
-      center,
-      67% top;
-    background-image:
-      linear-gradient(0deg, #090b08 5%, #090b08e8 37%, #090b0818 90%),
-      url("/assets/impact/public-skating.webp");
   }
-  .impact-banner-copy {
-    grid-row: 2;
-  }
-  .impact-play {
+  .impact-photo {
     grid-row: 1;
-    justify-self: end;
+    min-height: 0;
+    aspect-ratio: 1.12;
   }
 }
 @media (max-width: 480px) {
-  .impact-banner {
-    min-height: 470px;
-  }
   .impact-steps {
     grid-template-columns: minmax(0, 1fr);
   }
