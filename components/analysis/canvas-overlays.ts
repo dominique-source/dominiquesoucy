@@ -7,8 +7,18 @@ export function motionFrame(t:number,level:MotionLevel){
  const amount=level==="calm"?.08:level==="dynamic"?.22:.35;
  return {zoom:1+amount*[0,1,.35,.75][phase],gray:level==="intense"&&phase===3};
 }
+export type SpokenTitle={text:string;start:number;end:number};
+export function titleOpacity(title:SpokenTitle,t:number){return Math.max(0,Math.min(1,(t-title.start)/.18,(title.end-t)/.22));}
+export function drawSpokenTitle(ctx:CanvasRenderingContext2D,width:number,height:number,t:number,title?:SpokenTitle){
+ if(!title)return;const alpha=titleOpacity(title,t);if(!alpha)return;
+ ctx.save();ctx.globalAlpha=alpha;ctx.textAlign="center";ctx.textBaseline="middle";
+ const size=Math.round(Math.min(width*.075,height*.085));ctx.font=`900 italic ${size}px Impact,Arial,sans-serif`;
+ const rows=lines(ctx,title.text.toLocaleUpperCase(),width*.86,4);
+ const y=height*.16+(1-alpha)*12;ctx.fillStyle="#0a0a0a";ctx.fillRect(width*.04,y-size*.65,width*.92,rows.length*size*1.12+size*.3);
+ rows.forEach((row,i)=>{ctx.fillStyle=i===0?"#ccff00":"#f4f4ef";ctx.fillText(row,width/2,y+i*size*1.12,width*.86)});ctx.restore();
+}
 type Capsule=StudioProject["capsules"][number];
-export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap;motion?:MotionLevel};
+export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap;motion?:MotionLevel;spokenTitle?:SpokenTitle};
 const backgroundCache=new Map<string,HTMLImageElement>();
 export async function preloadStudioBackground(url:string){
   if(!url.startsWith("/assets/studio/backdrops/"))throw Error("INVALID_STUDIO_BACKGROUND");
@@ -117,6 +127,7 @@ export function drawStudioFrame(
   ctx.restore();
  }
  if(!visual)return;
+ drawSpokenTitle(ctx,width,height,t,visual.spokenTitle);
  const u=Math.max(0,t-start);
  const fade=Math.min(1,u/.55);
  const size=Math.max(22,Math.round(width*.047));
