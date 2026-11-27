@@ -16,7 +16,7 @@ export function Header({ lang }: { lang: Locale }) {
         href={`/${lang}`}
         aria-label={`Dominique Soucy — ${dict(lang).home}`}
       >
-        DOMINIQUE SOUCY<span>.</span>
+        <picture><source media="(max-width: 640px)" srcSet="/assets/logos/05_DS_MEDIA.png" /><img src="/assets/logos/01_DS_Dom_Soucy_Media.png" alt="Dom Soucy Média" style={{width:"clamp(100px, 15vw, 220px)",height:48,objectFit:"contain",objectPosition:"left center"}} /></picture>
       </Link>
       <DesktopNavigation lang={lang} />
       <div className="header-actions">
@@ -118,7 +118,7 @@ export function AboutPreview({
     <section className={`about-section ${full ? "full" : ""}`}>
       <Portrait lang={lang} />
       <div>
-        <p className="eyebrow accent">DOMINIQUE SOUCY / {d.nav["a-propos"]}</p>
+        <img src="/assets/logos/04_DOMINIQUE_SOUCY_MEDIA.png" alt="Dominique Soucy Média" style={{width:200,maxWidth:"100%",height:"auto",marginBottom:16}} /><p className="eyebrow accent">DOMINIQUE SOUCY / {d.nav["a-propos"]}</p>
         <h2>{d.person}</h2>
         <p className="about-lead">{d.bio}</p>
         {full && <p>{d.bio2}</p>}
@@ -166,9 +166,7 @@ export function Footer({ lang }: { lang: Locale }) {
     <footer className="site-footer">
       <div className="footer-top">
         <Link className="footer-wordmark" href={`/${lang}`}>
-          DOMINIQUE
-          <br />
-          SOUCY<span>.</span>
+          <img src="/assets/logos/03_DOM_SOUCY_MEDIA.png" alt="Dom Soucy Média" style={{width:220,maxWidth:"100%",height:"auto"}} />
         </Link>
         <div>
           <p className="eyebrow">{d.eyebrow}</p>
