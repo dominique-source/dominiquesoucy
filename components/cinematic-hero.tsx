@@ -38,7 +38,7 @@ export function CinematicHero({ lang }: { lang: Locale }) {
             </div>
           )}
           <p className="reference-eyebrow">{d.eyebrow}</p>
-          <h1 id="reference-title">{d.positioning}</h1>
+          <h1 id="reference-title">{lang === "fr" ? <>Le sport comme <span className="hero-title-accent">miroir de la société.</span></> : <>Sport as a <span className="hero-title-accent">mirror of society.</span></>}</h1>
           <p className="reference-mission">{d.mission}</p>
           <p className="reference-description">{d.bio2}</p>
           <div className="reference-actions">
