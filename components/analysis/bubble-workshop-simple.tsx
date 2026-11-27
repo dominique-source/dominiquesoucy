@@ -189,7 +189,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   }
 
   const selectedStyle=workshopStyle(current);
-  const format:Format=current?.format||"16:9";
+  const format:Format=current?.format||project.format;
   const timeValid=!!current&&hasValidTiming(current,project.timeline.duration);
   const textValid=!!current&&hasBubbleText(current);
 
