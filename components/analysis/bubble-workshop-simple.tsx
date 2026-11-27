@@ -5,7 +5,8 @@ import { reviewAfterTimingChange, type StudioProject } from "@/lib/analysis/proj
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { buildHdRenderManifest, hdManifestFilename } from "@/lib/analysis/hd-render-manifest";
-import { motionFrame, type MotionLevel } from "./canvas-overlays";
+import { findQuotedRange } from "@/lib/analysis/timed-excerpts";
+import { motionFrame, titleOpacity, type SpokenTitle, type MotionLevel } from "./canvas-overlays";
 import { renderLocalMp4 } from "./local-mp4";
 import { createTransparentBubblePng,downloadBubblePng } from "@/lib/analysis/transparent-bubble-png";
 
@@ -102,6 +103,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   const fr=lang==="fr";
   const capsules=project.capsules;
   const current=capsules.find(c=>c.id===project.selectedCapsuleId)||capsules[0];
+  const [titlesEnabled,setTitlesEnabled]=useState(true);
   const [motion,setMotion]=useState<MotionLevel>("dynamic");
   const [playTime,setPlayTime]=useState(0);
   const [previewUrl,setPreviewUrl]=useState("");
@@ -191,6 +193,17 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
     onChange({capsules:[...capsules,c],selectedCapsuleId:c.id,stage:"editing"});
   }
 
+  function spokenTitle(c:Capsule):SpokenTitle|undefined{
+    if(!titlesEnabled||!c.caption)return;
+    const offset=project.timeline.offsets[project.timeline.audioSource];
+    const words=project.timedWords.filter(w=>w.start-offset>=c.start-.1&&w.end-offset<=c.end+.1);
+    const range=findQuotedRange(c.caption,words);
+    if(!range)return;
+    const start=Math.max(c.start,range.start-offset),end=Math.min(c.end,range.end-offset);
+    if(end-start<.4)return;
+    return {text:c.caption,start,end};
+  }
+  const activeTitle=current?spokenTitle(current):undefined;
   const selectedStyle=workshopStyle(current);
   const framing=motionFrame(Math.max(0,playTime-(current?.start||0)),motion);
   const format:Format=current?.format||project.format;
@@ -267,7 +280,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
       let graphic:ImageBitmap|undefined;
       try{
         if(style!=="none")graphic=await createImageBitmap(await createTransparentBubblePng({style,question:capsule.bubble,caption:capsule.caption,journalistName:capsule.journalistName,journalistOutlet:capsule.journalistOutlet,questionAttribution:capsule.questionAttribution,portraitFile:style==="conversation"?await portraitFor(capsule):null}));
-        const blob=await renderLocalMp4({nodes:{main:video},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},audioSource:"main",cuts:[],fallback:"main",duration:video.duration,start:capsule.start,end:capsule.end,format:capsule.format,visual:{style,background:"original",caption:"",bubble:"",textPosition:"bottom",keying:{...defaultChroma,enabled:false},graphic,motion},onProgress:progress=>setRendering({id:capsule.id,progress})});
+        const blob=await renderLocalMp4({nodes:{main:video},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},audioSource:"main",cuts:[],fallback:"main",duration:video.duration,start:capsule.start,end:capsule.end,format:capsule.format,visual:{style,background:"original",caption:"",bubble:"",textPosition:"bottom",keying:{...defaultChroma,enabled:false},graphic,motion,spokenTitle:spokenTitle(capsule)},onProgress:progress=>setRendering({id:capsule.id,progress})});
         const filename=hdManifestFilename(capsule).replace(/\.json$/,".mp4");
         const result=URL.createObjectURL(blob);outputUrls.current.push(result);
         setOutputs(old=>({...old,[capsule.id]:{url:result,filename}}));
@@ -327,6 +340,8 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         {mediaDuration>0&&<p className="analysis-note">{fr?"Vidéo source : ":"Source video: "}{Math.floor(mediaDuration/60)}:{String(Math.floor(mediaDuration%60)).padStart(2,"0")}{Math.abs(mediaDuration-project.timeline.duration)>2&&(fr?" · Durée différente du projet : vérifie le fichier source.":" · Project duration differs: check source file.")}</p>}
         {current&&current.end>current.start&&mediaDuration>0&&current.end>mediaDuration&&<p role="alert">{fr?"Cet extrait dépasse la vidéo chargée. Importe le master complet.":"This clip exceeds the loaded video. Import the full master."}</p>}
         <div className="studio-bubble-editor-simple"><strong>{fr?"RYTHME DU MONTAGE":"EDITING PACE"}</strong><div role="group" aria-label={fr?"Intensité":"Intensity"}>{(["calm","dynamic","intense"] as const).map(level=><button key={level} type="button" className={motion===level?"analysis-primary":"analysis-secondary"} aria-pressed={motion===level} onClick={()=>{setMotion(level);setOutputs({})}}>{level==="calm"?(fr?"SOBRE":"CALM"):level==="dynamic"?(fr?"DYNAMIQUE":"DYNAMIC"):"INTENSE"}</button>)}</div><p className="analysis-note">{fr?"Zooms automatiques sur la vidéo, sans modifier les bulles. Appliqués au MP4 navigateur.":"Automatic video zooms without changing graphics. Applied to browser MP4."}</p></div>
+        <label><input type="checkbox" checked={titlesEnabled} onChange={e=>{setTitlesEnabled(e.target.checked);setOutputs({})}}/> {fr?"Titre animé synchronisé":"Animated spoken title"}</label>
+        {titlesEnabled&&current&&<p className="analysis-note">{activeTitle?(fr?"Titre lié aux mots prononcés.":"Title matched to spoken words."):(fr?"Aucun repère exact pour cette citation : titre désactivé.":"No exact timing for this quote: title disabled.")}</p>}
         <div className={"studio-bubble-preview format-"+format.replace(":","-")} style={{overflow:"hidden"}}>
           {previewUrl?<video ref={videoRef} src={previewUrl} controls playsInline preload="metadata" style={{transform:`scale(${framing.zoom})`,filter:framing.gray?"grayscale(1)":"none"}} onTimeUpdate={e=>{const v=e.currentTarget;setPlayTime(v.currentTime);if(current&&current.end>current.start&&v.currentTime>=current.end&&!v.paused){v.pause();}}}
             onLoadedMetadata={e=>{const duration=e.currentTarget.duration;if(Number.isFinite(duration)&&duration>0)setMediaDuration(duration)}}/>:<div className="studio-bubble-no-video">
@@ -334,6 +349,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
             <strong>{fr?"TA VIDÉO PREMIERE ICI":"YOUR PREMIERE VIDEO HERE"}</strong>
             <small>{fr?"Importe ton MP4 pour voir les bulles par-dessus.":"Import your MP4 to see the bubbles on top."}</small>
           </div>}
+          {activeTitle&&<div aria-hidden="true" style={{position:"absolute",top:"16%",left:"4%",width:"92%",background:"#0a0a0a",color:"#ccff00",fontFamily:"Impact, Arial, sans-serif",fontWeight:900,fontStyle:"italic",fontSize:"clamp(14px, 2.4vw, 32px)",textAlign:"center",textTransform:"uppercase",padding:"6px",boxSizing:"border-box",pointerEvents:"none",opacity:titleOpacity(activeTitle,playTime),transform:`translateY(${(1-titleOpacity(activeTitle,playTime))*12}px)`,zIndex:2}}>{activeTitle.text}</div>}
           <div className="studio-bubble-video-top" aria-hidden="true">
             <b>DOM SOUCY <em>MEDIA.</em></b><span>● {fr?"EN DIRECT":"LIVE"}</span>
           </div>
