@@ -36,6 +36,7 @@ export function CinematicCollage({ lang }: { lang: Locale }) {
   useEffect(() => {
     const element = surface.current;
     if (!element) return;
+    const interaction = element.closest(".reference-intro") ?? element;
     const allowed = matchMedia(
       "(prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) and (min-width: 901px)",
     );
@@ -47,7 +48,7 @@ export function CinematicCollage({ lang }: { lang: Locale }) {
     };
     const move = (event: PointerEvent) => {
       if (!allowed.matches) return;
-      const rect = element.getBoundingClientRect();
+      const rect = interaction.getBoundingClientRect();
       const x = Math.max(
         -8,
         Math.min(8, ((event.clientX - rect.left) / rect.width - 0.5) * 16),
@@ -62,13 +63,13 @@ export function CinematicCollage({ lang }: { lang: Locale }) {
         element.style.setProperty("--collage-y", `${y}px`);
       });
     };
-    element.addEventListener("pointermove", move);
-    element.addEventListener("pointerleave", reset);
+    interaction.addEventListener("pointermove", move as EventListener);
+    interaction.addEventListener("pointerleave", reset);
     allowed.addEventListener("change", reset);
     return () => {
       reset();
-      element.removeEventListener("pointermove", move);
-      element.removeEventListener("pointerleave", reset);
+      interaction.removeEventListener("pointermove", move as EventListener);
+      interaction.removeEventListener("pointerleave", reset);
       allowed.removeEventListener("change", reset);
     };
   }, []);
@@ -93,6 +94,7 @@ export function CinematicCollage({ lang }: { lang: Locale }) {
           sizes="(max-width: 900px) 50vw, 350px"
         />
       </div>
+      <svg className="hero-lime-brush" viewBox="0 0 1000 400" preserveAspectRatio="none" aria-hidden="true"><path fill="#ccff00" d="M0 365 Q230 190 480 150 T1000 45 L1000 59 Q720 100 490 168 T0 385 L70 330 Z"/><path d="M15 390 Q260 215 510 167 T1000 65 M45 345 Q260 185 500 143 T985 38" fill="none" stroke="#ccff00" strokeWidth="2" opacity=".7"/></svg>
       <div className="cinematic-portrait">
         <Image
           src={portrait.src}
