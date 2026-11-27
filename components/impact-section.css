@@ -1,0 +1,364 @@
+.impact {
+  --impact-lime: #cf0;
+  max-width: 1440px;
+  margin: auto;
+  padding: clamp(20px, 4vw, 56px);
+  color: #f4f4ef;
+  background: #090909;
+}
+.impact h2,
+.impact h3,
+.impact h4 {
+  font-family: var(--font-display, Impact, "Arial Narrow", sans-serif);
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  line-height: 0.97;
+  margin: 0;
+}
+.impact p {
+  margin: 0;
+}
+.impact-banner {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  align-items: center;
+  min-height: clamp(350px, 38vw, 510px);
+  padding: clamp(24px, 5vw, 70px);
+  border: 1px solid #3e452f;
+  background:
+    linear-gradient(90deg, #0a0c0a 3%, #0a0c0aee 35%, #0a0c0a18 80%),
+    #181c17 url("/assets/impact/public-skating.webp") center 47% / cover
+      no-repeat;
+}
+.impact-banner::after {
+  content: "";
+  position: absolute;
+  inset: 13px;
+  border: 2px solid var(--impact-lime);
+  clip-path: polygon(
+    0 0,
+    28px 0,
+    28px 2px,
+    2px 2px,
+    2px 28px,
+    0 28px,
+    0 100%,
+    calc(100% - 28px) 100%,
+    calc(100% - 28px) calc(100% - 2px),
+    calc(100% - 2px) calc(100% - 2px),
+    calc(100% - 2px) calc(100% - 28px),
+    100% calc(100% - 28px),
+    100% 100%,
+    0 100%
+  );
+  pointer-events: none;
+}
+.impact-banner-copy {
+  display: grid;
+  gap: 14px;
+}
+.impact-kicker,
+.impact-badge {
+  color: var(--impact-lime);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.impact h2 {
+  font-size: clamp(3.2rem, 7.8vw, 7.3rem);
+  max-width: 13ch;
+}
+.impact h2::after {
+  content: "";
+  display: block;
+  width: 47%;
+  margin-top: 12px;
+  height: 5px;
+  background: var(--impact-lime);
+  transform: skew(-25deg) rotate(-2deg);
+}
+.impact-banner-copy p {
+  max-width: 39ch;
+}
+.impact-image-note {
+  position: absolute;
+  bottom: 12px;
+  right: 24px;
+  background: #090909;
+  padding: 2px 6px;
+  font-size: 0.68rem;
+}
+.impact-play {
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  width: clamp(54px, 7vw, 90px);
+  aspect-ratio: 1;
+  border: 2px solid var(--impact-lime);
+  border-radius: 50%;
+  background: #090909b8;
+  color: var(--impact-lime);
+  font-size: clamp(18px, 2.5vw, 36px);
+  box-shadow: 0 0 26px #ccff0044;
+  text-decoration: none;
+}
+.impact-play:hover,
+.impact-button:hover {
+  box-shadow: 0 0 20px #ccff0060;
+}
+.impact-case {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 6fr);
+  gap: clamp(18px, 4vw, 52px);
+  padding: clamp(20px, 4vw, 52px);
+  background: linear-gradient(120deg, #131510, #101011 65%);
+  border: 1px solid #30332a;
+  scroll-margin-top: 85px;
+}
+.impact-case h3 {
+  font-size: clamp(2.7rem, 5vw, 5rem);
+  margin: 9px 0;
+}
+.impact-badge {
+  display: inline-block;
+  background: var(--impact-lime);
+  color: #10120c;
+  padding: 4px 8px;
+}
+.impact-meta {
+  color: #c4c6bb;
+  font-size: 0.87rem;
+}
+.impact-case .impact-meta {
+  margin-bottom: 12px;
+}
+.impact-actions,
+.impact-filters,
+.impact-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.impact-actions {
+  margin-top: 20px;
+}
+.impact-button,
+.impact-filters button,
+.impact-pagination button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-height: 44px;
+  padding: 8px 13px;
+  background: #22241f;
+  color: #f4f4ef;
+  border: 1px solid #646c52;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 0.87rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.impact-primary,
+.impact-filters button[aria-pressed="true"] {
+  color: #10120c;
+  background: var(--impact-lime);
+  border-color: var(--impact-lime);
+}
+.impact :is(a, button):focus-visible {
+  outline: 2px solid white;
+  outline-offset: 3px;
+}
+.impact-steps,
+.impact-rail {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.impact-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.impact-steps li {
+  background: linear-gradient(155deg, #303528, #181a17 63%);
+  border: 1px solid #424637;
+  padding: 14px;
+}
+.impact-step-mark {
+  color: var(--impact-lime);
+  font-size: 1.4rem;
+}
+.impact-steps h4 {
+  font-size: 1.4rem;
+  margin: 7px 0;
+}
+.impact-steps p {
+  font-size: 0.85rem;
+  color: #e3e5dc;
+}
+.impact-quote {
+  margin: 12px 0 0;
+  background: #161914;
+  padding: 15px;
+  border-inline-start: 3px solid var(--impact-lime);
+}
+.impact-quote blockquote {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+.impact-quote figcaption {
+  font-size: 0.82rem;
+  color: #c5c9ba;
+}
+.impact-archive {
+  margin-top: 25px;
+}
+.impact-archive header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.impact-archive h3 {
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  border-inline-start: 5px solid var(--impact-lime);
+  padding-inline-start: 10px;
+}
+.impact-filters button {
+  border-radius: 99px;
+}
+.impact-rail {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px;
+  scroll-behavior: smooth;
+}
+.impact-rail li {
+  flex: 0 0 calc((100% - 36px) / 4);
+  min-width: 190px;
+  border: 1px solid #3b4035;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #2c3229, #131513 72%);
+}
+.impact-rail li.impact-published {
+  border-color: var(--impact-lime);
+  background:
+    linear-gradient(0deg, #0a0c0a 0%, #0a0c0aa0 100%),
+    url("/assets/impact/public-skating.webp") right center / cover;
+}
+.impact-rail li > :is(a, div) {
+  display: grid;
+  gap: 4px;
+  padding: 15px;
+  color: inherit;
+  text-decoration: none;
+}
+.impact-rail li > a:hover {
+  color: var(--impact-lime);
+}
+.impact-rail li span {
+  color: var(--impact-lime);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.impact-rail li small {
+  color: #d1d4c8;
+}
+.impact-pagination {
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+.impact-pagination button {
+  min-width: 44px;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+.impact-pagination button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.impact-dialog {
+  width: min(570px, calc(100% - 28px));
+  max-height: calc(100% - 28px);
+  margin: auto;
+  padding: clamp(16px, 4vw, 30px);
+  border: 1px solid var(--impact-lime);
+  border-radius: 8px;
+  background: #141710;
+  color: #f4f4ef;
+}
+.impact-dialog::backdrop {
+  background: #000c;
+}
+.impact-dialog form {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+.impact-dialog h3 {
+  font-size: clamp(1.9rem, 4vw, 2.8rem);
+  margin-bottom: 12px;
+}
+.impact-dialog blockquote {
+  margin: 14px 0;
+  padding-inline-start: 12px;
+  border-inline-start: 3px solid var(--impact-lime);
+}
+.impact-dialog p + p {
+  margin-top: 8px;
+}
+@media (max-width: 760px) {
+  .impact-case {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .impact-banner {
+    min-height: 490px;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: end;
+    gap: 18px;
+    background-position:
+      center,
+      67% top;
+    background-image:
+      linear-gradient(0deg, #090b08 5%, #090b08e8 37%, #090b0818 90%),
+      url("/assets/impact/public-skating.webp");
+  }
+  .impact-banner-copy {
+    grid-row: 2;
+  }
+  .impact-play {
+    grid-row: 1;
+    justify-self: end;
+  }
+}
+@media (max-width: 480px) {
+  .impact-banner {
+    min-height: 470px;
+  }
+  .impact-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .impact-rail {
+    scroll-behavior: auto;
+  }
+}
+
+.impact-triangle {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-block: 0.35em solid transparent;
+  border-inline-start: 0.54em solid currentColor;
+}

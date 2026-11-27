@@ -1,3 +1,4 @@
+import { ImpactSection } from "@/components/impact-section";
 import { MediaLibrary } from "@/components/media-library";
 import { CinematicHero } from "@/components/cinematic-hero";
 import { locale, dict } from "@/lib/i18n";
@@ -40,6 +41,7 @@ export default async function Home({
       />
       <CinematicHero lang={lang} />
       <MediaLibrary lang={lang} />
+      <ImpactSection lang={lang} />
       <section className="content-shell home-connect" aria-labelledby="home-connect-title">
         <p className="eyebrow accent">{lang==="fr"?"RESTONS CONNECTÉS":"STAY CONNECTED"}</p>
         <h2 id="home-connect-title">{lang==="fr"?"La conversation continue.":"The conversation continues."}</h2>
