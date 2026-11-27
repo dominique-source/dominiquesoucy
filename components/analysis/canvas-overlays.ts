@@ -31,8 +31,21 @@ function drawSubtitles(ctx:CanvasRenderingContext2D,width:number,height:number,t
  const total=ctx.measureText(full).width;let x=(width-total)/2;const y=height*.91;ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillStyle="rgba(0,0,0,.88)";ctx.fillRect(x-10,y-size*.8,total+20,size*1.6);
  for(const w of frame){ctx.fillStyle=w.accent?"#ccff00":"#f4f4ef";ctx.fillText(w.word,x,y);x+=ctx.measureText(w.word+" ").width;}ctx.restore();
 }
+export type GraphicBreak={text:string;start:number;end:number;theme:"lime"|"black"};
+export function graphicBreakFor(words:readonly SubtitleWord[],start:number,end:number,level:MotionLevel):GraphicBreak|undefined{
+ if(level==="calm"||end-start<8)return;
+ const candidates=words.filter(w=>w.start>=start+2&&w.end<=end-2&&w.end>w.start&&/\d/.test(w.word));
+ const hit=candidates[0];if(!hit)return;
+ const i=words.indexOf(hit);const group=words.slice(i,i+3).filter(w=>w.end<=end-1&&w.end-hit.start<=2.5);
+ if(!group.length)return;
+ return {text:group.map(w=>w.word).join(" "),start:hit.start,end:Math.min(end-1,Math.max(hit.start+1.2,group[group.length-1].end)),theme:"lime"};
+}
+export function drawGraphicBreak(ctx:CanvasRenderingContext2D,w:number,h:number,card:GraphicBreak){
+ ctx.save();ctx.fillStyle=card.theme==="lime"?"#ccff00":"#0a0a0a";ctx.fillRect(0,0,w,h);ctx.fillStyle=card.theme==="lime"?"#0a0a0a":"#f4f4ef";ctx.textAlign="center";ctx.textBaseline="middle";
+ const size=Math.round(Math.min(w*.14,h*.18));ctx.font=`900 italic ${size}px Impact,Arial,sans-serif`;const rows=lines(ctx,card.text.toLocaleUpperCase(),w*.86,5);rows.forEach((row,i)=>ctx.fillText(row,w/2,h/2+(i-(rows.length-1)/2)*size*1.1,w*.86));ctx.font=`900 ${Math.round(w*.035)}px Arial,sans-serif`;ctx.fillText("DOM SOUCY MEDIA.",w/2,h*.08);ctx.restore();
+}
 type Capsule=StudioProject["capsules"][number];
-export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap;motion?:MotionLevel;spokenTitle?:SpokenTitle;subtitleWords?:SubtitleWord[]};
+export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap;motion?:MotionLevel;spokenTitle?:SpokenTitle;subtitleWords?:SubtitleWord[];graphicBreak?:GraphicBreak};
 const backgroundCache=new Map<string,HTMLImageElement>();
 export async function preloadStudioBackground(url:string){
   if(!url.startsWith("/assets/studio/backdrops/"))throw Error("INVALID_STUDIO_BACKGROUND");
@@ -111,6 +124,8 @@ export function drawStudioFrame(
  ctx:CanvasRenderingContext2D,video:HTMLVideoElement|undefined,
  width:number,height:number,t:number,start:number,visual?:CanvasVisual,
 ){
+ const card=visual?.graphicBreak;
+ if(card&&t>=card.start&&t<card.end){drawGraphicBreak(ctx,width,height,card);return;}
  const bg=visual?.background||"original";
  const grad=ctx.createLinearGradient(0,0,width,height);
  grad.addColorStop(0,"#0a0a0a");grad.addColorStop(1,"#263412");
