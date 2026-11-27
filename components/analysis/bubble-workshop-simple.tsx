@@ -5,6 +5,7 @@ import { reviewAfterTimingChange, type StudioProject } from "@/lib/analysis/proj
 import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { buildHdRenderManifest, hdManifestFilename } from "@/lib/analysis/hd-render-manifest";
+import { motionFrame, type MotionLevel } from "./canvas-overlays";
 import { renderLocalMp4 } from "./local-mp4";
 import { createTransparentBubblePng,downloadBubblePng } from "@/lib/analysis/transparent-bubble-png";
 
@@ -101,6 +102,8 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   const fr=lang==="fr";
   const capsules=project.capsules;
   const current=capsules.find(c=>c.id===project.selectedCapsuleId)||capsules[0];
+  const [motion,setMotion]=useState<MotionLevel>("dynamic");
+  const [playTime,setPlayTime]=useState(0);
   const [previewUrl,setPreviewUrl]=useState("");
   const [mediaDuration,setMediaDuration]=useState(0);
   const [info,setInfo]=useState("");
@@ -189,6 +192,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
   }
 
   const selectedStyle=workshopStyle(current);
+  const framing=motionFrame(Math.max(0,playTime-(current?.start||0)),motion);
   const format:Format=current?.format||project.format;
   const timeValid=!!current&&hasValidTiming(current,project.timeline.duration);
   const textValid=!!current&&hasBubbleText(current);
@@ -263,7 +267,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
       let graphic:ImageBitmap|undefined;
       try{
         if(style!=="none")graphic=await createImageBitmap(await createTransparentBubblePng({style,question:capsule.bubble,caption:capsule.caption,journalistName:capsule.journalistName,journalistOutlet:capsule.journalistOutlet,questionAttribution:capsule.questionAttribution,portraitFile:style==="conversation"?await portraitFor(capsule):null}));
-        const blob=await renderLocalMp4({nodes:{main:video},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},audioSource:"main",cuts:[],fallback:"main",duration:video.duration,start:capsule.start,end:capsule.end,format:capsule.format,visual:{style,background:"original",caption:"",bubble:"",textPosition:"bottom",keying:{...defaultChroma,enabled:false},graphic},onProgress:progress=>setRendering({id:capsule.id,progress})});
+        const blob=await renderLocalMp4({nodes:{main:video},offsets:{audio:0,enhanced:0,main:0,vertical:0,secondary:0},audioSource:"main",cuts:[],fallback:"main",duration:video.duration,start:capsule.start,end:capsule.end,format:capsule.format,visual:{style,background:"original",caption:"",bubble:"",textPosition:"bottom",keying:{...defaultChroma,enabled:false},graphic,motion},onProgress:progress=>setRendering({id:capsule.id,progress})});
         const filename=hdManifestFilename(capsule).replace(/\.json$/,".mp4");
         const result=URL.createObjectURL(blob);outputUrls.current.push(result);
         setOutputs(old=>({...old,[capsule.id]:{url:result,filename}}));
@@ -287,7 +291,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
       <div>
         <p className="analysis-kicker">DOM SOUCY MEDIA / {fr?"ATELIER GRAPHIQUE":"GRAPHIC LAB"}</p>
         <h2>{fr?"CRÉER MES BULLES.":"BUILD MY BUBBLES."}</h2>
-        <p>{fr?"Ta vidéo est déjà montée dans Premiere. Ici, on ajoute seulement nos bulles.":"Your video is already edited in Premiere. Here, we only add our bubbles."}</p>
+        <p>{fr?"Ta vidéo est déjà montée dans Premiere. Ici, on ajoute nos bulles et le montage dynamique.":"Your video is already edited in Premiere. Here, we add our graphics and dynamic editing."}</p>
       </div>
       <span>{capsules.length} / 40 {fr?"CAPSULES":"CLIPS"}</span>
     </div>
@@ -322,8 +326,9 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         <strong>{fr?"2. APERÇU SUR TA VIDÉO":"2. PREVIEW ON YOUR VIDEO"}</strong>
         {mediaDuration>0&&<p className="analysis-note">{fr?"Vidéo source : ":"Source video: "}{Math.floor(mediaDuration/60)}:{String(Math.floor(mediaDuration%60)).padStart(2,"0")}{Math.abs(mediaDuration-project.timeline.duration)>2&&(fr?" · Durée différente du projet : vérifie le fichier source.":" · Project duration differs: check source file.")}</p>}
         {current&&current.end>current.start&&mediaDuration>0&&current.end>mediaDuration&&<p role="alert">{fr?"Cet extrait dépasse la vidéo chargée. Importe le master complet.":"This clip exceeds the loaded video. Import the full master."}</p>}
-        <div className={"studio-bubble-preview format-"+format.replace(":","-")}>
-          {previewUrl?<video ref={videoRef} src={previewUrl} controls playsInline preload="metadata"
+        <div className="studio-bubble-editor-simple"><strong>{fr?"RYTHME DU MONTAGE":"EDITING PACE"}</strong><div role="group" aria-label={fr?"Intensité":"Intensity"}>{(["calm","dynamic","intense"] as const).map(level=><button key={level} type="button" className={motion===level?"analysis-primary":"analysis-secondary"} aria-pressed={motion===level} onClick={()=>{setMotion(level);setOutputs({})}}>{level==="calm"?(fr?"SOBRE":"CALM"):level==="dynamic"?(fr?"DYNAMIQUE":"DYNAMIC"):"INTENSE"}</button>)}</div><p className="analysis-note">{fr?"Zooms automatiques sur la vidéo, sans modifier les bulles. Appliqués au MP4 navigateur.":"Automatic video zooms without changing graphics. Applied to browser MP4."}</p></div>
+        <div className={"studio-bubble-preview format-"+format.replace(":","-")} style={{overflow:"hidden"}}>
+          {previewUrl?<video ref={videoRef} src={previewUrl} controls playsInline preload="metadata" style={{transform:`scale(${framing.zoom})`,filter:framing.gray?"grayscale(1)":"none"}} onTimeUpdate={e=>{const v=e.currentTarget;setPlayTime(v.currentTime);if(current&&current.end>current.start&&v.currentTime>=current.end&&!v.paused){v.pause();}}}
             onLoadedMetadata={e=>{const duration=e.currentTarget.duration;if(Number.isFinite(duration)&&duration>0)setMediaDuration(duration)}}/>:<div className="studio-bubble-no-video">
             <span>▶</span>
             <strong>{fr?"TA VIDÉO PREMIERE ICI":"YOUR PREMIERE VIDEO HERE"}</strong>
