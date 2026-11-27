@@ -42,8 +42,17 @@ export default async function Home({
       <CinematicHero lang={lang} />
       <MediaLibrary lang={lang} />
       <ImpactSection lang={lang} />
-      <section aria-label={lang === "fr" ? "30 ans sur le terrain" : "30 years on the field"} style={{background:"#0a0a0a",width:"100%"}}>
-        <iframe src="/journey-prototype-v3.html" title="The Journey" loading="lazy" style={{display:"block",width:"100%",height:"100svh",border:0}} />
+      <section
+        id="parcours"
+        aria-label={lang === "fr" ? "30 ans sur le terrain" : "30 years on the field"}
+        style={{ background: "#0a0a0a", width: "100%" }}
+      >
+        <iframe
+          src={`/journey-prototype-v6.html?lang=${lang}`}
+          title={lang === "fr" ? "30 ans sur le terrain" : "30 years on the field"}
+          loading="lazy"
+          style={{ display: "block", width: "100%", height: "100svh", border: 0 }}
+        />
       </section>
     </div>
   );
