@@ -1,7 +1,14 @@
 import type { StudioProject } from "@/lib/analysis/project";
 import { keyPixels } from "@/lib/analysis/chroma-key";
+export type MotionLevel="calm"|"dynamic"|"intense";
+export function motionFrame(t:number,level:MotionLevel){
+ const interval=level==="calm"?7:level==="dynamic"?3:1.8;
+ const phase=Math.floor(Math.max(0,t)/interval)%4;
+ const amount=level==="calm"?.08:level==="dynamic"?.22:.35;
+ return {zoom:1+amount*[0,1,.35,.75][phase],gray:level==="intense"&&phase===3};
+}
 type Capsule=StudioProject["capsules"][number];
-export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap};
+export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap;motion?:MotionLevel};
 const backgroundCache=new Map<string,HTMLImageElement>();
 export async function preloadStudioBackground(url:string){
   if(!url.startsWith("/assets/studio/backdrops/"))throw Error("INVALID_STUDIO_BACKGROUND");
@@ -96,13 +103,15 @@ export function drawStudioFrame(
  if(video&&video.readyState>=2&&video.videoWidth&&video.videoHeight){
   const inset=bg==="original"?0:Math.round(Math.min(width,height)*.075);
   const areaW=width-inset*2,areaH=height-inset*2;
-  const zoom=visual?.style==="quote"?1.12:1;
+  const motion=visual?.motion?motionFrame(t-start,visual.motion):null;
+  const zoom=motion?.zoom??(visual?.style==="quote"?1.12:1);
   const scale=Math.max(areaW/video.videoWidth,areaH/video.videoHeight)*zoom;
   const w=video.videoWidth*scale,h=video.videoHeight*scale;
   ctx.save();ctx.beginPath();ctx.rect(inset,inset,areaW,areaH);ctx.clip();
   if(visual?.keying?.enabled){
     drawKeyedVideo(ctx,video,inset,inset,areaW,areaH,zoom,visual.keying);
   }else{
+    if(motion?.gray)ctx.filter="grayscale(1)";
     ctx.drawImage(video,inset+(areaW-w)/2,inset+(areaH-h)/2,w,h);
   }
   ctx.restore();
