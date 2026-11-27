@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
 import "./impact-section.css";
 
+const rinkPhoto = "/assets/impact/dominique-patinoire.webp";
 const clip = "https://www.youtube.com/shorts/zJZ3l7RKwms";
 const originalStatement = [
   "La ville a été mise au fait de la situation par Facebook.",
@@ -172,7 +173,7 @@ export function ImpactSection({ lang }: { lang: Locale }) {
         </div>
         <figure className="impact-photo">
           <Image
-            src="/assets/impact/dominique-patinoire.webp"
+            src={rinkPhoto}
             alt={t.photoAlt}
             fill
             sizes="(max-width: 760px) 100vw, 52vw"
@@ -213,13 +214,14 @@ export function ImpactSection({ lang }: { lang: Locale }) {
           <ol className="impact-steps">
             {t.steps.map(([title, description], index) => (
               <li key={title}>
-                <span className="impact-step-mark" aria-hidden="true">
+                <div className="impact-step-art" aria-hidden="true">
                   {index === 0 ? (
-                    <span className="impact-triangle" />
+                    <Image src={rinkPhoto} alt="" fill sizes="(max-width: 480px) 90vw, 24vw" />
                   ) : (
-                    ["◎", "✓"][index - 1]
+                    <span>{index === 1 ? "Facebook" : "✓"}</span>
                   )}
-                </span>
+                  <span className="impact-step-mark">0{index + 1}</span>
+                </div>
                 <h4>{title}</h4>
                 <p>{description}</p>
               </li>
