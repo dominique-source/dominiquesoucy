@@ -268,7 +268,7 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
         ...capsule,
         style,
         keying:{...defaultChroma,enabled:false},background:"original",
-      },{transparentForeground:false,reporterPortrait:hasPortrait});
+      },{transparentForeground:false,reporterPortrait:hasPortrait,editing:{motion,editorialCues:editCues(capsule),spokenTitle:spokenTitle(capsule),subtitleWords:subtitleWords(capsule),graphicBreak:graphicBreak(capsule)}});
       if(reporter)manifest.portraitAsset=reporter.id+".png";
       const url=URL.createObjectURL(new Blob([JSON.stringify(manifest,null,2)],{type:"application/json"}));
       const link=document.createElement("a");link.href=url;link.download=hdManifestFilename(capsule);
