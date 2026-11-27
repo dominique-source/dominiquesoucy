@@ -1,11 +1,23 @@
 import type { StudioProject } from "@/lib/analysis/project";
 import { keyPixels } from "@/lib/analysis/chroma-key";
 export type MotionLevel="calm"|"dynamic"|"intense";
-export function motionFrame(t:number,level:MotionLevel){
- const interval=level==="calm"?7:level==="dynamic"?3:1.8;
- const phase=Math.floor(Math.max(0,t)/interval)%4;
+export type EditorialCue={start:number;end:number;kind:"question"|"contrast"|"emphasis"|"number";text:string};
+export function editorialCues(words:readonly SubtitleWord[],level:MotionLevel):EditorialCue[]{
+ const gap=level==="calm"?6:level==="dynamic"?3:1.8;
+ const out:EditorialCue[]=[];
+ for(let i=0;i<words.length;i++){
+  const w=words[i];const token=w.word.toLowerCase().replace(/[^\p{L}\p{N}]/gu,"");
+  const kind:EditorialCue["kind"]|null=/\d/.test(token)?"number":/\?$/.test(w.word)?"question":/^(mais|pourtant|cependant|but|however|instead)$/.test(token)?"contrast":/^(jamais|toujours|essentiel|important|absolument|never|always|must|critical)$/.test(token)?"emphasis":null;
+  if(!kind||!Number.isFinite(w.start)||w.end<=w.start||out.some(c=>w.start-c.start<gap))continue;
+  out.push({start:w.start,end:Math.min(w.start+2.4,Math.max(w.end,w.start+1.1)),kind,text:w.word});
+ }
+ return out;
+}
+export function motionFrame(t:number,level:MotionLevel,cues:readonly EditorialCue[]=[]){
+ const cue=cues.find(c=>t>=c.start&&t<c.end);
+ if(!cue)return {zoom:1,gray:false};
  const amount=level==="calm"?.08:level==="dynamic"?.22:.35;
- return {zoom:1+amount*[0,1,.35,.75][phase],gray:level==="intense"&&phase===3};
+ return {zoom:1+amount*(cue.kind==="question"?.55:cue.kind==="contrast"?.75:1),gray:false};
 }
 export type SpokenTitle={text:string;start:number;end:number};
 export function titleOpacity(title:SpokenTitle,t:number){return Math.max(0,Math.min(1,(t-title.start)/.18,(title.end-t)/.22));}
@@ -35,7 +47,7 @@ export type GraphicBreak={text:string;start:number;end:number;theme:"lime"|"blac
 export function graphicBreakFor(words:readonly SubtitleWord[],start:number,end:number,level:MotionLevel):GraphicBreak|undefined{
  if(level==="calm"||end-start<8)return;
  const candidates=words.filter(w=>w.start>=start+2&&w.end<=end-2&&w.end>w.start&&/\d/.test(w.word));
- const hit=candidates[0];if(!hit)return;
+ const hit=candidates[0]||words.find(w=>w.start>=start+2&&w.end<=end-2&&/^(jamais|toujours|essentiel|never|always|critical)[.!?,]?$/i.test(w.word));if(!hit)return;
  const i=words.indexOf(hit);const group=words.slice(i,i+3).filter(w=>w.end<=end-1&&w.end-hit.start<=2.5);
  if(!group.length)return;
  return {text:group.map(w=>w.word).join(" "),start:hit.start,end:Math.min(end-1,Math.max(hit.start+1.2,group[group.length-1].end)),theme:"lime"};
@@ -45,7 +57,7 @@ export function drawGraphicBreak(ctx:CanvasRenderingContext2D,w:number,h:number,
  const size=Math.round(Math.min(w*.14,h*.18));ctx.font=`900 italic ${size}px Impact,Arial,sans-serif`;const rows=lines(ctx,card.text.toLocaleUpperCase(),w*.86,5);rows.forEach((row,i)=>ctx.fillText(row,w/2,h/2+(i-(rows.length-1)/2)*size*1.1,w*.86));ctx.font=`900 ${Math.round(w*.035)}px Arial,sans-serif`;ctx.fillText("DOM SOUCY MEDIA.",w/2,h*.08);ctx.restore();
 }
 type Capsule=StudioProject["capsules"][number];
-export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap;motion?:MotionLevel;spokenTitle?:SpokenTitle;subtitleWords?:SubtitleWord[];graphicBreak?:GraphicBreak};
+export type CanvasVisual=Pick<Capsule,"style"|"background"|"caption"|"bubble"|"textPosition"|"keying">&{backgroundUrl?:string;graphic?:ImageBitmap;motion?:MotionLevel;editorialCues?:EditorialCue[];spokenTitle?:SpokenTitle;subtitleWords?:SubtitleWord[];graphicBreak?:GraphicBreak};
 const backgroundCache=new Map<string,HTMLImageElement>();
 export async function preloadStudioBackground(url:string){
   if(!url.startsWith("/assets/studio/backdrops/"))throw Error("INVALID_STUDIO_BACKGROUND");
@@ -142,7 +154,7 @@ export function drawStudioFrame(
  if(video&&video.readyState>=2&&video.videoWidth&&video.videoHeight){
   const inset=bg==="original"?0:Math.round(Math.min(width,height)*.075);
   const areaW=width-inset*2,areaH=height-inset*2;
-  const motion=visual?.motion?motionFrame(t-start,visual.motion):null;
+  const motion=visual?.motion?motionFrame(t,visual.motion,visual.editorialCues):null;
   const zoom=motion?.zoom??(visual?.style==="quote"?1.12:1);
   const scale=Math.max(areaW/video.videoWidth,areaH/video.videoHeight)*zoom;
   const w=video.videoWidth*scale,h=video.videoHeight*scale;
