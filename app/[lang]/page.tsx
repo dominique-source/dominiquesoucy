@@ -46,6 +46,7 @@ export default async function Home({
         <div className="home-era-inner">
           <p className="home-era-past">{lang === "fr" ? "Hier." : "Yesterday."}</p>
           <div className="home-era-bridge">
+            <img src="/assets/logos/02_DS_signature.png" alt="" aria-hidden="true" style={{width:110,height:65,objectFit:"contain",position:"relative",zIndex:2}} />
             <svg viewBox="0 0 1000 140" preserveAspectRatio="none" aria-hidden="true">
               <path pathLength="1" d="M-20 90 Q200 5 390 72 T710 65 T1020 28" />
               <path pathLength="1" d="M-20 100 Q200 15 390 82 T710 75 T1020 38" />
