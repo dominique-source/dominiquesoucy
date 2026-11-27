@@ -41,7 +41,7 @@ export async function generateMetadata({
       description: d.positioning,
       images: [`/og?lang=${lang}`],
     },
-    icons: { icon: "/assets/brand/favicon.svg" },
+    icons: { icon: "/assets/logos/05_DS_MEDIA.png" },
   };
 }
 export default async function Layout({
