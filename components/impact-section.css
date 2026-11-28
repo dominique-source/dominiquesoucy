@@ -460,16 +460,49 @@
   .impact-pagination {
     margin-top: 4px;
   }
+  .impact {
+    border-block-start: 3px solid var(--impact-lime);
+    background: linear-gradient(#222819, #090909 430px);
+  }
   .impact-banner {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template: auto auto / minmax(0, 1fr);
+    background: #171d12;
+    border-color: #4c5838;
+  }
+  .impact-banner::after {
+    display: none;
+  }
+  .impact-banner-copy {
+    gap: 8px;
+    padding: 14px 16px 17px;
+  }
+  .impact h2 {
+    max-width: 15ch;
+    font-size: clamp(2.25rem, 9vw, 3.75rem);
+  }
+  .impact h2::after {
+    margin-top: 7px;
+    height: 3px;
+  }
+  .impact-banner-copy p:not(.impact-kicker) {
+    font-size: .88rem;
+    line-height: 1.42;
   }
   .impact-photo::after {
-    background: linear-gradient(0deg, #090909b3, transparent 40%);
+    background: linear-gradient(0deg, #0c100ae6, transparent 40%);
   }
   .impact-photo {
     grid-row: 1;
+    width: 100%;
     min-height: 0;
-    aspect-ratio: 1.12;
+    height: clamp(142px, 39vw, 230px);
+    border-block-end: 2px solid var(--impact-lime);
+  }
+  .impact-photo img {
+    object-position: center 40%;
+  }
+  .impact-image-note {
+    inset: auto 8px 5px auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {

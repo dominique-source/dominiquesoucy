@@ -8,12 +8,27 @@ html{scroll-behavior:smooth} .chapter{display:block;position:relative;padding:0;
 #c8 .copy{container-type:inline-size}
 #c8 h2{font-size:min(7.2cqi,100px);white-space:nowrap;overflow-wrap:normal}
 @media (max-width: 700px) {
-  body > header { position: relative; gap: 8px; }
+  body > header {
+    position: relative;
+    gap: 8px;
+    border-block-start: 3px solid #cf0;
+    background: #191d21;
+  }
   header nav { gap: clamp(4px, 1.6vw, 10px); max-width: none; }
   header nav a { padding-block: 8px; }
   #bar, .stage img, .chapter .line, .chapter .cut { display: none; }
   #intro { height: auto; }
-  .stage { position: relative; min-height: 320px; height: auto; }
+  .stage {
+    position: relative;
+    min-height: 220px;
+    height: auto;
+    padding-block: 12px;
+    background:
+      linear-gradient(90deg, #101417 12%, #101417d9 48%, #10141742),
+      url("/assets/journey-v6/01-01.webp") right 35% / auto 135% no-repeat,
+      #101417;
+  }
+  .hero { background: transparent; padding: 14px; }
   .hero h1 { font-size: clamp(46px, 13vw, 80px); }
   .chapter, .chapter.no-photos { height: auto; border-top: 1px solid #333; }
   .chapter .scene, .chapter.no-photos .scene {
