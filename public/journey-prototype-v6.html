@@ -128,7 +128,7 @@ html{scroll-behavior:smooth} .chapter{display:block;position:relative;padding:0;
 @media (max-width: 380px) {
   body > header { flex-wrap: wrap; }
 }
-</style></head><body><header><b>DS <span class="lime">/</span> ARCHIVES</b><nav id="nav"></nav></header><div id="bar"></div><section id="intro"><div class="stage" id="stage"><div class="hero"><small>LES ARCHIVES / 01—11</small><h1>30 ANS<br><span class="lime">SUR LE TERRAIN.</span></h1><p>DÉFILER POUR EXPLORER ↓</p><a href="#c0">Entrer dans l’histoire</a></div></div></section><main id="main"></main><section class="wall"><small>ARCHIVES / EXPLORATION LIBRE</small><h2>Le mur des <span class="lime">souvenirs.</span></h2><button class="wall-toggle" type="button" aria-controls="wall" aria-expanded="false">Voir le mur des souvenirs</button><div class="wallgrid" id="wall"></div></section><footer><h2>Et ce n’est que <span class="lime">le début.</span></h2></footer><dialog id="modal"><button>Fermer ×</button><img id="large" alt="Archive agrandie"></dialog><script>const data=[
+</style></head><body><header><b>DS <span class="lime">/</span> ARCHIVES</b><nav id="nav"></nav></header><div id="bar"></div><section id="intro"><div class="stage" id="stage"><div class="hero"><small>LES ARCHIVES / 01—12</small><h1>30 ANS<br><span class="lime">SUR LE TERRAIN.</span></h1><p>DÉFILER POUR EXPLORER ↓</p><a href="#c0">Entrer dans l’histoire</a></div></div></section><main id="main"></main><section class="wall"><small>ARCHIVES / EXPLORATION LIBRE</small><h2>Le mur des <span class="lime">souvenirs.</span></h2><button class="wall-toggle" type="button" aria-controls="wall" aria-expanded="false">Voir le mur des souvenirs</button><div class="wallgrid" id="wall"></div></section><footer><h2>Et ce n’est que <span class="lime">le début.</span></h2></footer><dialog id="modal"><button>Fermer ×</button><img id="large" alt="Archive agrandie"></dialog><script>const data=[
   {
     "date": "Les origines",
     "title": "Le secondaire",
@@ -179,6 +179,16 @@ html{scroll-behavior:smooth} .chapter{display:block;position:relative;padding:0;
       "title": "Ligue de basketball Yunitee",
       "desc": "Lancement de la ligue à la même époque que les DVD Manipule le jeu."
     }
+  },
+  {
+    "id": "c11",
+    "mode": "energy",
+    "date": "Yunitee",
+    "title": "Académie de basketball Yunitee",
+    "desc": "Photo d’équipe de l’Académie Yunitee.",
+    "photos": [
+      "/assets/journey-v6/academie-basketball-yunitee.webp"
+    ]
   },
   {
     "date": "Ouganda",
@@ -331,6 +341,7 @@ if (english) {
     ['Basketball', 'Rouge et Or / Pro basketball', 'Basketball archives.'],
     ['After the playing career', 'Basketball concentration', 'Creation of the first basketball concentration at the Petit Séminaire de Québec.'],
     ['Early entrepreneurship', 'Manipule le jeu', 'Handle Your Game. Two DVDs. The first venture, and the start of everything that followed.'],
+    ['Yunitee', 'Yunitee Basketball Academy', 'Yunitee Academy team photo.'],
     ['Uganda', 'Watoto Child Care Ministry', 'Sport, encounters and community.'],
     ['Public service', 'Politics', 'Civic engagement and political life.'],
     ['Creating', 'PürInstinct', 'Create a sport. Bring athletes together. Share the joy of playing.'],
@@ -387,6 +398,9 @@ const all=data.flatMap(c=>c.photos);const stage=document.getElementById('stage')
   ? ['Cover of Arts sportifs — Transcender le sport', 'Storyboard with a team in red jerseys', 'Storyboard with a basketball player and a crowd', 'Storyboard with court diagrams and an athlete in motion']
   : ['Couverture d’Arts sportifs — Transcender le sport', 'Planche avec une équipe en maillots rouges', 'Planche avec un joueur de basketball et une foule', 'Planche avec des schémas de jeu et un athlète en mouvement'];
 const archiveAlts = new Map(data.find(chapter => chapter.id === 'c10').photos.map((src, index) => [src, manifestoAlts[index]]));
+archiveAlts.set('/assets/journey-v6/academie-basketball-yunitee.webp', english
+  ? 'Yunitee Basketball Academy group in a gymnasium'
+  : 'Groupe de l’Académie de basketball Yunitee dans un gymnase');
 function pic(src){let im=new Image();im.loading='lazy';im.decoding='async';im.alt=archiveAlts.get(src) ?? labels.image;im.onerror=()=>{im.alt=labels.missing};im.src=src;im.tabIndex=0;im.onclick=()=>openPhoto(src);im.onkeydown=e=>{if(e.key==='Enter')im.click()};return im}const scenes=[];data.forEach((c,i)=>{const number=String(i+1).padStart(2,'0');let s=document.createElement('section');s.className='chapter'+(!c.photos.length?' no-photos':'');s.id=c.id;s.dataset.mode=c.mode;s.innerHTML=`<div class="scene"><div class="era" aria-hidden="true">${c.date}</div><div class="copy"><div class="num">${number}</div><small>${c.date}</small><h2>${c.title}</h2><p>${c.desc}</p>${c.related ? `<aside class="related-milestone"><h3>${c.related.title}</h3><p>${c.related.desc}</p></aside>` : ''}<span class="hint">${c.photos.length ? `<span class="desktop-hint">${labels.scroll} →</span>${c.photos.length > 1 ? `<span class="mobile-hint">${english ? 'SWIPE TO SEE THE PHOTOS' : 'BALAYER POUR VOIR LES PHOTOS'} →</span>` : ''}` : ''}</span></div><div class="photos"></div><div class="line"></div><div class="cut"></div></div>`;let g=s.querySelector('.photos');c.photos.slice(0,c.id==='c6'?8:c.photos.length).forEach(src=>g.append(pic(src)));if(c.id==='c6'){let b=document.createElement("button");b.textContent=labels.gallery;b.onclick=()=>{const gallery=document.getElementById("quartier-gallery");gallery.hidden=false;gallery.scrollIntoView({behavior:"smooth"})};s.querySelector(".copy").append(b)}if(c.id==='c4'){let links=document.createElement("p");links.innerHTML='<a target="_blank" rel="noopener" href="https://ici.radio-canada.ca/article/info/1058760/quebec-21-parcs-intelligents-application-telephone-mobile">'+labels.parks+'</a><br><a target="_blank" rel="noopener" href="https://ici.radio-canada.ca/article/info/1057646/dominique-soucy-voice-of-english-speaking">'+labels.community+'</a>';s.querySelector(".copy").append(links)}main.append(s);if(c.id==='c6'){let q=document.createElement("section");q.id="quartier-gallery";q.className="wall";q.hidden=true;q.innerHTML=`<small>${labels.galleryLabel}</small><h2>${labels.galleryTitle}</h2><div class="wallgrid"></div>`;c.photos.forEach(src=>q.querySelector(".wallgrid").append(pic(src)));main.append(q)}let a=document.createElement('a');a.href='#'+c.id;a.textContent=number;a.setAttribute('aria-label',c.title);nav.append(a);scenes.push({s,g,a})});let queued=false;function animateScenes(){queued=false;if(mobile.matches)return;let active=-1;scenes.forEach(({s,g,a},i)=>{const r=s.getBoundingClientRect(),h=s.querySelector('.scene').offsetHeight;const p=Math.max(0,Math.min(1,-r.top/Math.max(1,r.height-h)));const available=innerWidth*(innerWidth<=700?.88:.59);const travel=Math.max(0,g.scrollWidth-available);s.style.setProperty('--p',p);s.style.setProperty('--shift',(-travel*p)+'px');s.style.setProperty('--wipe',p>.94?(-150+(p-.94)/.06*850)+'%':'-150%');if(r.top<=innerHeight*.45&&r.bottom>innerHeight*.45)active=i});scenes.forEach(({a},i)=>{a.classList.toggle('active',i===active);if(i===active)a.setAttribute('aria-current','step');else a.removeAttribute('aria-current')})}function schedule(){if(!queued){queued=true;requestAnimationFrame(animateScenes)}}addEventListener('scroll',schedule,{passive:true});addEventListener('resize',schedule);addEventListener('load',schedule);schedule();all.forEach(src=>wall.append(pic(src)));
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const railEntrance = new IntersectionObserver(entries => {
