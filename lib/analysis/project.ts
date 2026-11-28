@@ -86,6 +86,7 @@ export const projectSchema = z.object({
   stage:z.enum(["recording","transcription","analysis","editing","ready"]).default("recording"),
   events:z.array(episodeEventSchema).max(100).default([]),
   capsules:z.array(capsuleSchema).max(40).default([]),
+  featuredCapsuleId:z.string().uuid().optional(),
   selectedCapsuleId:z.string().max(64).default(""),
   id:z.string().uuid(),
   name:z.string().trim().min(1).max(100),
