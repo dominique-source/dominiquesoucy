@@ -389,6 +389,76 @@
 @media (max-width: 760px) {
   .impact-case {
     grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+  }
+  .impact-case h3 {
+    font-size: clamp(2rem, 8vw, 2.7rem);
+    margin-block: 6px;
+  }
+  .impact-case .impact-meta {
+    margin-bottom: 4px;
+  }
+  .impact-actions {
+    margin-top: 10px;
+    gap: 6px;
+  }
+  .impact-actions .impact-button,
+  .impact-filters button {
+    padding-inline: 8px;
+    font-size: 0.75rem;
+  }
+  .impact-steps {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    padding-bottom: 5px;
+  }
+  .impact-steps li {
+    flex: 0 0 78%;
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+  .impact-steps li:not(:last-child)::after {
+    display: none;
+  }
+  .impact-step-art {
+    min-height: 0;
+    height: 64px;
+    aspect-ratio: auto;
+  }
+  .impact-step-art img {
+    object-position: center 34%;
+  }
+  .impact-steps h4 {
+    font-size: 1.15rem;
+  }
+  .impact-steps p {
+    line-height: 1.4;
+  }
+  .impact-quote {
+    margin-top: 8px;
+    padding: 9px 11px;
+  }
+  .impact-quote blockquote {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    margin-bottom: 4px;
+  }
+  .impact-archive {
+    margin-top: 14px;
+  }
+  .impact-archive header,
+  .impact-filters {
+    gap: 5px;
+  }
+  .impact-rail li > :is(a, div) {
+    padding: 9px 12px;
+  }
+  .impact-pagination {
+    margin-top: 4px;
   }
   .impact-banner {
     grid-template-columns: minmax(0, 1fr);
@@ -400,19 +470,6 @@
     grid-row: 1;
     min-height: 0;
     aspect-ratio: 1.12;
-  }
-}
-@media (max-width: 480px) {
-  .impact-steps {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .impact-steps li:not(:last-child)::after {
-    top: calc(100% + 1px);
-    left: calc(50% - 4px);
-    transform: rotate(135deg);
-  }
-  .impact-step-art {
-    aspect-ratio: 2.5;
   }
 }
 @media (prefers-reduced-motion: reduce) {
