@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
 import "./impact-section.css";
 
@@ -14,6 +14,8 @@ const originalStatement = [
 
 const copy = {
   fr: {
+    expand: "Voir plus",
+    collapse: "Voir moins",
     kicker: "Au-delà des mots",
     title: "De la parole à l’action",
     lead: "On a soulevé un problème. La Ville a changé ses pratiques.",
@@ -62,6 +64,8 @@ const copy = {
     note: "Photo de la publication originale",
   },
   en: {
+    expand: "See more",
+    collapse: "See less",
     kicker: "Beyond words",
     title: "From words to action",
     lead: "We spoke up. The City changed its practices.",
@@ -123,6 +127,7 @@ export function ImpactSection({ lang }: { lang: Locale }) {
   const t = copy[lang];
   const declaration = useRef<HTMLDialogElement>(null);
   const rail = useRef<HTMLUListElement>(null);
+  const [expanded, setExpanded] = useState(false);
   const [filter, setFilter] = useState(0);
   const [page, setPage] = useState(0);
   const [pages, setPages] = useState(1);
@@ -154,6 +159,24 @@ export function ImpactSection({ lang }: { lang: Locale }) {
     [syncRail],
   );
 
+  useEffect(() => {
+    let frame = 0;
+    function revealLinkedCase() {
+      if (window.location.hash !== "#impact-001" || !window.matchMedia("(max-width: 760px)").matches) return;
+      setExpanded(true);
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        document.getElementById("impact-001")?.scrollIntoView();
+      });
+    }
+    revealLinkedCase();
+    window.addEventListener("hashchange", revealLinkedCase);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("hashchange", revealLinkedCase);
+    };
+  }, []);
+
   function moveTo(index: number) {
     const track = rail.current;
     if (!track) return;
@@ -161,7 +184,7 @@ export function ImpactSection({ lang }: { lang: Locale }) {
   }
 
   return (
-    <section id="impact" className="impact" aria-labelledby="impact-title">
+    <section id="impact" className="impact" aria-labelledby="impact-title" data-expanded={expanded}>
       <header className="impact-banner">
         <div className="impact-banner-copy">
           <p className="impact-kicker">{t.kicker}</p>
@@ -169,7 +192,17 @@ export function ImpactSection({ lang }: { lang: Locale }) {
           <p>
             <strong>{t.lead}</strong>
           </p>
-          <p>{t.intro}</p>
+          <p className="impact-intro">{t.intro}</p>
+          <button
+            type="button"
+            className="impact-button impact-toggle"
+            aria-expanded={expanded}
+            aria-controls="impact-details"
+            onClick={() => setExpanded((open) => !open)}
+          >
+            {expanded ? t.collapse : t.expand}
+            <span aria-hidden="true">{expanded ? "−" : "+"}</span>
+          </button>
         </div>
         <figure className="impact-photo">
           <Image
@@ -185,128 +218,130 @@ export function ImpactSection({ lang }: { lang: Locale }) {
         </figure>
       </header>
 
-      <article
-        id="impact-001"
-        className="impact-case"
-        aria-labelledby="impact-case-title"
-      >
-        <div>
-          <p className="impact-badge">{t.file} 001</p>
-          <h3 id="impact-case-title">{t.caseTitle}</h3>
-          <p className="impact-meta">
-            <time dateTime="2026-11-26">{t.date}</time> · {t.city}
-          </p>
-          <p>{t.blurb}</p>
-          <div className="impact-actions">
-            <a className="impact-button impact-primary" href={clip}>
-              <span className="impact-triangle" aria-hidden="true" /> {t.watch}
-            </a>
-            <button
-              className="impact-button"
-              type="button"
-              onClick={() => declaration.current?.showModal()}
-            >
-              {t.read}
-            </button>
+      <div id="impact-details" className="impact-details">
+        <article
+          id="impact-001"
+          className="impact-case"
+          aria-labelledby="impact-case-title"
+        >
+          <div>
+            <p className="impact-badge">{t.file} 001</p>
+            <h3 id="impact-case-title">{t.caseTitle}</h3>
+            <p className="impact-meta">
+              <time dateTime="2026-11-26">{t.date}</time> · {t.city}
+            </p>
+            <p>{t.blurb}</p>
+            <div className="impact-actions">
+              <a className="impact-button impact-primary" href={clip}>
+                <span className="impact-triangle" aria-hidden="true" /> {t.watch}
+              </a>
+              <button
+                className="impact-button"
+                type="button"
+                onClick={() => declaration.current?.showModal()}
+              >
+                {t.read}
+              </button>
+            </div>
           </div>
-        </div>
-        <div>
-          <ol className="impact-steps">
-            {t.steps.map(([title, description], index) => (
-              <li key={title}>
-                <div className="impact-step-art" aria-hidden="true">
-                  {index === 0 ? (
-                    <Image src={rinkPhoto} alt="" fill sizes="(max-width: 480px) 90vw, 24vw" />
-                  ) : (
-                    <span>{index === 1 ? "Facebook" : "✓"}</span>
-                  )}
-                  <span className="impact-step-mark">0{index + 1}</span>
-                </div>
-                <h4>{title}</h4>
-                <p>{description}</p>
+          <div>
+            <ol className="impact-steps">
+              {t.steps.map(([title, description], index) => (
+                <li key={title}>
+                  <div className="impact-step-art" aria-hidden="true">
+                    {index === 0 ? (
+                      <Image src={rinkPhoto} alt="" fill sizes="(max-width: 480px) 90vw, 24vw" />
+                    ) : (
+                      <span>{index === 1 ? "Facebook" : "✓"}</span>
+                    )}
+                    <span className="impact-step-mark">0{index + 1}</span>
+                  </div>
+                  <h4>{title}</h4>
+                  <p>{description}</p>
+                </li>
+              ))}
+            </ol>
+            <figure className="impact-quote">
+              <blockquote>
+                “{lang === "fr" ? originalStatement[1] : translation}”
+              </blockquote>
+              <figcaption>
+                <strong>Elainie Lepage</strong> · {t.role}
+              </figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <div className="impact-archive">
+          <header>
+            <h3>{t.archive}</h3>
+            <div className="impact-filters">
+              {t.filters.map((label, index) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={filter === index}
+                  onClick={() => {
+                    moveTo(0);
+                    setFilter(index);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </header>
+          <ul
+            key={filter}
+            className="impact-rail"
+            ref={attachRail}
+            onScroll={syncRail}
+          >
+            {visible.map((item) => (
+              <li
+                key={item.id}
+                className={item.published ? "impact-published" : ""}
+              >
+                {item.published ? (
+                  <a href="#impact-001">
+                    <span>{item.id}</span>
+                    <strong>{t.caseTitle}</strong>
+                    <small>{t.topics[cases.indexOf(item)]}</small>
+                  </a>
+                ) : (
+                  <div>
+                    <span>{item.id}</span>
+                    <strong>{t.upcoming}</strong>
+                    <small>{t.topics[cases.indexOf(item)]}</small>
+                  </div>
+                )}
               </li>
             ))}
-          </ol>
-          <figure className="impact-quote">
-            <blockquote>
-              “{lang === "fr" ? originalStatement[1] : translation}”
-            </blockquote>
-            <figcaption>
-              <strong>Elainie Lepage</strong> · {t.role}
-            </figcaption>
-          </figure>
-        </div>
-      </article>
-
-      <div className="impact-archive">
-        <header>
-          <h3>{t.archive}</h3>
-          <div className="impact-filters">
-            {t.filters.map((label, index) => (
+          </ul>
+          {pages > 1 && (
+            <div className="impact-pagination">
               <button
-                key={label}
                 type="button"
-                aria-pressed={filter === index}
-                onClick={() => {
-                  moveTo(0);
-                  setFilter(index);
-                }}
+                disabled={page === 0}
+                onClick={() => moveTo(page - 1)}
+                aria-label={t.previous}
               >
-                {label}
+                ‹
               </button>
-            ))}
-          </div>
-        </header>
-        <ul
-          key={filter}
-          className="impact-rail"
-          ref={attachRail}
-          onScroll={syncRail}
-        >
-          {visible.map((item) => (
-            <li
-              key={item.id}
-              className={item.published ? "impact-published" : ""}
-            >
-              {item.published ? (
-                <a href="#impact-001">
-                  <span>{item.id}</span>
-                  <strong>{t.caseTitle}</strong>
-                  <small>{t.topics[cases.indexOf(item)]}</small>
-                </a>
-              ) : (
-                <div>
-                  <span>{item.id}</span>
-                  <strong>{t.upcoming}</strong>
-                  <small>{t.topics[cases.indexOf(item)]}</small>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-        {pages > 1 && (
-          <div className="impact-pagination">
-            <button
-              type="button"
-              disabled={page === 0}
-              onClick={() => moveTo(page - 1)}
-              aria-label={t.previous}
-            >
-              ‹
-            </button>
-            <span aria-live="polite">
-              {page + 1} / {pages}
-            </span>
-            <button
-              type="button"
-              disabled={page === pages - 1}
-              onClick={() => moveTo(page + 1)}
-              aria-label={t.next}
-            >
-              ›
-            </button>
-          </div>
-        )}
+              <span aria-live="polite">
+                {page + 1} / {pages}
+              </span>
+              <button
+                type="button"
+                disabled={page === pages - 1}
+                onClick={() => moveTo(page + 1)}
+                aria-label={t.next}
+              >
+                ›
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <dialog

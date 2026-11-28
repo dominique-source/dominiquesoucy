@@ -386,7 +386,30 @@
 .impact-dialog p + p {
   margin-top: 8px;
 }
+.impact-details {
+  display: contents;
+}
+.impact-toggle {
+  display: none;
+}
 @media (max-width: 760px) {
+  .impact[data-expanded="false"] :is(.impact-intro, .impact-details) {
+    display: none;
+  }
+  .impact-toggle {
+    display: inline-flex;
+    justify-self: start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 3px;
+    background: var(--impact-lime);
+    color: #10120c;
+    border-color: var(--impact-lime);
+  }
+  .impact-toggle span {
+    font-size: 1.15rem;
+    line-height: 1;
+  }
   .impact-case {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
