@@ -7,6 +7,7 @@ import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { buildHdRenderManifest, hdManifestFilename } from "@/lib/analysis/hd-render-manifest";
 import { findQuotedRange } from "@/lib/analysis/timed-excerpts";
 import { motionFrame, titleOpacity, subtitleFrame, graphicBreakFor, editorialCues, type SpokenTitle, type MotionLevel } from "./canvas-overlays";
+import { exportReelCover } from "./reel-cover";
 import { renderLocalMp4 } from "./local-mp4";
 import { createTransparentBubblePng,downloadBubblePng } from "@/lib/analysis/transparent-bubble-png";
 
@@ -282,6 +283,25 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
     }
   }
 
+  const [coverTitle, setCoverTitle] = useState("");
+  const [coverOffset, setCoverOffset] = useState("");
+  const [coverBusy, setCoverBusy] = useState(false);
+  async function downloadCover(capsule: Capsule){
+    if (!master || coverBusy) return;
+    setCoverBusy(true);
+    setInfo("");
+    try {
+      const offset = coverOffset === "" ? (capsule.end - capsule.start) / 2 : Number(coverOffset);
+      await exportReelCover(master, capsule.start + offset, coverTitle.trim() || capsule.title,
+        "reel-vedette-" + hdManifestFilename(capsule).replace(/\.json$/, ".jpg"));
+      setInfo(fr ? "Couverture JPG téléchargée." : "JPG cover downloaded.");
+    } catch (error) {
+      setInfo(error instanceof Error ? error.message : (fr ? "Couverture indisponible." : "Cover unavailable."));
+    } finally {
+      setCoverBusy(false);
+    }
+  }
+
   async function exportVideo(capsule:Capsule){
     if(rendering||!master||!hasValidTiming(capsule,project.timeline.duration)||!hasBubbleText(capsule))return;
     setInfo("");setRendering({id:capsule.id,progress:0});
@@ -548,6 +568,24 @@ export function BubbleWorkshopSimple({lang,project,master,view,onReviewClips,onO
           <div style={{display:"grid",gap:8}}>
           {ready?<><button className="analysis-primary" type="button" disabled={!!rendering||!master} onClick={()=>void exportVideo(c)}>{rendering?.id===c.id?`${rendering.progress}%`:fr?"EXPORTER CETTE CAPSULE MP4":"EXPORT THIS CLIP MP4"}</button>
           <button className="analysis-secondary" type="button" onClick={()=>exportPlan(c)}>{fr?"INSTRUCTIONS RENDU HD (JSON)":"HD RENDER INSTRUCTIONS (JSON)"}</button>
+          {c.format === "9:16" && <button className="analysis-secondary" type="button"
+            aria-pressed={project.featuredCapsuleId === c.id}
+            onClick={() => { setCoverTitle(""); setCoverOffset(""); onChange({featuredCapsuleId:c.id}); }}>
+            {project.featuredCapsuleId === c.id ? (fr ? "REEL VEDETTE ✓" : "FEATURED REEL ✓") : (fr ? "CHOISIR COMME REEL VEDETTE" : "SET AS FEATURED REEL")}
+          </button>}
+          {c.format === "9:16" && project.featuredCapsuleId === c.id && <>
+            <label>{fr ? "Accroche de couverture" : "Cover headline"}<input maxLength={100} value={coverTitle}
+              placeholder={c.title} onChange={event => setCoverTitle(event.target.value)} /></label>
+            <label>{fr ? "Image à cette seconde de la capsule" : "Frame at this second of the clip"}
+              <input type="number" min={0} max={c.end-c.start} step="any" value={coverOffset}
+                placeholder={String(Math.round((c.end-c.start)/2))}
+                onChange={event => setCoverOffset(event.target.value)} /></label>
+            <button className="analysis-secondary" type="button"
+              disabled={!master || coverBusy || (coverOffset !== "" && !(Number(coverOffset)>=0 && Number(coverOffset)<c.end-c.start))}
+              onClick={() => void downloadCover(c)}>
+              {fr ? "TÉLÉCHARGER LA COUVERTURE JPG" : "DOWNLOAD JPG COVER"}
+            </button>
+          </>}
           {!master&&<small>{fr?"Réimporte le master local pour le MP4.":"Reimport the local master for MP4."}</small>}
           </>:<button className="analysis-secondary" type="button" onClick={()=>{onChange({selectedCapsuleId:c.id});onReviewClips()}}>{fr?"MODIFIER / APPROUVER":"EDIT / APPROVE"}</button>}
           {outputs[c.id]&&<><a className="analysis-primary" href={outputs[c.id].url} download={outputs[c.id].filename}>{fr?"↓ TÉLÉCHARGER MP4":"↓ DOWNLOAD MP4"}</a>
