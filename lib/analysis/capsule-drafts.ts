@@ -12,22 +12,28 @@ type Capsule=StudioProject["capsules"][number];
 export function createDraftsFromAnalysis(project:StudioProject):Capsule[]{
   const moments=project.analysis?.moments||[];
   const existing=new Set(project.capsules.map(c=>c.title.trim().toLocaleLowerCase("fr-CA")));
+  const rangeKey=(start:number,end:number)=>`${start.toFixed(1)}:${end.toFixed(1)}`;
+  const usedRanges=new Set(project.capsules.filter(c=>c.end>c.start).map(c=>rangeKey(c.start,c.end)));
   const slots=Math.max(0,40-project.capsules.length);
   if(!slots||!moments.length)return [];
   const available=cameraKeys.filter(k=>!!project.localMedia?.[k]||!!project.media[k]);
   const primary=available.includes("main")?"main":available[0];
   return moments
-    .filter(m=>!existing.has(m.title.trim().toLocaleLowerCase("fr-CA")))
-    .slice(0,slots)
-    .map(m=>{
+    .flatMap(m=>{
+      const title=m.title.slice(0,100);
+      const key=title.trim().toLocaleLowerCase("fr-CA");
       const audioRange=findQuotedRange(m.excerpt,project.timedWords);
       const range=audioRange?toProjectRange(audioRange,project.timeline.offsets.audio,
         project.timeline.duration):null;
+      const timingKey=range?rangeKey(range.start,range.end):null;
+      if ((timingKey && usedRanges.has(timingKey)) || existing.has(key)) return [];
+      if (timingKey) usedRanges.add(timingKey);
+      existing.add(key);
       const cameraCuts=range&&available.length?proposeMulticamCuts({
         start:range.start,end:range.end,available,primary,
       }):undefined;
-      return {
-        id:crypto.randomUUID(),title:m.title.slice(0,100),
+      return [{
+        id:crypto.randomUUID(),title,
         start:range?.start??0,end:range?.end??0,
         timingSource:range?"automatic" as const:"unmatched" as const,
         cameraCuts,cameraEditSource:cameraCuts?"automatic" as const:undefined,
@@ -37,6 +43,6 @@ export function createDraftsFromAnalysis(project:StudioProject):Capsule[]{
         journalistName:"",journalistOutlet:"",questionAttribution:"reconstructed" as const,
         background:"dark" as const,keying:{...defaultChroma},
         textPosition:"bottom" as const,status:"draft" as const,review:"pending" as const,
-      };
-    });
+      }];
+    }).slice(0,slots);
 }

@@ -16,7 +16,8 @@ test("One Analyze action transcribes and creates proposed capsules without expos
  const workshop=readFileSync("components/analysis/bubble-workshop-simple.tsx","utf8");
  assert.ok(studio.includes("analyzeTranscriptText(transcript"));
  assert.ok(studio.includes("createDraftsFromAnalysis(prepared)"));
- assert.ok(studio.includes("ANALYSER MA VIDÉO"));
+ assert.ok(studio.includes("TRANSCRIRE, ANALYSER ET CRÉER MES CAPSULES"));
+ assert.ok(studio.includes('activeSection==="import"&&(files.audio||hasTimedTranscript)&&analysisAction'));
  assert.ok(workshop.includes("studio-bubble-gallery"));
  assert.ok(workshop.includes('keying:{...defaultChroma,enabled:false}'));
  assert.ok(workshop.includes("<details"));

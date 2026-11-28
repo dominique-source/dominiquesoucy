@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { localExcerptAnalysis } from "../lib/analysis/local-excerpt-analysis";
+import { createDraftsFromAnalysis } from "../lib/analysis/capsule-drafts";
+import { freshProject, projectSchema } from "../lib/analysis/project";
 import { sourcePassages, groundedMoments } from "../lib/analysis/passages";
 
 test("candidate passages use verbatim original transcript, without rewriting quotations", () => {
@@ -29,4 +32,29 @@ test("long unpunctuated monologue yields word-aligned source excerpts", () => {
   const passages = sourcePassages(transcript);
   assert.ok(passages.length > 2);
   for (const p of passages) assert.ok(transcript.includes(p.text));
+});
+
+
+test("a long timestamped transcript can produce and save 20 distinct drafts without AI", () => {
+  const project = freshProject();
+  const words = Array.from({ length: 1872 }, (_, index) => ({
+    word: index % 12 === 11 ? `passage${index}.` : `mot${index}`,
+    start: index * 0.3,
+    end: index * 0.3 + 0.25,
+  }));
+  project.transcript = words.map(({ word }) => word).join("  ");
+  project.timedWords = words;
+  project.timeline.duration = 600;
+  project.analysis = localExcerptAnalysis(project, true);
+  const drafts = createDraftsFromAnalysis(project);
+  assert.equal(drafts.length, 20);
+  assert.ok(drafts.every(clip => clip.timingSource === "automatic" && clip.end > clip.start));
+  assert.equal(new Set(drafts.map(clip => clip.start)).size, 20);
+  assert.ok(project.analysis.moments.every(({ excerpt }) => project.transcript.includes(excerpt)));
+  project.capsules = drafts;
+  assert.equal(projectSchema.parse(project).capsules.length, 20);
+  project.analysis.moments = project.analysis.moments.map((moment, index) => ({
+    ...moment, title: `Nouveau titre ${index}`,
+  }));
+  assert.deepEqual(createDraftsFromAnalysis(project), []);
 });

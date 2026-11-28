@@ -9,12 +9,24 @@ import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
 import { StudioBackdropPicker } from "./studio-backdrop-picker";
 import { BubbleWorkshopSimple } from "./bubble-workshop-simple";
+import { localExcerptAnalysis } from "@/lib/analysis/local-excerpt-analysis";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, reviewAfterTimingChange, type StudioProject } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
 
 const names:Record<SourceKey,string>={audio:"AUDIO ORIGINAL",enhanced:"AUDIO FINAL OPTIMISÉ",main:"CANON · PLAN PRINCIPAL",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
 const englishNames:Record<SourceKey,string>={audio:"ORIGINAL AUDIO",enhanced:"ENHANCED FINAL AUDIO",main:"CANON · MAIN CAMERA",vertical:"IPHONE · VERTICAL",secondary:"SAMSUNG · HORIZONTAL"};
+const analysisFailureDetails:Record<string,[string,string]>={
+  ANALYSIS_TIMEOUT:["Le service d’analyse a dépassé le délai.","The analysis request timed out."],
+  RATE_LIMITED:["La limite de requêtes a été atteinte. Réessaie dans quelques minutes.","The request limit was reached. Try again in a few minutes."],
+  AI_RATE_LIMITED:["Le service IA limite les requêtes. Réessaie dans quelques minutes.","The AI service is rate limiting requests. Try again in a few minutes."],
+  AI_NOT_CONFIGURED:["Le service d’analyse n’est pas configuré sur ce déploiement.","The analysis service is not configured on this deployment."],
+  AI_AUTH_FAILED:["Le service IA a refusé l’accès du Studio.","The AI service denied Studio access."],
+  UNAUTHORIZED:["La session privée du Studio a expiré.","Your private Studio session expired."],
+  NO_SOURCE_PASSAGES:["Le texte ne contient pas de passage exploitable.","No usable passage was found in the transcript."],
+  NO_VALID_EXCERPTS:["L’analyse n’a renvoyé aucun passage vérifiable.","Analysis returned no verifiable passage."],
+  NO_TIMED_EXCERPTS:["Aucun passage n’a pu être relié aux repères audio.","No passage could be matched to audio timestamps."],
+};
 const allowed:Record<SourceKey,RegExp>={audio:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,enhanced:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,main:/\.(mov|mp4|m4v|webm)$/i,vertical:/\.(mov|mp4|m4v|webm)$/i,secondary:/\.(mov|mp4|m4v|webm)$/i};
 type ProjectRow=EpisodeRow;
 function download(filename:string,content:string,mime="application/json"){
@@ -62,6 +74,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
   const [error,setError]=useState("");
   const [saveFailure,setSaveFailure]=useState("");
   // Transcription errors must survive unrelated autosave responses and section changes.
+  const [analysisFailure,setAnalysisFailure]=useState<string|null>(null);
   const [transcriptionFailure,setTranscriptionFailure]=useState<{code:string;stage:"upload"|"transcribe";detail:string}|null>(null);
   const [localBackupError,setLocalBackupError]=useState("");
   const [retryKey,setRetryKey]=useState(0);
@@ -246,7 +259,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
   },[uploading,status]);
   const choose=(key:SourceKey,e:ChangeEvent<HTMLInputElement>)=>{
     const file=e.target.files?.[0];
-    if(!file)return;
+    if(!file||busy)return;
     if(file.size<=0||file.size>MAX_PROJECT_MEDIA_BYTES||!allowed[key].test(file.name)){
       setError(fr?"Fichier non pris en charge ou supérieur à 5 Go.":"Unsupported file or over 5 GB.");
       return;
@@ -282,6 +295,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     if(different&&(previous.transcript||previous.capsules.length)&&!window.confirm(fr?
       "Changer de vidéo invalidera les anciens extraits et leurs repères. Créer une nouvelle analyse pour ce master?":
       "Changing the video invalidates previous clips and their timing. Start a new analysis for this master?"))return;
+    if(different)setAnalysisFailure(null);
     setFiles(current=>({...current,main:file,audio:audioFromVideo?file:undefined}));
     const safeMedia={...previous.localMedia};
     if(!audioFromVideo)delete safeMedia.audio;
@@ -303,7 +317,6 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       "Video imported. For transcription, export an MP3/M4A from Premiere and select it below."));
     setError("");setTranscriptionFailure(null);
   };
-  // One IA action: transcribe the Premiere master, analyze, and prepare visual clips.
   async function analyzeTranscriptText(transcript:string,context?:Partial<StudioProject>){
     const response=await fetch("/api/analysis",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({consent:true,lang,transcript})});
@@ -313,6 +326,11 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     }
     const raw=await response.json() as NonNullable<StudioProject["analysis"]>;
     const value={synopsis:raw.synopsis,themes:raw.themes,editorial_cautions:raw.editorial_cautions,moments:raw.moments};
+    if (!value.moments.length) throw Error("NO_VALID_EXCERPTS");
+    prepareCapsules(transcript,value,context);
+  }
+  function prepareCapsules(transcript:string,value:NonNullable<StudioProject["analysis"]>,
+    context?:Partial<StudioProject>,local=false){
     const prepared={...latest.current,...context,transcript,analysis:value};
     const drafts=createDraftsFromAnalysis(prepared);
     const capsules=[...prepared.capsules,...drafts];
@@ -320,18 +338,19 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       ...context,transcript,analysis:value,selectedMoment:0,stage:"editing",
       capsules,selectedCapsuleId:prepared.selectedCapsuleId||capsules[0]?.id||"",
     });
-    record("analysis",fr?`Analyse IA terminée : ${value.moments.length} extraits, ${drafts.length} capsules préparées`:
+    record("analysis",local?value.synopsis:fr?`Analyse IA terminée : ${value.moments.length} extraits, ${drafts.length} capsules préparées`:
       `AI analysis complete: ${value.moments.length} highlights, ${drafts.length} clips prepared`,"success");
     setActiveSection("editing");
     window.setTimeout(()=>document.getElementById("studio-phase5-current")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
-    setMessage(fr?"L'IA a trouvé "+String(value.moments.length)+" passages. Clique sur une bulle pour la voir sur ta vidéo.":
-      "AI found "+String(value.moments.length)+" highlights. Choose a bubble to preview it on your video.");
+    setMessage(local?value.synopsis:fr?`${drafts.length} nouvelles capsules préparées. Ouvre un brouillon pour vérifier sa coupe.`:
+      `${drafts.length} new drafts prepared. Open one to review its cut.`);
   }
   const transcribe=async()=>{
     const audio=files.audio;
     const master=files.main;
     if(!audio||!consent||busy)return;
     setTranscriptionFailure(null);
+    setAnalysisFailure(null);
     setBusy("transcribe");setError("");
     try{
       setTranscriptionProgress(fr?"Vérification de la session privée…":"Checking Studio session…");
@@ -389,16 +408,12 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       record("transcription",fr?"Transcription horodatée générée en mémoire, sans Blob":"Timed transcript generated in memory without Blob","success");
       setTranscriptionFailure(null);
       setBusy("analyze");
-      setTranscriptionProgress(fr?"L'IA sélectionne maintenant les meilleurs moments…":
-        "AI is selecting the strongest highlights…");
+      setTranscriptionProgress("");
       try{
         await analyzeTranscriptText(transcript,{timedWords:words,timeline});
       }catch(e){
         setActiveSection("analysis");
-        setError(fr?
-          "Audio transcrit et conservé, mais l'analyse IA n'a pas abouti. Clique à nouveau sur Analyser pour réessayer.":
-          "Audio was transcribed and saved, but AI analysis did not finish. Click Analyze to retry.");
-        record("error",(fr?"Analyse IA échouée après transcription : ":"AI analysis failed after transcription: ")+(e instanceof Error?e.message:"UNKNOWN"),"failure");
+        failAnalysis(e);
       }
     }catch(e){
       const code=(e instanceof Error?e.message:"UNKNOWN").slice(0,90);
@@ -426,27 +441,36 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
         `Question reconstruction unavailable (${e instanceof Error?e.message:"ERROR"}).`);
     }finally{setBusy("")}
   };
+  function failAnalysis(error:unknown){
+    const code=error instanceof Error?error.message:"UNKNOWN";
+    setAnalysisFailure(code);
+    record("error",`Analyse IA / AI analysis: ${code}`,"failure");
+  }
   const analyze=async()=>{
-    if(!consent||project.transcript.length<100||busy)return;
-    setBusy("analyze");setError("");
+    if(!consent||project.transcript.trim().length<100||busy)return;
+    setBusy("analyze");setError("");setAnalysisFailure(null);
     try{await analyzeTranscriptText(project.transcript)}
-    catch(e){
-    record("error",fr?"Échec analyse IA":"AI analysis failed","failure");
-      setError((fr?"Analyse IA indisponible. Ta transcription est conservée. Code : ":"AI analysis unavailable. Your transcript is preserved. Code: ")+(e instanceof Error?e.message:"UNKNOWN"));
-    }finally{setBusy("")}
+    catch(error){failAnalysis(error)}
+    finally{setBusy("")}
+  };
+  const prepareLocalCapsules=()=>{
+    const current=latest.current;
+    const value=localExcerptAnalysis(current,fr);
+    if(!value.moments.length){setAnalysisFailure("NO_TIMED_EXCERPTS");return}
+    prepareCapsules(current.transcript,value,undefined,true);
   };
   const openProject=async(id:string)=>{
-    if(uploading||status==="saving"||status==="pending")return;
+    if(busy||uploading||status==="saving"||status==="pending")return;
     try{
-      const p=await load(id);setFiles({});
+      const p=await load(id);setFiles({});setAnalysisFailure(null);
       persisted.current=JSON.stringify({...p,updatedAt:undefined});
       latest.current=p;setProject(p);setStatus("saved");setError("");setTranscriptionFailure(null);setActiveSection("projects");
     }catch{setError(fr?"Impossible d’ouvrir ce projet.":"Cannot open this project.")}
   };
   const newProject=()=>{
-    if(uploading||status==="pending"||status==="saving")return;
+    if(busy||uploading||status==="pending"||status==="saving")return;
     const last=[project,...projects].reduce((n,item)=>item.season===project.season?Math.max(n,item.episode):n,0);
-    const p={...freshProject(lang),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});
+    const p={...freshProject(lang),season:project.season,episode:last+1,name:`DOM SOUCY MEDIA — ${episodeCode(project.season,last+1)}`};setFiles({});setAnalysisFailure(null);
     latest.current=p;setProject(p);setStatus("pending");setError("");setMessage("");
     setRecoveryCandidate(null);
     setTranscriptionFailure(null);
@@ -504,10 +528,11 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
   };
   const projectSaved=status==="saved";
   const hasTranscript=project.transcript.trim().length>=100;
+  const hasTimedTranscript=hasTranscript&&project.timedWords.length>0;
   const hasAnalysis=!!project.analysis?.moments.length;
   const approvedCapsules=project.capsules.filter(c=>c.review==="approved");
   const suggestedNext=approvedCapsules.length?"production":hasAnalysis&&project.capsules.length?"editing":
-    !files.main&&!files.audio&&!hasTranscript?"import":!hasAnalysis?"analysis":"editing";
+    !files.audio&&!hasTimedTranscript?"import":!hasAnalysis?"analysis":"editing";
   const quickNavigate=(tab:typeof activeSection)=>{
     setActiveSection(tab);
     window.setTimeout(()=>document.getElementById("studio-phase5-current")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
@@ -515,8 +540,8 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
   const mainSteps=[
     {id:"import" as const,num:"01",icon:"↓",name:fr?"IMPORTER":"IMPORT",
       detail:fr?"Choisir les médias sources":"Choose source media",ready:!!files.main||!!files.audio||hasTranscript},
-    {id:"analysis" as const,num:"02",icon:"✦",name:fr?"ANALYSER & DÉCOUPER":"ANALYZE & CUT",
-      detail:fr?"Transcription et meilleurs extraits":"Transcript and highlights",ready:hasAnalysis},
+    {id:"analysis" as const,num:"02",icon:"✦",name:fr?"TRANSCRIPTION & ANALYSE":"TRANSCRIPT & ANALYSIS",
+      detail:hasTimedTranscript?(fr?"Créer les capsules à partir du texte":"Create clips from the transcript"):(fr?"Transcrire et créer les capsules":"Transcribe and create clips"),ready:hasAnalysis},
     {id:"editing" as const,num:"03",icon:"◉",name:fr?"CRÉER LES BULLES":"CREATE BUBBLES",
       detail:fr?"Valider les extraits et créer les bulles":"Review clips and create graphics",ready:approvedCapsules.length>0},
     {id:"production" as const,num:"04",icon:"↓",name:fr?"EXPORTER":"EXPORT",
@@ -533,6 +558,25 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     error:fr?"ÉCHEC DE SAUVEGARDE":"SAVE FAILED",
   }[status];
 
+  const analysisInProgress=busy==="analyze"||busy==="transcribe";
+  const analysisAction=<div className="studio-analysis-action">
+    <label className="analysis-consent"><input type="checkbox" checked={consent} disabled={analysisInProgress}
+      onChange={e=>setConsent(e.target.checked)}/>
+      <span>{fr?"J’autorise la transcription et l’analyse privées par l’IA.":"I consent to private AI transcription and analysis."}</span>
+    </label>
+    <button type="button" className="analysis-primary studio-simple-primary"
+      disabled={!consent||(!hasTimedTranscript&&!files.audio)||!!busy}
+      onClick={()=>{
+        if(activeSection==="import")quickNavigate("analysis");
+        if(hasTimedTranscript)void analyze();else void transcribe();
+      }}>
+      {busy==="transcribe"?(fr?"TRANSCRIPTION EN COURS…":"TRANSCRIBING…"):
+        busy==="analyze"?(fr?"ANALYSE EN COURS…":"ANALYZING…"):
+        analysisFailure&&hasTimedTranscript?(fr?"RÉESSAYER L’ANALYSE IA":"RETRY AI ANALYSIS"):
+        hasTimedTranscript?(fr?"ANALYSER ET CRÉER MES CAPSULES":"ANALYZE AND CREATE MY CLIPS"):
+        (fr?"TRANSCRIRE, ANALYSER ET CRÉER MES CAPSULES":"TRANSCRIBE, ANALYZE AND CREATE MY CLIPS")}
+    </button>
+  </div>;
   return <section className="analysis-studio studio-production">
     <div className="analysis-topline">
       <div className="analysis-logo">DOMINIQUE SOUCY <span>/ STUDIO PRODUCTION</span></div>
@@ -550,7 +594,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     {transcriptionFailure&&<div className="studio-transcription-banner" role="alert">
       <strong>{fr?"TRANSCRIPTION EN ÉCHEC":"TRANSCRIPTION FAILED"}</strong>
       <span>{transcriptionFailure.code}</span>
-      <button type="button" onClick={()=>setActiveSection("import")}>{fr?"VOIR L'ERREUR":"VIEW ERROR"}</button>
+      <button type="button" onClick={()=>quickNavigate("analysis")}>{fr?"VOIR L'ERREUR":"VIEW ERROR"}</button>
     </div>}
     <div className="studio-simple-command">
       <div className="studio-simple-heading">
@@ -569,20 +613,20 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
           className={activeSection===item.id?"studio-simple-tile active":"studio-simple-tile"}
           aria-current={activeSection===item.id?"step":undefined}
           onClick={()=>quickNavigate(item.id)}>
-          <span className="studio-simple-tile-top"><span>{item.num} / {String(mainSteps.length).padStart(2,"0")}</span><span>{activeSection===item.id?(fr?"EN COURS":"CURRENT"):item.ready?"✓ "+(fr?"PRÊT":"READY"):(fr?"À FAIRE":"TO DO")}</span></span>
+          <span className="studio-simple-tile-top"><span>{item.num} / {String(mainSteps.length).padStart(2,"0")}</span><span>{item.id==="analysis"&&analysisInProgress?(fr?"EN COURS":"IN PROGRESS"):activeSection===item.id?(fr?"OUVERT":"OPEN"):item.ready?"✓ "+(fr?"PRÊT":"READY"):(fr?"À FAIRE":"TO DO")}</span></span>
           <span className="studio-simple-tile-icon" aria-hidden="true">{item.icon}</span>
           <strong>{item.name}</strong>
           <small>{item.detail}</small>
         </button>)}
       </nav>
-      <div className="studio-simple-continue">
+      {activeSection!==suggestedNext&&!analysisInProgress&&<div className="studio-simple-continue">
         <span><strong>{fr?"PROCHAINE ACTION":"NEXT ACTION"}</strong>
           {nextStep?.detail}
         </span>
         <button type="button" className="studio-simple-go" onClick={()=>quickNavigate(suggestedNext)}>
           {nextStep?.name} →
         </button>
-      </div>
+      </div>}
     </div>
     <div id="studio-phase5-current" className="studio-phase5-context" role="status">
       <span>{project.name} / {episodeCode(project.season,project.episode)}</span>
@@ -594,6 +638,13 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
         activeSection==="publish"?(fr?"PRÉPARATION DE LA DIFFUSION":"PUBLICATION PREPARATION"):
         fr?"OUTILS AVANCÉS":"ADVANCED TOOLS"}</strong>
     </div>
+    {analysisInProgress&&<div className="studio-analysis-progress" role="status" aria-live="polite">
+      <strong>{busy==="transcribe"?(fr?"Transcription en cours":"Transcribing"):
+        (fr?"Analyse IA en cours":"AI analysis in progress")}</strong>
+      <span>{busy==="transcribe"?transcriptionProgress:
+        (fr?"Transcription prête. Le Studio sélectionne les passages et prépare les coupes.":"Transcript ready. Studio is selecting highlights and preparing cuts.")}</span>
+      <progress aria-label={fr?"Traitement en cours":"Processing"}/>
+    </div>}
     <div hidden={activeSection!=="projects"} className="studio-workspace-project-library">
       <EpisodeDashboard lang={lang} episodes={projects} currentId={project.id} onOpen={openProject}
         onNew={newProject} disabled={!ready||uploading||status==="pending"||status==="saving"}/>
@@ -688,6 +739,10 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
           "If your MP4 is over 600 MB or your browser cannot decode the audio track, export a matching M4A, MP3 or WAV from Premiere for analysis only."}</p>
         {tile("audio")}
       </details>
+      {activeSection==="import"&&(files.audio||hasTimedTranscript)&&analysisAction}
+      {files.main&&!files.audio&&!hasTimedTranscript&&<p role="status">{fr?
+        "Ajoute l’audio original du même montage pour démarrer.":
+        "Add the original audio from the same edit to begin."}</p>}
       <details className="studio-audio-optimized studio-simple-details"><summary>{fr?"OPTIONNEL — AMÉLIORER LA VOIX":"OPTIONAL — ENHANCE VOICE"}</summary>
         <h3>{fr?"PISTE AUDIO FINALE — VOIX OPTIMISÉE":"FINAL AUDIO — ENHANCED VOICE"}</h3>
         <p>{fr
@@ -708,7 +763,9 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       <p>{fr?"Relis tes paroles. La transcription horodatée permet de découper automatiquement les capsules. Toute correction manuelle du texte invalide les anciens repères et nécessite une nouvelle transcription horodatée.":"Review the transcript. Word timestamps can create capsule cuts automatically. Editing the transcript invalidates previous timestamps and requires re-transcription."}</p>
       <p className="analysis-note">{fr?`${project.timedWords.length} mots horodatés`:`${project.timedWords.length} timed words`}</p>
       <textarea aria-label={fr?"Transcription":"Transcript"} rows={11} maxLength={26000}
-        value={project.transcript} onChange={e=>modify({transcript:e.target.value,timedWords:[],analysis:null,selectedMoment:0})}
+        value={project.transcript} disabled={analysisInProgress} onChange={e=>{
+          setAnalysisFailure(null);modify({transcript:e.target.value,timedWords:[],analysis:null,selectedMoment:0});
+        }}
         placeholder={fr?"La transcription apparaît ici après traitement…":"Transcription appears here…"}/>
       <button type="button" className="analysis-secondary" disabled={!project.transcript}
         onClick={()=>download("dom-soucy-transcription.txt",project.transcript,"text/plain")}>
@@ -716,21 +773,23 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       </button>
       </details>
     </>)}
-    {step(3,fr?"ANALYSE IA":"AI ANALYSIS",`${project.analysis?.moments.length||0} ${fr?"EXTRAITS":"CLIPS"}`,<>
+    {step(3,fr?"ANALYSE IA":"AI ANALYSIS",hasAnalysis?`${project.analysis?.moments.length} ${fr?"EXTRAITS":"CLIPS"}`:
+      analysisFailure?(fr?"ÉCHEC DE L’ANALYSE":"ANALYSIS FAILED"):
+      analysisInProgress?(fr?"TRAITEMENT EN COURS":"PROCESSING"):(fr?"À FAIRE":"TO DO"),<>
       <p>{fr?"Un seul clic : transcription si nécessaire, analyse, découpage et bulles de citations authentiques.":"One click: transcription if needed, analysis, cuts and authentic quote graphics."}</p>
       <p role="status">{hasTranscript?(fr?"✓ Transcription conservée — aucune nouvelle transcription nécessaire.":"✓ Transcript saved — no need to transcribe again."):(fr?"Transcription à faire":"Transcript needed")} · {project.timedWords.length} {fr?"mots horodatés":"timed words"}</p>
       {hasTranscript&&!project.timedWords.length&&<p role="alert">{fr?"Cette transcription ne contient pas de repères temporels. Une transcription horodatée est nécessaire pour découper automatiquement.":"This transcript has no timestamps. Timed transcription is required for automatic cuts."}</p>}
-      {transcriptionProgress&&<p role="status" className="analysis-note">{transcriptionProgress}</p>}
-      <label className="analysis-consent"><input type="checkbox" checked={consent}
-        onChange={e=>setConsent(e.target.checked)}/>
-        <span>{fr?"J'autorise la transcription et l'analyse privées par l'IA.":"I consent to private AI transcription and analysis."}</span>
-      </label>
-      <button type="button" className="analysis-primary studio-simple-primary"
-        disabled={!consent||(!files.audio&&(!hasTranscript||!project.timedWords.length))||!!busy}
-        onClick={()=>{if(hasTranscript&&project.timedWords.length)void analyze();else void transcribe()}}>
-        {busy?(fr?"✦ ANALYSE EN COURS…":"✦ ANALYZING…"):
-          hasTranscript&&project.timedWords.length?(fr?"✦ ANALYSER ET CRÉER MES CAPSULES →":"✦ ANALYZE AND CREATE MY CLIPS →"):(fr?"✦ TRANSCRIRE, ANALYSER ET CRÉER MES CAPSULES →":"✦ TRANSCRIBE, ANALYZE AND CREATE MY CLIPS →")}
-      </button>
+      {analysisFailure&&<div className="studio-analysis-failure" role="alert">
+        <strong>{fr?"Analyse IA indisponible":"AI analysis unavailable"}</strong>
+        {analysisFailureDetails[analysisFailure]&&<p>{analysisFailureDetails[analysisFailure][fr?0:1]}</p>}
+        <p>{fr?"Ta transcription est conservée.":"Your transcript is preserved."}</p>
+        <code>{analysisFailure}</code>
+        {hasTimedTranscript&&analysisFailure!=="NO_TIMED_EXCERPTS"&&<button type="button"
+          className="analysis-secondary" disabled={!!busy} onClick={prepareLocalCapsules}>
+          {fr?"PRÉPARER DES BROUILLONS SANS IA":"PREPARE DRAFTS WITHOUT AI"}
+        </button>}
+      </div>}
+      {activeSection==="analysis"&&analysisAction}
       {!files.audio&&project.transcript.length<100&&<p className="analysis-note">{fr?
         "Dépose d'abord le master Premiere. Pour une vidéo de plus de 600 Mo, ajoute sa petite piste audio dans l'étape Importer.":
         "First import your Premiere master. For videos over 600 MB, add a separate audio export in Import."}</p>}

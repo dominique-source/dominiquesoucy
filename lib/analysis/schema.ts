@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_ANALYSIS_MOMENTS } from "./passages";
 
 export const analysisInput = z.object({
   transcript: z.string().trim().min(100).max(26000),
@@ -15,6 +16,6 @@ export const analysisResult = z.object({
     excerpt: z.string(),
     rationale: z.string(),
     model_id: z.number().int().min(1).max(12),
-  }).strict()).max(15),
+  }).strict()).max(MAX_ANALYSIS_MOMENTS),
 }).strict();
 export type AnalysisResult = z.infer<typeof analysisResult>;

@@ -1432,3 +1432,38 @@ a:hover {
 .studio-bubble-tile strong{font-size:18px;font-weight:950;letter-spacing:.02em}
 .studio-bubble-tile small{font-size:11px;font-weight:750;color:#d0d7c7;letter-spacing:.08em}
 @media(max-width:620px){.studio-bubble-tiles{grid-template-columns:1fr}.studio-bubble-tile{min-height:84px;flex-direction:row;align-items:center;justify-content:flex-start}.studio-bubble-tile small{margin-left:auto}}
+
+/* Studio import and capsule preparation */
+.studio-analysis-action {
+  display: grid;
+  justify-items: start;
+  gap: .65rem;
+  margin-block: 1rem;
+}
+.studio-analysis-action .studio-simple-primary {
+  width: min(100%, 40rem);
+  white-space: normal;
+}
+.studio-analysis-progress,
+.studio-analysis-failure {
+  display: grid;
+  gap: .65rem;
+  padding: 1rem 1.25rem;
+  margin-block: 1rem;
+  border: 1px solid var(--accent);
+  background: var(--background);
+  color: var(--foreground);
+}
+.studio-analysis-progress strong,
+.studio-analysis-failure strong {
+  font-size: clamp(1.25rem, 3vw, 1.65rem);
+}
+.studio-analysis-progress progress {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.studio-analysis-failure {
+  border-color: #ff9f9f;
+  background: #331c20;
+}
+.studio-analysis-failure button { justify-self: start; }
