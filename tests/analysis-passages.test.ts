@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { localExcerptAnalysis } from "../lib/analysis/local-excerpt-analysis";
+import { parseEditorialResponse } from "../lib/analysis/editorial-response";
 import { createDraftsFromAnalysis } from "../lib/analysis/capsule-drafts";
 import { freshProject, projectSchema } from "../lib/analysis/project";
 import { sourcePassages, groundedMoments } from "../lib/analysis/passages";
@@ -35,7 +35,7 @@ test("long unpunctuated monologue yields word-aligned source excerpts", () => {
 });
 
 
-test("a long timestamped transcript can produce and save 20 distinct drafts without AI", () => {
+test("a long timestamped transcript can produce and save 20 AI-selected drafts despite out-of-range entries and extra themes", () => {
   const project = freshProject();
   const words = Array.from({ length: 1872 }, (_, index) => ({
     word: index % 12 === 11 ? `passage${index}.` : `mot${index}`,
@@ -45,7 +45,24 @@ test("a long timestamped transcript can produce and save 20 distinct drafts with
   project.transcript = words.map(({ word }) => word).join("  ");
   project.timedWords = words;
   project.timeline.duration = 600;
-  project.analysis = localExcerptAnalysis(project, true);
+  const passages = sourcePassages(project.transcript);
+  const result = parseEditorialResponse({
+    synopsis: "Analyse du texte",
+    themes: Array.from({ length: 12 }, (_, i) => `Thème ${i}`),
+    editorial_cautions: [],
+    moments: [
+      { passage_id: 0, title: "Invalide", rationale: "", model_id: 4 },
+      { passage_id: 1, title: "Invalide", rationale: "", model_id: 99 },
+      ...passages.slice(0, 22).map(({ id }) => ({
+        passage_id: id, title: `Extrait ${id}`, rationale: "À relire", model_id: 4,
+      })),
+    ],
+  }, passages);
+  assert.ok(result);
+  const { original_count, ...analysis } = result;
+  assert.equal(original_count, 24);
+  assert.equal(analysis.themes.length, 8);
+  project.analysis = analysis;
   const drafts = createDraftsFromAnalysis(project);
   assert.equal(drafts.length, 20);
   assert.ok(drafts.every(clip => clip.timingSource === "automatic" && clip.end > clip.start));

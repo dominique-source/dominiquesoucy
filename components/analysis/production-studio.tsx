@@ -9,7 +9,6 @@ import { defaultChroma } from "@/lib/analysis/chroma-key";
 import { resolveBackdrop } from "@/lib/analysis/studio-backdrops";
 import { StudioBackdropPicker } from "./studio-backdrop-picker";
 import { BubbleWorkshopSimple } from "./bubble-workshop-simple";
-import { localExcerptAnalysis } from "@/lib/analysis/local-excerpt-analysis";
 import { createDraftsFromAnalysis } from "@/lib/analysis/capsule-drafts";
 import { freshProject, MAX_PROJECT_MEDIA_BYTES, episodeCode, eventFor, reviewAfterTimingChange, type StudioProject } from "@/lib/analysis/project";
 import type { SourceFiles, SourceKey } from "@/lib/analysis/multicam";
@@ -25,7 +24,7 @@ const analysisFailureDetails:Record<string,[string,string]>={
   UNAUTHORIZED:["La session privée du Studio a expiré.","Your private Studio session expired."],
   NO_SOURCE_PASSAGES:["Le texte ne contient pas de passage exploitable.","No usable passage was found in the transcript."],
   NO_VALID_EXCERPTS:["L’analyse n’a renvoyé aucun passage vérifiable.","Analysis returned no verifiable passage."],
-  NO_TIMED_EXCERPTS:["Aucun passage n’a pu être relié aux repères audio.","No passage could be matched to audio timestamps."],
+  AI_INVALID_OUTPUT:["La réponse de l’IA était dans un format illisible. Réessaie avec le texte conservé.","The AI response could not be read. Retry with your saved transcript."],
 };
 const allowed:Record<SourceKey,RegExp>={audio:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,enhanced:/\.(mp3|m4a|wav|flac|ogg|webm|mp4)$/i,main:/\.(mov|mp4|m4v|webm)$/i,vertical:/\.(mov|mp4|m4v|webm)$/i,secondary:/\.(mov|mp4|m4v|webm)$/i};
 type ProjectRow=EpisodeRow;
@@ -64,6 +63,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
   const [projects,setProjects]=useState<ProjectRow[]>([]);
   const [files,setFiles]=useState<SourceFiles>({});
   const uploading=false;
+  const [segments,setSegments]=useState<{completed:number;total:number}|null>(null);
   const [transcriptionProgress,setTranscriptionProgress]=useState("");
   const [cleanupBusy,setCleanupBusy]=useState(false);
   const [cleanupFeedback,setCleanupFeedback]=useState("");
@@ -330,7 +330,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     prepareCapsules(transcript,value,context);
   }
   function prepareCapsules(transcript:string,value:NonNullable<StudioProject["analysis"]>,
-    context?:Partial<StudioProject>,local=false){
+    context?:Partial<StudioProject>){
     const prepared={...latest.current,...context,transcript,analysis:value};
     const drafts=createDraftsFromAnalysis(prepared);
     const capsules=[...prepared.capsules,...drafts];
@@ -338,11 +338,11 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       ...context,transcript,analysis:value,selectedMoment:0,stage:"editing",
       capsules,selectedCapsuleId:prepared.selectedCapsuleId||capsules[0]?.id||"",
     });
-    record("analysis",local?value.synopsis:fr?`Analyse IA terminée : ${value.moments.length} extraits, ${drafts.length} capsules préparées`:
+    record("analysis",fr?`Analyse IA terminée : ${value.moments.length} extraits, ${drafts.length} capsules préparées`:
       `AI analysis complete: ${value.moments.length} highlights, ${drafts.length} clips prepared`,"success");
     setActiveSection("editing");
     window.setTimeout(()=>document.getElementById("studio-phase5-current")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
-    setMessage(local?value.synopsis:fr?`${drafts.length} nouvelles capsules préparées. Ouvre un brouillon pour vérifier sa coupe.`:
+    setMessage(fr?`${drafts.length} nouvelles capsules préparées. Ouvre un brouillon pour vérifier sa coupe.`:
       `${drafts.length} new drafts prepared. Open one to review its cut.`);
   }
   const transcribe=async()=>{
@@ -377,6 +377,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
         }
       }
       const ranges=chunkRanges(decoded.duration);
+      setSegments({completed:0,total:ranges.length});
       const textParts:string[]=[];
       const words:StudioProject["timedWords"]=[];
       for(let i=0;i<ranges.length;i++){
@@ -394,6 +395,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
           throw Error(code.replace(/[^A-Z0-9_:-]/gi,"").slice(0,90)||"TRANSCRIBE_FAILED");
         }
         textParts.push(data.transcript);
+        setSegments({completed:i+1,total:ranges.length});
         for(const word of data.timedWords||[]){
           if(words.length>=6000)break;
           words.push({...word,start:Math.round((word.start+start)*100)/100,
@@ -421,7 +423,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
       setTranscriptionFailure({code,stage:"transcribe",detail});
       record("error",fr?`Échec transcription directe : ${code}`:`Transcription failed: ${code}`,"failure");
       setMessage("");
-    }finally{setBusy("");setTranscriptionProgress("")}
+    }finally{setBusy("");setTranscriptionProgress("");setSegments(null)}
   };
   const reconstructQuestions=async()=>{
     if(!consent||project.transcript.length<100||busy)return;
@@ -452,12 +454,6 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
     try{await analyzeTranscriptText(project.transcript)}
     catch(error){failAnalysis(error)}
     finally{setBusy("")}
-  };
-  const prepareLocalCapsules=()=>{
-    const current=latest.current;
-    const value=localExcerptAnalysis(current,fr);
-    if(!value.moments.length){setAnalysisFailure("NO_TIMED_EXCERPTS");return}
-    prepareCapsules(current.transcript,value,undefined,true);
   };
   const openProject=async(id:string)=>{
     if(busy||uploading||status==="saving"||status==="pending")return;
@@ -540,7 +536,7 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
   const mainSteps=[
     {id:"import" as const,num:"01",icon:"↓",name:fr?"IMPORTER":"IMPORT",
       detail:fr?"Choisir les médias sources":"Choose source media",ready:!!files.main||!!files.audio||hasTranscript},
-    {id:"analysis" as const,num:"02",icon:"✦",name:fr?"TRANSCRIPTION & ANALYSE":"TRANSCRIPT & ANALYSIS",
+    {id:"analysis" as const,num:"02",icon:"✦",name:fr?"ANALYSE IA":"AI ANALYSIS",
       detail:hasTimedTranscript?(fr?"Créer les capsules à partir du texte":"Create clips from the transcript"):(fr?"Transcrire et créer les capsules":"Transcribe and create clips"),ready:hasAnalysis},
     {id:"editing" as const,num:"03",icon:"◉",name:fr?"CRÉER LES BULLES":"CREATE BUBBLES",
       detail:fr?"Valider les extraits et créer les bulles":"Review clips and create graphics",ready:approvedCapsules.length>0},
@@ -643,7 +639,8 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
         (fr?"Analyse IA en cours":"AI analysis in progress")}</strong>
       <span>{busy==="transcribe"?transcriptionProgress:
         (fr?"Transcription prête. Le Studio sélectionne les passages et prépare les coupes.":"Transcript ready. Studio is selecting highlights and preparing cuts.")}</span>
-      <progress aria-label={fr?"Traitement en cours":"Processing"}/>
+      {busy==="transcribe"&&segments&&<progress value={segments.completed} max={segments.total}
+        aria-label={fr?"Segments transcrits":"Transcribed segments"}/>}
     </div>}
     <div hidden={activeSection!=="projects"} className="studio-workspace-project-library">
       <EpisodeDashboard lang={lang} episodes={projects} currentId={project.id} onOpen={openProject}
@@ -784,10 +781,6 @@ export function ProductionStudio({lang,initialProject}:{lang:"fr"|"en";initialPr
         {analysisFailureDetails[analysisFailure]&&<p>{analysisFailureDetails[analysisFailure][fr?0:1]}</p>}
         <p>{fr?"Ta transcription est conservée.":"Your transcript is preserved."}</p>
         <code>{analysisFailure}</code>
-        {hasTimedTranscript&&analysisFailure!=="NO_TIMED_EXCERPTS"&&<button type="button"
-          className="analysis-secondary" disabled={!!busy} onClick={prepareLocalCapsules}>
-          {fr?"PRÉPARER DES BROUILLONS SANS IA":"PREPARE DRAFTS WITHOUT AI"}
-        </button>}
       </div>}
       {activeSection==="analysis"&&analysisAction}
       {!files.audio&&project.transcript.length<100&&<p className="analysis-note">{fr?
