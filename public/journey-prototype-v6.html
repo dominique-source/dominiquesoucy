@@ -29,8 +29,10 @@ html{scroll-behavior:smooth} .chapter{display:block;position:relative;padding:0;
     display: flex;
     align-items: center;
     width: 100%;
-    gap: 10px;
-    padding: 4px 14vw 12px;
+    --photo-height: clamp(175px, 62vw, 340px);
+    gap: 6px;
+    min-height: calc(var(--photo-height) + 16px);
+    padding: 4px var(--end-pad, 14vw) 12px var(--start-pad, 14vw);
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
@@ -40,9 +42,11 @@ html{scroll-behavior:smooth} .chapter{display:block;position:relative;padding:0;
   .chapter .photos img, .chapter .photos img:first-child,
   .chapter .photos img:nth-child(even), .chapter[data-mode=energy] .photos img:nth-child(even),
   #quartier-gallery .wallgrid img {
-    flex: 0 0 72vw;
-    width: 72vw;
-    height: clamp(175px, 62vw, 340px);
+    flex: none;
+    width: auto;
+    height: auto;
+    max-width: 72vw;
+    max-height: var(--photo-height);
     margin: 0;
     object-fit: contain;
     background: transparent;
@@ -71,6 +75,13 @@ html{scroll-behavior:smooth} .chapter{display:block;position:relative;padding:0;
   #c2 .photos img[src$="dvd-2.webp"] {
     --disc-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 400'%3E%3Cellipse cx='142' cy='218' rx='122' ry='120' transform='rotate(11 142 218)'/%3E%3C/svg%3E");
   }
+  @media (prefers-reduced-motion: no-preference) {
+    .photo-rail-entering img:nth-child(-n+3) {
+      animation: photo-settle 520ms cubic-bezier(.2,.7,.2,1) backwards;
+    }
+    .photo-rail-entering img:nth-child(2) { animation-delay: 55ms; }
+    .photo-rail-entering img:nth-child(3) { animation-delay: 110ms; }
+  }
   #quartier-gallery { padding: 24px 0; }
   #quartier-gallery > :is(small, h2) { margin-inline: 6vw; }
   .wall, footer { padding-block: 34px; }
@@ -84,6 +95,10 @@ html{scroll-behavior:smooth} .chapter{display:block;position:relative;padding:0;
     overflow: auto;
   }
   dialog.mobile-embedded img { max-height: calc(var(--dialog-height) - 62px); }
+}
+@keyframes photo-settle {
+  from { translate: 22px 14px; opacity: .68; }
+  to { translate: 0 0; opacity: 1; }
 }
 .wall-toggle, .mobile-hint { display: none; }
 @media (max-width: 700px) {
@@ -298,16 +313,25 @@ function openPhoto(src) {
 }
 const all=data.flatMap(c=>c.photos);const stage=document.getElementById('stage');const floating=all.filter((_,i)=>i%2===0).slice(0,18).map((src,i)=>{let im=new Image();im.src=src;im.alt='';stage.prepend(im);return im});function tick(){if(mobile.matches)return;let y=scrollY,p=Math.min(1,y/(innerHeight*.8));document.getElementById('bar').style.width=100*y/Math.max(1,document.documentElement.scrollHeight-innerHeight)+'%';floating.forEach((im,i)=>{let a=i*2.4,z=((i/floating.length+p*.8)%1),r=100+z*innerWidth*.55;im.style.transform=`translate3d(${Math.cos(a)*r}px,${Math.sin(a)*r*.58}px,${-850+z*900}px) rotate(${Math.sin(i)*12}deg)`;im.style.opacity=.3+z*.65})}addEventListener('scroll',tick,{passive:true});addEventListener('resize',tick);tick();function pic(src){let im=new Image();im.loading='lazy';im.decoding='async';im.alt=labels.image;im.onerror=()=>{im.alt=labels.missing};im.src=src;im.tabIndex=0;im.onclick=()=>openPhoto(src);im.onkeydown=e=>{if(e.key==='Enter')im.click()};return im}const modes=['paper','energy','paper','human','editorial','energy','human','energy','now'];const scenes=[];data.forEach((c,i)=>{let s=document.createElement('section');s.className='chapter'+(!c.photos.length?' no-photos':'');s.id='c'+i;s.dataset.mode=modes[i];s.innerHTML=`<div class="scene"><div class="era" aria-hidden="true">${c.date}</div><div class="copy"><div class="num">0${i+1}</div><small>${c.date}</small><h2>${c.title}</h2><p>${c.desc}</p><span class="hint">${c.photos.length ? `<span class="desktop-hint">${labels.scroll} →</span>${c.photos.length > 1 ? `<span class="mobile-hint">${english ? 'SWIPE TO SEE THE PHOTOS' : 'BALAYER POUR VOIR LES PHOTOS'} →</span>` : ''}` : ''}</span></div><div class="photos"></div><div class="line"></div><div class="cut"></div></div>`;let g=s.querySelector('.photos');c.photos.slice(0,i===6?8:c.photos.length).forEach(src=>g.append(pic(src)));if(i===6){let b=document.createElement("button");b.textContent=labels.gallery;b.onclick=()=>{const gallery=document.getElementById("quartier-gallery");gallery.hidden=false;gallery.scrollIntoView({behavior:"smooth"})};s.querySelector(".copy").append(b)}if(i===4){let links=document.createElement("p");links.innerHTML='<a target="_blank" rel="noopener" href="https://ici.radio-canada.ca/article/info/1058760/quebec-21-parcs-intelligents-application-telephone-mobile">'+labels.parks+'</a><br><a target="_blank" rel="noopener" href="https://ici.radio-canada.ca/article/info/1057646/dominique-soucy-voice-of-english-speaking">'+labels.community+'</a>';s.querySelector(".copy").append(links)}if(!c.photos.length)g.innerHTML='<div class="empty">Archive à intégrer</div>';main.append(s);if(i===6){let q=document.createElement("section");q.id="quartier-gallery";q.className="wall";q.hidden=true;q.innerHTML=`<small>${labels.galleryLabel}</small><h2>${labels.galleryTitle}</h2><div class="wallgrid"></div>`;c.photos.forEach(src=>q.querySelector(".wallgrid").append(pic(src)));main.append(q)}let a=document.createElement('a');a.href='#c'+i;a.textContent='0'+(i+1);a.setAttribute('aria-label',c.title);nav.append(a);scenes.push({s,g,a})});let queued=false;function animateScenes(){queued=false;if(mobile.matches)return;let active=-1;scenes.forEach(({s,g,a},i)=>{const r=s.getBoundingClientRect(),h=s.querySelector('.scene').offsetHeight;const p=Math.max(0,Math.min(1,-r.top/Math.max(1,r.height-h)));const available=innerWidth*(innerWidth<=700?.88:.59);const travel=Math.max(0,g.scrollWidth-available);s.style.setProperty('--p',p);s.style.setProperty('--shift',(-travel*p)+'px');s.style.setProperty('--wipe',p>.94?(-150+(p-.94)/.06*850)+'%':'-150%');if(r.top<=innerHeight*.45&&r.bottom>innerHeight*.45)active=i});scenes.forEach(({a},i)=>{a.classList.toggle('active',i===active);if(i===active)a.setAttribute('aria-current','step');else a.removeAttribute('aria-current')})}function schedule(){if(!queued){queued=true;requestAnimationFrame(animateScenes)}}addEventListener('scroll',schedule,{passive:true});addEventListener('resize',schedule);addEventListener('load',schedule);schedule();all.forEach(src=>wall.append(pic(src)));
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const railEntrance = new IntersectionObserver(entries => {
+  entries.forEach(({target, isIntersecting}) => {
+    if (!isIntersecting || !mobile.matches || reducedMotion.matches) return;
+    target.classList.add('photo-rail-entering');
+    railEntrance.unobserve(target);
+  });
+}, {threshold: 0.12});
 document.querySelectorAll('.chapter .photos, #quartier-gallery .wallgrid').forEach(rail => {
   const cards = [...rail.querySelectorAll('img')];
+  if (!cards.length) return;
   let pending = false;
   function updateDepth() {
     pending = false;
     if (!mobile.matches || !rail.clientWidth) return;
-    const center = rail.scrollLeft + rail.clientWidth / 2;
-    cards.forEach(card => {
-      const offset = (card.offsetLeft + card.offsetWidth / 2 - center) / rail.clientWidth;
-      const distance = reducedMotion.matches ? 0 : Math.max(-1, Math.min(1, offset));
+    const width = rail.clientWidth;
+    const center = rail.scrollLeft + width / 2;
+    const distances = cards.map(card => (card.offsetLeft + card.offsetWidth / 2 - center) / width);
+    cards.forEach((card, index) => {
+      const distance = reducedMotion.matches ? 0 : Math.max(-1, Math.min(1, distances[index]));
       card.style.setProperty('--card-angle', (distance * -30) + 'deg');
       card.style.setProperty('--card-scale', String(1 - Math.abs(distance) * 0.20));
     });
@@ -317,9 +341,22 @@ document.querySelectorAll('.chapter .photos, #quartier-gallery .wallgrid').forEa
     pending = true;
     requestAnimationFrame(updateDepth);
   }
+  function updateRailSize() {
+    if (!mobile.matches || !rail.clientWidth) return;
+    const widths = [cards[0].offsetWidth, cards.at(-1).offsetWidth];
+    ['--start-pad', '--end-pad'].forEach((property, index) => {
+      if (widths[index]) rail.style.setProperty(property, (rail.clientWidth - widths[index]) / 2 + 'px');
+    });
+    scheduleDepth();
+  }
   rail.addEventListener('scroll', scheduleDepth, {passive: true});
+  rail.addEventListener('pointerdown', () => rail.classList.remove('photo-rail-entering'), {passive: true});
   reducedMotion.addEventListener('change', scheduleDepth);
-  new ResizeObserver(scheduleDepth).observe(rail);
+  mobile.addEventListener('change', updateRailSize);
+  const sizeObserver = new ResizeObserver(updateRailSize);
+  sizeObserver.observe(rail);
+  cards.forEach(card => sizeObserver.observe(card));
+  railEntrance.observe(rail);
 });
 syncFrameHeight();
 if (frame) {
